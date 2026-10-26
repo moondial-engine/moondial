@@ -69,7 +69,7 @@ jobs:
           [ -n "$VPS_HOST" ] || { echo "::error::VPS_HOST secret is empty"; fail=1; }
           head -1 ~/.ssh/deploy_key | grep -q "BEGIN .*PRIVATE KEY" \
             || { echo "::error::VPS_SSH_KEY does not look like a private key (first line should be -----BEGIN OPENSSH PRIVATE KEY-----)"; fail=1; }
-          shape() { printf '%s' "$1" | sed 's/[0-9]/d/g; s/[A-Za-z]/a/g'; }
+          shape() { printf '%s' "$1" | sed 's/[A-Za-z]/a/g; s/[0-9]/d/g'; }
           echo "::notice::VPS_HOST shape: $(shape "$VPS_HOST") (${#VPS_HOST} chars)"
           while read -r host type rest; do
             echo "::notice::known_hosts line: host shape $(shape "$host"), key type $type, key length ${#rest}"
