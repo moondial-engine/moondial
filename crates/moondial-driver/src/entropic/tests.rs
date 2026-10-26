@@ -43,11 +43,13 @@ fn call(
 }
 
 fn ok(w: &mut World, actor: &str, verb: &str, args: Value) -> Outcome {
-    call(w, actor, ActorKind::Citizen, verb, args.clone()).unwrap_or_else(|e| panic!("{verb} {args}: {e}"))
+    call(w, actor, ActorKind::Citizen, verb, args.clone())
+        .unwrap_or_else(|e| panic!("{verb} {args}: {e}"))
 }
 
 fn admin(w: &mut World, actor: &str, verb: &str, args: Value) -> Outcome {
-    call(w, actor, ActorKind::Admin, verb, args.clone()).unwrap_or_else(|e| panic!("{verb} {args}: {e}"))
+    call(w, actor, ActorKind::Admin, verb, args.clone())
+        .unwrap_or_else(|e| panic!("{verb} {args}: {e}"))
 }
 
 fn level(w: &mut World, actor: &str) -> f64 {
