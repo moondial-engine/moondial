@@ -49,8 +49,10 @@ jobs:
       - name: Configure SSH
         run: |
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
-          printf '%s\n' "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" | tr -d '\r' > ~/.ssh/deploy_key
+          printf '%s\n' "${{ secrets.VPS_KNOWN_HOSTS }}" | tr -d '\r' | grep -v '^#' > ~/.ssh/known_hosts
+          VPS_HOST=$(printf '%s' "$VPS_HOST" | tr -d '\r\n ')
+          echo "VPS_HOST=$VPS_HOST" >> "$GITHUB_ENV"
           chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
           cat > ~/.ssh/config <<EOF
           Host vps
@@ -67,10 +69,13 @@ jobs:
           [ -n "$VPS_HOST" ] || { echo "::error::VPS_HOST secret is empty"; fail=1; }
           head -1 ~/.ssh/deploy_key | grep -q "BEGIN .*PRIVATE KEY" \
             || { echo "::error::VPS_SSH_KEY does not look like a private key (first line should be -----BEGIN OPENSSH PRIVATE KEY-----)"; fail=1; }
-          echo "known_hosts entries (host and key type only):"
-          awk '{print "  " $1 " " $2}' ~/.ssh/known_hosts
+          shape() { printf '%s' "$1" | sed 's/[0-9]/d/g; s/[A-Za-z]/a/g'; }
+          echo "::notice::VPS_HOST shape: $(shape "$VPS_HOST") (${#VPS_HOST} chars)"
+          while read -r host type rest; do
+            echo "::notice::known_hosts line: host shape $(shape "$host"), key type $type, key length ${#rest}"
+          done < ~/.ssh/known_hosts
           grep -q "^$VPS_HOST " ~/.ssh/known_hosts \
-            || { echo "::error::VPS_KNOWN_HOSTS has no line starting with '$VPS_HOST ' (it must be keyed by the IP, not a hostname)"; fail=1; }
+            || { echo "::error::VPS_KNOWN_HOSTS has no line whose first field equals VPS_HOST exactly (compare the shapes above: both must be the same IP)"; fail=1; }
           [ "$fail" = 0 ] || exit 1
           if ! ssh -o BatchMode=yes -o ConnectTimeout=15 vps 'echo "connected as $(id -un)@$(hostname)"'; then
             echo "::error::ssh to $VPS_USER@$VPS_HOST failed; verbose trace follows"
