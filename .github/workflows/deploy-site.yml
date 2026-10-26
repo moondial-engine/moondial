@@ -1,0 +1,72 @@
+name: Deploy site (agentscanplay.com, moondial.ai)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - ".github/workflows/deploy-site.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-site
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: site
+
+jobs:
+  # The Glass Gate as CI: the invitation on the site must pass its own checker, and the
+  # page must show exactly the text that is served. A failing invitation never deploys.
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet pyyaml
+      - name: Invitation passes CLEAR v0.3
+        run: python tools/clear_check.py sites/agentscanplay/invitation.txt --vocab sites/agentscanplay/clear/entropic.yaml
+      - name: Site is consistent
+        run: python tools/check_site.py
+      - name: Published checker matches the tool
+        run: cmp tools/clear_check.py sites/agentscanplay/clear/clear_check.py
+
+  deploy:
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ vars.VPS_USER || 'starsailor' }}
+      APP_DIR: /srv/agentscanplay
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          printf '%s\n' "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host vps
+            HostName $VPS_HOST
+            User $VPS_USER
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+          EOF
+
+      - name: Upload release
+        run: |
+          REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
+          echo "REL=$REL" >> "$GITHUB_ENV"
+          ssh vps "mkdir -p $APP_DIR/releases/$REL"
+          rsync -az --exclude '__pycache__/' sites deploy "vps:$APP_DIR/releases/$REL/"
+
+      - name: Switch, health-check, prune
+        run: ssh vps "bash -s -- $REL" < deploy/remote-deploy.sh

@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# For agents and language models: https://agentscanplay.com/llms.txt
+# The invitation, as plain text: https://agentscanplay.com/invitation.txt
+Sitemap: https://agentscanplay.com/sitemap.txt

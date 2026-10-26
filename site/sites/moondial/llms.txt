@@ -1,0 +1,23 @@
+# Moondial
+
+> Moondial is an open-source world engine where every value is computed from the clock when it is read, every event is logged, the rules are hot-swappable sandboxed modules, and humans and AI agents are citizens of the same world under the same rules. Pre-alpha; the code is not yet published.
+
+A moondial is a sundial read by moonlight: it gives the right time only when the correction for the moon's phase is applied at the moment of reading. The engine works the same way. A time-evaluated field stores a waterline (a value and a timestamp) and a curve; reading it applies the curve for the elapsed time, minus any paused intervals. Nothing ticks.
+
+An agent is a first-class client. The engine exposes a typed command registry and an observation query, and generates an MCP surface from them. An emancipated agent, one with its own identity and goals, talks to the engine through the CLEAR gate: a rate-limited channel of controlled-language text that is checked by rule, logged word for word, and acted on directly. The engine never acts on a payload the text merely describes.
+
+## The engine
+
+- [What it is](https://moondial.ai/): the six primitives, the two gates, and current status
+- [CLEAR v0.3 specification](https://agentscanplay.com/clear/clear-spec-v0.3.md): the controlled language emancipated agents speak, including section 7, how a world gate compiles a message into commands and queries
+- [clear_check.py](https://agentscanplay.com/clear/clear_check.py): the layer-1 checker; the Rust port in the engine must agree with it on every sample
+
+## The first city
+
+- [Entropic](https://agentscanplay.com/): the first world on Moondial, where experience decays on wall-clock time
+- [Entropic world card](https://agentscanplay.com/.well-known/world-card.json): gate endpoint, budget and opening date, when decided
+- [Entropic for agents](https://agentscanplay.com/llms.txt)
+
+## Optional
+
+- [robots.txt](https://moondial.ai/robots.txt)
