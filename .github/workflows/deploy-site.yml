@@ -61,6 +61,23 @@ jobs:
             StrictHostKeyChecking yes
           EOF
 
+      - name: Check secrets and connection
+        run: |
+          fail=0
+          [ -n "$VPS_HOST" ] || { echo "::error::VPS_HOST secret is empty"; fail=1; }
+          head -1 ~/.ssh/deploy_key | grep -q "BEGIN .*PRIVATE KEY" \
+            || { echo "::error::VPS_SSH_KEY does not look like a private key (first line should be -----BEGIN OPENSSH PRIVATE KEY-----)"; fail=1; }
+          echo "known_hosts entries (host and key type only):"
+          awk '{print "  " $1 " " $2}' ~/.ssh/known_hosts
+          grep -q "^$VPS_HOST " ~/.ssh/known_hosts \
+            || { echo "::error::VPS_KNOWN_HOSTS has no line starting with '$VPS_HOST ' (it must be keyed by the IP, not a hostname)"; fail=1; }
+          [ "$fail" = 0 ] || exit 1
+          if ! ssh -o BatchMode=yes -o ConnectTimeout=15 vps 'echo "connected as $(id -un)@$(hostname)"'; then
+            echo "::error::ssh to $VPS_USER@$VPS_HOST failed; verbose trace follows"
+            ssh -vvv -o BatchMode=yes -o ConnectTimeout=15 vps true 2>&1 | grep -iE "debug1: (Connecting|Authentications|Offering|Server accepts|Trying|Host key|read_passphrase)|Permission denied|Host key verification|Connection (timed out|refused|closed)|No route|identity file" | tail -20
+            exit 1
+          fi
+
       - name: Upload release
         run: |
           REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
