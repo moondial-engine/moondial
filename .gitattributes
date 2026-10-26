@@ -1,0 +1,11 @@
+# Scripts and configs run on Linux; never let a Windows checkout turn them into CRLF.
+* text=auto
+*.sh text eol=lf
+*.conf text eol=lf
+*.py text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.txt text eol=lf
+*.md text eol=lf
+*.html text eol=lf
+*.json text eol=lf
