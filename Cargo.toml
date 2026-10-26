@@ -1,6 +1,13 @@
 [workspace]
 resolver = "2"
-members = ["crates/moondial-time", "crates/moondial-log", "crates/moondial-store", "crates/moondial"]
+members = [
+    "crates/moondial-time",
+    "crates/moondial-log",
+    "crates/moondial-store",
+    "crates/moondial-registry",
+    "crates/moondial-driver",
+    "crates/moondial",
+]
 
 [workspace.package]
 edition = "2021"
@@ -13,4 +20,6 @@ rust-version = "1.80"
 serde = { version = "1", features = ["derive"] }
 thiserror = "2"
 proptest = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "macros", "signal", "sync", "time"] }
+axum = { version = "0.8", features = ["json"] }
 serde_json = { version = "1", features = ["float_roundtrip", "preserve_order"] }

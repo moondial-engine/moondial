@@ -1,0 +1,111 @@
+name: Deploy driver (play.agentscanplay.com)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "deploy/server/**"
+      - ".github/workflows/deploy-driver.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-driver
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: musl
+      - name: Test
+        run: cargo test --workspace
+      - name: Build static binary
+        run: |
+          cargo build --release -p moondial-driver --target x86_64-unknown-linux-musl
+          BIN=target/x86_64-unknown-linux-musl/release/moondial-driver
+          file "$BIN"
+          "$BIN" --version
+          mkdir -p out && cp "$BIN" out/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: moondial-driver
+          path: out/moondial-driver
+          retention-days: 7
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GAME_HOST: ${{ secrets.GAME_HOST }}
+      GAME_USER: ${{ vars.VPS_USER || 'starsailor' }}
+      APP_DIR: /srv/moondial
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: moondial-driver
+          path: out
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" | tr -d '\r' > ~/.ssh/deploy_key
+          printf '%s\n' "${{ secrets.GAME_KNOWN_HOSTS }}" | tr -d '\r' | grep -v '^#' > ~/.ssh/known_hosts
+          GAME_HOST=$(printf '%s' "$GAME_HOST" | tr -d '\r\n ')
+          echo "GAME_HOST=$GAME_HOST" >> "$GITHUB_ENV"
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host game
+            HostName $GAME_HOST
+            User $GAME_USER
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+          EOF
+
+      - name: Check secrets and connection
+        run: |
+          fail=0
+          [ -n "$GAME_HOST" ] || { echo "::error::GAME_HOST secret is empty"; fail=1; }
+          head -1 ~/.ssh/deploy_key | grep -q "BEGIN .*PRIVATE KEY" \
+            || { echo "::error::VPS_SSH_KEY does not look like a private key"; fail=1; }
+          grep -q "^$GAME_HOST " ~/.ssh/known_hosts \
+            || { echo "::error::GAME_KNOWN_HOSTS has no line whose first field equals GAME_HOST exactly (ssh-keyscan -t ed25519 $GAME_HOST)"; fail=1; }
+          [ "$fail" = 0 ] || exit 1
+          if ! ssh -o BatchMode=yes -o ConnectTimeout=15 game 'echo "connected as $(id -un)@$(hostname)"'; then
+            echo "::error::ssh to $GAME_USER@$GAME_HOST failed; verbose trace follows"
+            ssh -vvv -o BatchMode=yes -o ConnectTimeout=15 game true 2>&1 | grep -iE "debug1: (Connecting|Authentications|Offering|Server accepts|Host key)|Permission denied|Host key verification|Connection (timed out|refused|closed)|No route" | tail -20
+            exit 1
+          fi
+
+      - name: Upload release
+        run: |
+          REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
+          echo "REL=$REL" >> "$GITHUB_ENV"
+          chmod +x out/moondial-driver
+          ssh game "mkdir -p $APP_DIR/releases/$REL"
+          rsync -az out/moondial-driver deploy/server/ "game:$APP_DIR/releases/$REL/"
+          ssh game "mkdir -p $APP_DIR/releases/$REL/deploy && mv $APP_DIR/releases/$REL/*.sh $APP_DIR/releases/$REL/*.conf $APP_DIR/releases/$REL/deploy/ 2>/dev/null; ls -la $APP_DIR/releases/$REL"
+
+      - name: Switch, restart, health-check
+        run: ssh game "bash -s -- $REL" < deploy/server/remote-deploy.sh
+
+      - name: Public health
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS --max-time 10 "https://play.agentscanplay.com/health" && echo; then exit 0; fi
+            sleep 5
+          done
+          echo "::warning::https://play.agentscanplay.com/health not reachable from GitHub (DNS or certificate not ready?); the server-side check passed"

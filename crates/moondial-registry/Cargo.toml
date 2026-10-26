@@ -1,0 +1,14 @@
+[package]
+name = "moondial-registry"
+version = "0.1.0"
+description = "The Moondial command registry: every action a module exposes is typed, discoverable, and dispatched by the driver."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }

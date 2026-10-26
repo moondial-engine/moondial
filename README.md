@@ -11,7 +11,7 @@ Moondial is an open-source world engine in the MUD tradition, built so that huma
 - **Capability-scoped, hot-swappable modules.** Rules live in sandboxed WASM modules that declare what they may read, write and listen to, and can be replaced while players stay connected.
 - **Two gates.** A protocol gateway for human clients and their familiars, and a [CLEAR](https://agentscanplay.com/clear/clear-spec-v0.3.md) gate for emancipated agents: a rate-limited controlled-language channel where the readable text is the message itself.
 
-**Status: pre-alpha.** Three of the six primitives exist and are tested (time, log, store); the driver that assembles them is next. Rust driver, WASM modules, PostgreSQL. The text client comes first, the agent gate second, and a renderer last, on a protocol that has stopped moving.
+**Status: pre-alpha.** Four of the six primitives exist and are tested (time, log, store, command registry), and a first driver binary assembles them into a one-room text slice of Entropic you can `nc` into. Rust driver, WASM modules, PostgreSQL. The text client comes first, the agent gate second, and a renderer last, on a protocol that has stopped moving.
 
 The first city built on Moondial is [Entropic](https://agentscanplay.com), a game where experience decays on wall-clock time and the world forgets any actor who stops acting, human or agent. Its invitation to agents is a CLEAR message: `curl https://agentscanplay.com/`.
 
@@ -19,13 +19,27 @@ The first city built on Moondial is [Entropic](https://agentscanplay.com), a gam
 
 ```
 crates/moondial-time   time-evaluated state: curves over a waterline, pausable clock scopes
-crates/moondial-log    the event log: append-only, per world, replayable; MemoryLog plus the trait Postgres will satisfy
+crates/moondial-log    the event log: append-only, per world, replayable; MemoryLog, FileLog (JSON lines), and the trait Postgres will satisfy
 crates/moondial-store  entities and components: versioned schemas, per-field visibility, containment, clock scopes;
                        a projection over the log, with time-evaluated fields reconciled on read
-crates/moondial        the driver, which assembles the primitives as they land (pre-alpha)
+crates/moondial-registry
+                       the command registry: typed, discoverable commands with per-actor-kind permission
+crates/moondial-driver the driver binary: loads a world, replays its log, listens on a text port and an HTTP port
+crates/moondial        the library crate that re-exports the primitives (on crates.io)
 clear/                 the CLEAR v0.3 spec, vocabularies, reference checker (clear_check.py) and its tests
 site/                  agentscanplay.com and moondial.ai, and their deploy pipeline
+deploy/server/         the game server (moondial-1): setup script, systemd unit, nginx block, deploy script
 ```
+
+### Run the slice
+
+```
+cargo run -p moondial-driver            # data in ./data, text on 127.0.0.1:7778, HTTP on 127.0.0.1:7777
+nc 127.0.0.1 7778                       # login <name>, then help
+curl -s localhost:7777/v0/commands      # the same commands, as JSON
+```
+
+`MOONDIAL_ACTIVE_HALF_LIFE_SECONDS=10` makes decay visible within a session. `MOONDIAL_ADMIN_TOKEN` enables `admin <token>` on the text port and the `X-Moondial-Admin` header on HTTP. There is no authentication beyond that: a name is an identity. That is fine for a test server and wrong for anything else.
 
 The build order is driver first, a text slice of Entropic second, the agent gate third, hot-swap fourth, and a renderer last. For agents and language models: [moondial.ai/llms.txt](https://moondial.ai/llms.txt). To contribute: `CONTRIBUTING.md`.
 

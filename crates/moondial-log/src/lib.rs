@@ -291,6 +291,109 @@ impl EventLog for MemoryLog {
     }
 }
 
+/// An append-only file of JSON lines, one event per line, per world directory. Durable
+/// enough for a single-process world until the Postgres log lands: every append is
+/// written and flushed before it is acknowledged, and the whole file is replayed on open.
+///
+/// Layout: `<dir>/<world>.events.jsonl`. The in-memory index mirrors [`MemoryLog`].
+#[derive(Debug)]
+pub struct FileLog {
+    dir: std::path::PathBuf,
+    memory: MemoryLog,
+    files: BTreeMap<WorldId, std::fs::File>,
+}
+
+impl FileLog {
+    /// Open (or create) a log directory and load every world file in it.
+    pub fn open(dir: impl Into<std::path::PathBuf>) -> Result<Self, LogError> {
+        use std::io::BufRead;
+        let dir = dir.into();
+        std::fs::create_dir_all(&dir).map_err(|e| LogError::Storage(e.to_string()))?;
+        let mut memory = MemoryLog::new();
+        for entry in std::fs::read_dir(&dir).map_err(|e| LogError::Storage(e.to_string()))? {
+            let entry = entry.map_err(|e| LogError::Storage(e.to_string()))?;
+            let name = entry.file_name().to_string_lossy().to_string();
+            let Some(world) = name.strip_suffix(".events.jsonl") else {
+                continue;
+            };
+            let world = WorldId(world.to_string());
+            let file =
+                std::fs::File::open(entry.path()).map_err(|e| LogError::Storage(e.to_string()))?;
+            for (i, line) in std::io::BufReader::new(file).lines().enumerate() {
+                let line = line.map_err(|e| LogError::Storage(e.to_string()))?;
+                if line.trim().is_empty() {
+                    continue;
+                }
+                let ev: Event = serde_json::from_str(&line)
+                    .map_err(|e| LogError::Storage(format!("{name} line {}: {e}", i + 1)))?;
+                let entries = memory.worlds.entry(world.clone()).or_default();
+                if ev.seq.0 != entries.len() as u64 + 1 {
+                    return Err(LogError::Storage(format!(
+                        "{name} line {}: expected seq {}, found {}",
+                        i + 1,
+                        entries.len() + 1,
+                        ev.seq.0
+                    )));
+                }
+                entries.push(ev);
+            }
+        }
+        Ok(FileLog {
+            dir,
+            memory,
+            files: BTreeMap::new(),
+        })
+    }
+
+    /// The directory the log lives in.
+    pub fn dir(&self) -> &std::path::Path {
+        &self.dir
+    }
+
+    fn file_for(&mut self, world: &WorldId) -> Result<&mut std::fs::File, LogError> {
+        if !self.files.contains_key(world) {
+            let path = self.dir.join(format!("{}.events.jsonl", world.0));
+            let f = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(path)
+                .map_err(|e| LogError::Storage(e.to_string()))?;
+            self.files.insert(world.clone(), f);
+        }
+        Ok(self.files.get_mut(world).expect("just inserted"))
+    }
+}
+
+impl EventLog for FileLog {
+    fn append(&mut self, world: &WorldId, event: NewEvent) -> Result<Event, LogError> {
+        use std::io::Write;
+        // Validate and assign the sequence in memory first, but only keep it if the write succeeds.
+        let ev = self.memory.append(world, event)?;
+        let line = serde_json::to_string(&ev).map_err(|e| LogError::Storage(e.to_string()))?;
+        let res = (|| {
+            let f = self.file_for(world)?;
+            f.write_all(line.as_bytes())
+                .map_err(|e| LogError::Storage(e.to_string()))?;
+            f.write_all(b"\n")
+                .map_err(|e| LogError::Storage(e.to_string()))?;
+            f.sync_data().map_err(|e| LogError::Storage(e.to_string()))
+        })();
+        if let Err(e) = res {
+            self.memory.worlds.get_mut(world).map(|v| v.pop());
+            return Err(e);
+        }
+        Ok(ev)
+    }
+
+    fn read(&self, world: &WorldId, cursor: Cursor, limit: usize) -> Result<Vec<Event>, LogError> {
+        self.memory.read(world, cursor, limit)
+    }
+
+    fn head(&self, world: &WorldId) -> Result<Option<Seq>, LogError> {
+        self.memory.head(world)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -379,6 +482,46 @@ mod tests {
             }
             other => panic!("expected projection failure, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn file_log_survives_reopen_and_rejects_corruption() {
+        let dir = std::env::temp_dir().join(format!("moondial-filelog-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let w = WorldId::from("w");
+        {
+            let mut log = FileLog::open(&dir).unwrap();
+            log.append(&w, ev(1, "a")).unwrap();
+            log.append(&w, ev(2, "b")).unwrap();
+            log.append(&WorldId::from("other"), ev(1, "z")).unwrap();
+        }
+        {
+            let mut log = FileLog::open(&dir).unwrap();
+            assert_eq!(log.head(&w).unwrap(), Some(Seq(2)));
+            assert_eq!(
+                log.read_all(&w, Cursor::START)
+                    .unwrap()
+                    .iter()
+                    .map(|e| e.kind.as_str())
+                    .collect::<Vec<_>>(),
+                vec!["a", "b"]
+            );
+            assert_eq!(log.append(&w, ev(3, "c")).unwrap().seq, Seq(3));
+            assert_eq!(
+                log.append(&w, ev(1, "late")).unwrap_err(),
+                LogError::OutOfOrder {
+                    at: Timestamp(1),
+                    last: Timestamp(3)
+                }
+            );
+        }
+        // A gap in the sequence is corruption, and open refuses it.
+        let path = dir.join("w.events.jsonl");
+        let mut text = std::fs::read_to_string(&path).unwrap();
+        text = text.replace("\"seq\":2", "\"seq\":9");
+        std::fs::write(&path, text).unwrap();
+        assert!(matches!(FileLog::open(&dir), Err(LogError::Storage(_))));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
