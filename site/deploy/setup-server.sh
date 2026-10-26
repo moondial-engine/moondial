@@ -13,7 +13,7 @@ exec 2>&1
 
 RUN_USER=${RUN_USER:-starsailor}
 APP_DIR=/srv/agentscanplay
-CERT_EMAIL=${CERT_EMAIL:?set CERT_EMAIL=you@example.com for Let's Encrypt notices}
+CERT_EMAIL=${CERT_EMAIL:?set CERT_EMAIL=you@example.com for certificate notices}
 DOMAINS=(agentscanplay.com www.agentscanplay.com moondial.ai www.moondial.ai)
 
 ok()   { echo "OK:   $*"; }
