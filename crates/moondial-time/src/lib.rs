@@ -353,41 +353,41 @@ impl CurveFn for Curve {
 }
 
 impl Curve {
-    /// Active time until the value falls from `v0` to `target`, for curves that can be
-    /// inverted. `None` if the curve never reaches it or cannot be inverted. Jobs use this
-    /// to schedule "when does this bottom out" without polling.
+    /// Active time until the value moves from `v0` to `target`, in whichever direction
+    /// the curve goes, for curves that can be inverted. `None` if the curve never reaches
+    /// it (it moves the other way, or approaches it asymptotically) or cannot be
+    /// inverted. Jobs use this to schedule "when does this bottom out" or "when is this
+    /// full" without polling.
     pub fn time_to_reach(&self, v0: f64, target: f64) -> Option<Duration> {
-        if target >= v0 {
+        if target == v0 {
             return Some(Duration::ZERO);
         }
-        if target <= 0.0 && !matches!(self, Curve::Linear { .. } | Curve::Step { .. }) {
-            return None; // asymptotic curves never reach zero
-        }
+        let rising = target > v0;
         let ms = match *self {
             Curve::Constant => return None,
             Curve::Linear { rate_per_ms } => {
-                if rate_per_ms >= 0.0 {
+                if rate_per_ms == 0.0 || (rate_per_ms > 0.0) != rising {
                     return None;
                 }
                 (target - v0) / rate_per_ms
             }
             Curve::Exponential { half_life } => {
-                if half_life.0 <= 0 || v0 <= 0.0 || target <= 0.0 {
-                    return None;
+                if rising || half_life.0 <= 0 || v0 <= 0.0 || target <= 0.0 {
+                    return None; // only falls, and never to zero
                 }
                 half_life.as_ms_f64() * (v0 / target).log2()
             }
             Curve::PowerLaw { scale, exponent } => {
-                if scale.0 <= 0 || exponent <= 0.0 || v0 <= 0.0 || target <= 0.0 {
+                if rising || scale.0 <= 0 || exponent <= 0.0 || v0 <= 0.0 || target <= 0.0 {
                     return None;
                 }
                 scale.as_ms_f64() * ((v0 / target).powf(1.0 / exponent) - 1.0)
             }
             Curve::Step { interval, delta } => {
-                if interval.0 <= 0 || delta >= 0.0 {
+                if interval.0 <= 0 || delta == 0.0 || (delta > 0.0) != rising {
                     return None;
                 }
-                ((v0 - target) / -delta).ceil() * interval.as_ms_f64()
+                ((target - v0) / delta).ceil() * interval.as_ms_f64()
             }
         };
         Some(Duration(ms.ceil() as i64))
@@ -684,6 +684,38 @@ mod tests {
         };
         assert_eq!(s.time_to_reach(10.0, 0.0), Some(Duration(40)));
         assert_eq!(Curve::Constant.time_to_reach(1.0, 0.5), None);
+    }
+
+    #[test]
+    fn time_to_reach_works_for_rising_curves_too() {
+        // Hit points regenerating: a linear rise to a ceiling.
+        let heal = Curve::Linear { rate_per_ms: 0.5 };
+        assert_eq!(heal.time_to_reach(20.0, 30.0), Some(Duration(20)));
+        assert_eq!(heal.time_to_reach(30.0, 20.0), None, "it only rises");
+        assert_eq!(heal.time_to_reach(30.0, 30.0), Some(Duration::ZERO));
+        let s = Curve::Step {
+            interval: Duration(10),
+            delta: 3.0,
+        };
+        assert_eq!(s.time_to_reach(0.0, 10.0), Some(Duration(40)));
+        // Decay never rises.
+        let e = Curve::Exponential {
+            half_life: Duration(100),
+        };
+        assert_eq!(e.time_to_reach(10.0, 20.0), None);
+        let full = TimedValue::new(20.0, Timestamp(0), heal).with_bounds(Bounds {
+            floor: 0.0,
+            ceiling: Some(30.0),
+        });
+        assert_eq!(
+            full.active_time_to_reach(30.0, Timestamp(0), &[]),
+            Some(Duration(20))
+        );
+        assert_eq!(
+            full.active_time_to_reach(30.0, Timestamp(20), &[]),
+            Some(Duration::ZERO),
+            "already full"
+        );
     }
 
     #[test]

@@ -1,14 +1,15 @@
 //! The two listeners of the pre-alpha driver.
 //!
 //! - A line protocol on TCP, for a terminal (`nc`, `telnet`, or the text client to come).
-//!   `login <name>` arrives as a citizen; every other line is `<verb> [args...]`.
+//!   `login <name> <passphrase>` arrives as a citizen; every other line is `<verb> [args...]`.
 //! - JSON over HTTP, for tools and tests: `/health`, `/v0/commands`, `/v0/command`,
 //!   `/v0/view/{id}`, `/v0/log`.
 //!
 //! Both go through the same registry and the same `World::call`, so a command means the
-//! same thing on either. There is no authentication in the slice beyond an admin token;
-//! a name is an identity. That is fine for a test server and wrong for anything else,
-//! and the world card says so.
+//! same thing on either. Identity is a name and a passphrase set on first login; there
+//! are no sessions beyond the connection, and the HTTP side sends the passphrase with
+//! every call. That is fine for a test server and wrong for anything else, and the world
+//! card says so.
 
 use crate::entropic;
 use crate::world::World;
@@ -45,6 +46,20 @@ fn split_args(rest: &str) -> Value {
             .map(|s| Value::String(s.to_string()))
             .collect(),
     )
+}
+
+fn valid_name(name: &str) -> Result<(), String> {
+    if name.is_empty()
+        || name.len() > 32
+        || !name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
+        return Err(
+            "login <name> <passphrase>: name is letters, digits, - and _ only, up to 32.".into(),
+        );
+    }
+    Ok(())
 }
 
 fn help_text(world: &World, kind: ActorKind) -> String {
@@ -91,18 +106,21 @@ fn run_line(
         .map_err(|_| "world lock poisoned".to_string())?;
     match verb {
         "login" | "arrive" => {
-            let name = rest.split_whitespace().next().unwrap_or("");
-            if name.is_empty()
-                || name.len() > 32
-                || !name
-                    .chars()
-                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
-            {
-                return Err("login <name>: letters, digits, - and _ only, up to 32.".into());
-            }
-            entropic::ensure_citizen(&mut world, name, "terminal")?;
+            let mut parts = rest.splitn(2, char::is_whitespace);
+            let name = parts.next().unwrap_or("").trim();
+            let passphrase = parts.next().unwrap_or("").trim();
+            valid_name(name)?;
+            let fresh = !world
+                .store
+                .entities()
+                .any(|e| e.kind == "citizen" && e.owner.as_deref() == Some(name));
+            entropic::login(&mut world, name, "terminal", passphrase).map_err(|e| e.to_string())?;
             *actor = Some((name.to_string(), ActorKind::Citizen));
-            Ok(format!("Welcome, {name}. You are at the Gate. Type help."))
+            Ok(if fresh {
+                format!("Welcome, {name}. Your passphrase is set; you will need it next time. You are at the Gate. Type help.")
+            } else {
+                format!("Welcome back, {name}. Type look.")
+            })
         }
         "admin" => {
             let (Some((name, _)), true) = (actor.clone(), shared.is_admin(Some(rest))) else {
@@ -115,7 +133,7 @@ fn run_line(
             let kind = actor.as_ref().map(|a| a.1).unwrap_or(ActorKind::Citizen);
             Ok(if actor.is_none() {
                 format!(
-                    "Not logged in. Type: login <name>\n{}",
+                    "Not logged in. Type: login <name> <passphrase>\n{}",
                     help_text(&world, kind)
                 )
             } else {
@@ -124,7 +142,7 @@ fn run_line(
         }
         _ => {
             let Some((name, kind)) = actor.clone() else {
-                return Err("Not logged in. Type: login <name>".into());
+                return Err("Not logged in. Type: login <name> <passphrase>".into());
             };
             let ctx = CallContext { actor: name, kind };
             match world.call(&ctx, verb, &split_args(rest)) {
@@ -142,7 +160,7 @@ async fn handle_tcp(shared: Shared, stream: TcpStream) {
     let (r, mut w) = stream.into_split();
     let mut lines = BufReader::new(r).lines();
     let _ = w
-        .write_all(b"Entropic on Moondial (pre-alpha). Type: login <name>\n> ")
+        .write_all(b"Entropic on Moondial (pre-alpha). Type: login <name> <passphrase>\n> ")
         .await;
     let mut actor: Option<(String, ActorKind)> = None;
     while let Ok(Some(line)) = lines.next_line().await {
@@ -186,6 +204,8 @@ pub async fn serve_tcp(shared: Shared, addr: String) {
 #[derive(Deserialize)]
 struct CommandBody {
     actor: String,
+    #[serde(default)]
+    passphrase: String,
     command: String,
     #[serde(default)]
     args: Value,
@@ -236,14 +256,16 @@ async fn command(
         ActorKind::Citizen
     };
     let mut w = lock(&s)?;
-    if body.actor.is_empty() || body.actor.len() > 32 {
-        return Err(err_json(
-            StatusCode::BAD_REQUEST,
-            "actor must be 1 to 32 characters",
-        ));
-    }
-    entropic::ensure_citizen(&mut w, &body.actor, "http")
-        .map_err(|e| err_json(StatusCode::INTERNAL_SERVER_ERROR, e))?;
+    valid_name(&body.actor).map_err(|e| err_json(StatusCode::BAD_REQUEST, e))?;
+    entropic::login(&mut w, &body.actor, "http", &body.passphrase).map_err(|e| match e {
+        entropic::LoginError::Internal(_) => {
+            err_json(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        }
+        entropic::LoginError::WrongPassphrase { .. } => {
+            err_json(StatusCode::UNAUTHORIZED, e.to_string())
+        }
+        _ => err_json(StatusCode::BAD_REQUEST, e.to_string()),
+    })?;
     let ctx = CallContext {
         actor: body.actor.clone(),
         kind,

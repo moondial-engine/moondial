@@ -94,10 +94,15 @@ jobs:
         run: |
           REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
           echo "REL=$REL" >> "$GITHUB_ENV"
-          chmod +x out/moondial-driver
+          # Release layout: the binary, deploy/ (server scripts + nginx snippets), analytics/.
+          mkdir -p stage/deploy stage/analytics
+          install -m 755 out/moondial-driver stage/moondial-driver
+          cp deploy/server/* stage/deploy/
+          cp -r site/deploy/nginx-snippets stage/deploy/
+          cp site/analytics/*.py stage/analytics/
           ssh game "mkdir -p $APP_DIR/releases/$REL"
-          rsync -az out/moondial-driver deploy/server/ "game:$APP_DIR/releases/$REL/"
-          ssh game "mkdir -p $APP_DIR/releases/$REL/deploy && mv $APP_DIR/releases/$REL/*.sh $APP_DIR/releases/$REL/*.conf $APP_DIR/releases/$REL/deploy/ 2>/dev/null; ls -la $APP_DIR/releases/$REL"
+          rsync -az stage/ "game:$APP_DIR/releases/$REL/"
+          ssh game "ls -la $APP_DIR/releases/$REL"
 
       - name: Switch, restart, health-check
         run: ssh game "bash -s -- $REL" < deploy/server/remote-deploy.sh

@@ -23,7 +23,17 @@ settings:
 
 # The command registry, as verbs. A DO whose actor is the sender must use one of these
 # (CL-I5, error). A DO addressed to another actor is checked at warning severity.
+# The driver's registry is the authority; this list is the design's full set. The verbs
+# the pre-alpha slice implements today: look, travel, attack, retreat, rest, chunks,
+# palace, shelve, reminisce, pto, resume, time, log.
 approved_verbs:
+  # the window, the palace, and the clocks
+  - chunks
+  - palace
+  - pto
+  - resume
+  - time
+  - log
   # movement and world
   - go
   - move

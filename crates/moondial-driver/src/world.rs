@@ -28,6 +28,8 @@ pub struct World {
     pub started: Timestamp,
     /// Set by tests to freeze the clock; `None` reads the system clock.
     pub fixed_now: Option<Timestamp>,
+    /// Dice state. Outcomes are recorded as events, so replay never rolls again.
+    rng: u64,
 }
 
 impl World {
@@ -37,13 +39,15 @@ impl World {
             LogBacking::Memory => Box::new(MemoryLog::new()),
             LogBacking::File(dir) => Box::new(FileLog::open(dir).map_err(|e| e.to_string())?),
         };
+        let started = now_ms();
         let mut world = World {
             id,
             store,
             log,
             registry: Registry::new(),
-            started: now_ms(),
+            started,
             fixed_now: None,
+            rng: started.0 as u64 | 1,
         };
         let head = world.log.head(&world.id).map_err(|e| e.to_string())?;
         if head.is_some() {
@@ -54,6 +58,26 @@ impl World {
             world.store = fresh;
         }
         Ok(world)
+    }
+
+    /// Seed the dice, for tests that want the same fight twice.
+    #[cfg(test)]
+    pub fn seed(&mut self, seed: u64) {
+        self.rng = seed | 1;
+    }
+
+    /// A roll in `0..n` (splitmix64; not for anything that needs to be unpredictable).
+    pub fn roll(&mut self, n: u32) -> u32 {
+        self.rng = self.rng.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        let mut z = self.rng;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^= z >> 31;
+        if n == 0 {
+            0
+        } else {
+            (z % n as u64) as u32
+        }
     }
 
     /// The current moment: the system clock, or the fixed one in tests.

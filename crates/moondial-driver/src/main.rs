@@ -48,8 +48,8 @@ fn main() {
             std::process::exit(1);
         }
     };
-    if let Err(e) = entropic::ensure_room(&mut world) {
-        eprintln!("cannot create the room: {e}");
+    if let Err(e) = entropic::ensure_world(&mut world) {
+        eprintln!("cannot build the rooms: {e}");
         std::process::exit(1);
     }
     entropic::register(&mut world, entropic::Curves::from_env());

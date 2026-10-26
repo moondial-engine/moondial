@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# One-time analytics setup on the VPS. Run as root, after setup-server.sh and one deploy.
+# One-time analytics setup on a server. Run as root, after the server setup and one deploy.
 # From Windows PowerShell, in site/:
 #   cmd /c 'ssh root@5.78.104.64 "tr -d \"\r\" | ADMIN_USER=david ADMIN_PASS=... bash -s" < deploy\setup-analytics.sh > setup-analytics.log'
+# On the game server (moondial-1), the same script with its own paths and site:
+#   cmd /c 'ssh root@5.78.210.32 "tr -d \"\r\" | APP_DIR=/srv/moondial SITES=play SERVER_NAME_RE=play.agentscanplay.com ADMIN_USER=david ADMIN_PASS=... bash -s" < deploy\setup-analytics.sh > setup-analytics-play.log'
 #
 # - installs the JSON log format (http context) and makes both public server blocks
 #   include the analytics snippet (access_log + the /_admin/ page)
@@ -14,7 +16,11 @@ set -uo pipefail
 exec 2>&1
 
 RUN_USER=${RUN_USER:-starsailor}
-APP_DIR=/srv/agentscanplay
+APP_DIR=${APP_DIR:-/srv/agentscanplay}
+# Which /etc/nginx/sites-available/<site> files get the include, and which server_name
+# lines inside them (the apex blocks; www blocks are redirects and get nothing).
+SITES=${SITES:-"agentscanplay moondial"}
+SERVER_NAME_RE=${SERVER_NAME_RE:-'(agentscanplay\.com|moondial\.ai)'}
 STORE=$APP_DIR/shared/analytics
 ADMIN_USER=${ADMIN_USER:?set ADMIN_USER}
 ADMIN_PASS=${ADMIN_PASS:?set ADMIN_PASS}
@@ -28,15 +34,16 @@ REL=$APP_DIR/current
 echo "######## nginx log format and snippet"
 install -m 644 "$REL/deploy/nginx-snippets/analytics-format.conf" /etc/nginx/conf.d/analytics-format.conf
 install -d /etc/nginx/snippets
-install -m 644 "$REL/deploy/nginx-snippets/analytics.conf" /etc/nginx/snippets/analytics.conf
-for site in agentscanplay moondial; do
+sed "s|/srv/agentscanplay|$APP_DIR|g" "$REL/deploy/nginx-snippets/analytics.conf" > /etc/nginx/snippets/analytics.conf
+chmod 644 /etc/nginx/snippets/analytics.conf
+for site in $SITES; do
   f=/etc/nginx/sites-available/$site
   [ -f "$f" ] || { fail "$f missing"; exit 1; }
   if grep -q "snippets/analytics.conf" "$f"; then
     ok "$site already includes the analytics snippet"
   else
     # Insert after the apex server_name line(s) only (the www blocks are redirects).
-    sed -i -E "/^\s*server_name (agentscanplay\.com|moondial\.ai);/a\    include snippets/analytics.conf;" "$f"
+    sed -i -E "/^\s*server_name $SERVER_NAME_RE;/a\    include snippets/analytics.conf;" "$f"
     ok "added include to $site ($(grep -c 'snippets/analytics.conf' "$f") blocks)"
   fi
 done
@@ -82,6 +89,7 @@ Description=Collect nginx analytics log into the store
 [Service]
 Type=oneshot
 User=$RUN_USER
+Environment=ANALYTICS_DB=$STORE/analytics.db
 ExecStart=/usr/bin/python3 $APP_DIR/current/analytics/collect.py
 UNIT
 cat > /etc/systemd/system/analytics-collect.timer <<'UNIT'
@@ -99,6 +107,8 @@ Description=Render the analytics admin page
 [Service]
 Type=oneshot
 User=$RUN_USER
+Environment=ANALYTICS_DB=$STORE/analytics.db
+Environment=ANALYTICS_HTML=$STORE/html
 ExecStart=/usr/bin/python3 $APP_DIR/current/analytics/render.py --days 30 --html
 UNIT
 cat > /etc/systemd/system/analytics-render.timer <<'UNIT'
@@ -116,5 +126,5 @@ systemctl start analytics-collect.service && systemctl start analytics-render.se
 systemctl list-timers analytics-* --no-pager | head -5
 
 echo; echo "######## Done"
-echo "Admin page: https://agentscanplay.com/_admin/  (user $ADMIN_USER)"
-echo "Text report any time: sudo -u $RUN_USER python3 $APP_DIR/current/analytics/render.py --days 7"
+echo "Admin page: https://<this server's site>/_admin/  (user $ADMIN_USER)"
+echo "Text report any time: sudo -u $RUN_USER ANALYTICS_DB=$STORE/analytics.db python3 $APP_DIR/current/analytics/render.py --days 7"

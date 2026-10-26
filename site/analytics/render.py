@@ -23,7 +23,9 @@ DB = os.environ.get("ANALYTICS_DB", "/srv/agentscanplay/shared/analytics/analyti
 HTML_DIR = os.environ.get("ANALYTICS_HTML", "/srv/agentscanplay/shared/analytics/html")
 
 KEY_PATHS = ["/", "/invitation.txt", "/llms.txt", "/.well-known/world-card.json", "/clear/clear-spec-v0.3.md",
-             "/clear/entropic.yaml", "/clear/clear_check.py", "/robots.txt"]
+             "/clear/entropic.yaml", "/clear/clear_check.py", "/robots.txt",
+             # the game server
+             "/health", "/v0/commands", "/v0/command", "/v0/log"]
 
 
 def q(db, sql, args=()):
