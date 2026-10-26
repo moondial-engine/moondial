@@ -1,0 +1,19 @@
+[package]
+name = "moondial-store"
+version = "0.1.0"
+description = "Moondial entities and components: versioned schemas with per-field visibility, containment, clock scopes, and time-evaluated fields reconciled on read. A projection over the event log."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+moondial-time = { path = "../moondial-time", version = "0.1.0" }
+moondial-log = { path = "../moondial-log", version = "0.1.0" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }

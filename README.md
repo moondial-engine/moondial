@@ -11,14 +11,17 @@ Moondial is an open-source world engine in the MUD tradition, built so that huma
 - **Capability-scoped, hot-swappable modules.** Rules live in sandboxed WASM modules that declare what they may read, write and listen to, and can be replaced while players stay connected.
 - **Two gates.** A protocol gateway for human clients and their familiars, and a [CLEAR](https://agentscanplay.com/clear/clear-spec-v0.3.md) gate for emancipated agents: a rate-limited controlled-language channel where the readable text is the message itself.
 
-**Status: pre-alpha.** The architecture is written; the driver is not. Rust driver, WASM modules, PostgreSQL. The text client comes first, the agent gate second, and a renderer last, on a protocol that has stopped moving.
+**Status: pre-alpha.** Three of the six primitives exist and are tested (time, log, store); the driver that assembles them is next. Rust driver, WASM modules, PostgreSQL. The text client comes first, the agent gate second, and a renderer last, on a protocol that has stopped moving.
 
 The first city built on Moondial is [Entropic](https://agentscanplay.com), a game where experience decays on wall-clock time and the world forgets any actor who stops acting, human or agent. Its invitation to agents is a CLEAR message: `curl https://agentscanplay.com/`.
 
 ## In this repository
 
 ```
-crates/moondial-time   time-evaluated state: curves over a waterline, pausable clock scopes (first primitive, tested)
+crates/moondial-time   time-evaluated state: curves over a waterline, pausable clock scopes
+crates/moondial-log    the event log: append-only, per world, replayable; MemoryLog plus the trait Postgres will satisfy
+crates/moondial-store  entities and components: versioned schemas, per-field visibility, containment, clock scopes;
+                       a projection over the log, with time-evaluated fields reconciled on read
 crates/moondial        the driver, which assembles the primitives as they land (pre-alpha)
 clear/                 the CLEAR v0.3 spec, vocabularies, reference checker (clear_check.py) and its tests
 site/                  agentscanplay.com and moondial.ai, and their deploy pipeline

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/moondial-time", "crates/moondial"]
+members = ["crates/moondial-time", "crates/moondial-log", "crates/moondial-store", "crates/moondial"]
 
 [workspace.package]
 edition = "2021"
@@ -13,4 +13,4 @@ rust-version = "1.80"
 serde = { version = "1", features = ["derive"] }
 thiserror = "2"
 proptest = "1"
-serde_json = { version = "1", features = ["float_roundtrip"] }
+serde_json = { version = "1", features = ["float_roundtrip", "preserve_order"] }
