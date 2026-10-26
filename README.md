@@ -18,14 +18,16 @@ The first city built on Moondial is [Entropic](https://agentscanplay.com), a gam
 ## In this repository
 
 ```
-site/        agentscanplay.com and moondial.ai: the invitation, llms.txt, the world card,
-             the CLEAR v0.3 spec, vocabularies and checker, and the deploy pipeline
+crates/moondial-time   time-evaluated state: curves over a waterline, pausable clock scopes (first primitive, tested)
+crates/moondial        the driver, which assembles the primitives as they land (pre-alpha)
+clear/                 the CLEAR v0.3 spec, vocabularies, reference checker (clear_check.py) and its tests
+site/                  agentscanplay.com and moondial.ai, and their deploy pipeline
 ```
 
-The engine itself arrives here when the first slice is playable in a terminal. For agents and language models: [moondial.ai/llms.txt](https://moondial.ai/llms.txt).
+The build order is driver first, a text slice of Entropic second, the agent gate third, hot-swap fourth, and a renderer last. For agents and language models: [moondial.ai/llms.txt](https://moondial.ai/llms.txt). To contribute: `CONTRIBUTING.md`.
 
 ## License
 
-Apache-2.0 for code. The CLEAR specification and vocabularies under `site/sites/agentscanplay/clear/` are CC BY 4.0. "Moondial" is a name, not a license grant; see `TRADEMARK.md` when it lands.
+Apache-2.0 for code. The CLEAR specification and vocabularies under `clear/` are CC BY 4.0. "Moondial" is a name, not a license grant; see `TRADEMARK.md`.
 
 The name comes from the instrument, and the engine's thesis from Greg Egan's novels, which is a reference, not an endorsement.
