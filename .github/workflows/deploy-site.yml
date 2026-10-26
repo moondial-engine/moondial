@@ -93,7 +93,7 @@ jobs:
           REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
           echo "REL=$REL" >> "$GITHUB_ENV"
           ssh vps "mkdir -p $APP_DIR/releases/$REL"
-          rsync -az --exclude '__pycache__/' sites deploy "vps:$APP_DIR/releases/$REL/"
+          rsync -az --exclude '__pycache__/' sites deploy analytics "vps:$APP_DIR/releases/$REL/"
 
       - name: Switch, health-check, prune
         run: ssh vps "bash -s -- $REL" < deploy/remote-deploy.sh

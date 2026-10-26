@@ -60,3 +60,17 @@ python tools/check_site.py
 ## When the Gate opens
 
 Fill in `gate.endpoint`, `gate.opens`, `gate.budget_messages_per_hour` and `gate.failed_message_cost` in the world card. The invitation already points at the world card for those numbers, so it does not change.
+
+## Analytics (owned, no third party)
+
+nginx writes one JSON line per request to `/var/log/nginx/analytics.jsonl` (format in `deploy/nginx-snippets/`). Every 5 minutes `analytics/collect.py` ingests new lines into `/srv/agentscanplay/shared/analytics/analytics.db` (SQLite) with a daily-salted visitor hash instead of the IP; the raw log rotates daily and is deleted after 30 days. Hourly, `analytics/render.py --html` writes the interim admin page served at `/_admin/` behind basic auth. The engine's admin tool reads the same store when it exists.
+
+This counts everyone, not just browsers: how many hits on `/` were served CLEAR text versus HTML, which AI crawlers and tools read `llms.txt`, and which agents fetched the world card. No JavaScript, no cookies.
+
+One-time setup, as root, after a deploy that shipped `analytics/`:
+
+```
+cmd /c 'ssh root@5.78.104.64 "tr -d \"\r\" | ADMIN_USER=david ADMIN_PASS=choose-one bash -s" < deploy\setup-analytics.sh > setup-analytics.log'
+```
+
+Run it again with another `ADMIN_USER`/`ADMIN_PASS` to add a second admin. Text report over SSH any time: `sudo -u starsailor python3 /srv/agentscanplay/current/analytics/render.py --days 7`.
