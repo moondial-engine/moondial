@@ -1,0 +1,17 @@
+[package]
+name = "moondial-time"
+version = "0.1.0"
+description = "Time-evaluated state for the Moondial engine: values that are curves over a waterline, computed when read, never ticked, with pausable clock scopes."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+serde_json = { workspace = true }

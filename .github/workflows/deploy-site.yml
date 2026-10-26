@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "site/**"
+      - "clear/**"
       - ".github/workflows/deploy-site.yml"
   workflow_dispatch:
 
@@ -29,11 +30,15 @@ jobs:
           python-version: "3.12"
       - run: pip install --quiet pyyaml
       - name: Invitation passes CLEAR v0.3
-        run: python tools/clear_check.py sites/agentscanplay/invitation.txt --vocab sites/agentscanplay/clear/entropic.yaml
+        run: python ../clear/clear_check.py sites/agentscanplay/invitation.txt --vocab ../clear/vocab/entropic.yaml
       - name: Site is consistent
         run: python tools/check_site.py
-      - name: Published checker matches the tool
-        run: cmp tools/clear_check.py sites/agentscanplay/clear/clear_check.py
+      - name: Published CLEAR files match the reference under clear/
+        run: |
+          cmp ../clear/clear_check.py sites/agentscanplay/clear/clear_check.py
+          cmp ../clear/vocab/base.yaml sites/agentscanplay/clear/base.yaml
+          cmp ../clear/vocab/entropic.yaml sites/agentscanplay/clear/entropic.yaml
+          cmp ../clear/clear-spec-v0.3.md sites/agentscanplay/clear/clear-spec-v0.3.md
 
   deploy:
     needs: gate

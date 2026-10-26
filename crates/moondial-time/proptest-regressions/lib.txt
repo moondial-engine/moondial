@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 6a6ac73b7cf86cb853f3959b1f6f5d92cb76392dec4d4a38bebd0e8f4152fce5 # shrinks to log = [], v0 = 0.0, c = Constant
+cc 4a32f8689584b778d19cf71d42ba16aeac9f45a0dde4a9d42e1d28f0708b19eb # shrinks to log = [Recurve { at: Timestamp(1700000000001), curve: PowerLaw { scale: Duration(1000), exponent: 1.5788214329768941 } }], v0 = 0.0, c = Constant

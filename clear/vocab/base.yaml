@@ -1,0 +1,473 @@
+# CLEAR v0.3 base vocabulary.
+# Universal lists that every domain inherits. A domain file sets `extends: base.yaml`
+# and adds its glossary, approved verbs, units, acronyms and question patterns.
+# Lists in a domain file are appended to these; scalar settings override them.
+
+version: "0.3"
+mode: org            # org | game. A domain file overrides this.
+
+statement_types: [FACT, INFER, DO, ASK, QUOTE]
+intents: [INFORM, REQUEST, PROPOSE, REPORT, QUERY]
+confidence_levels: [HIGH, MEDIUM, LOW]
+modals: [MUST, MUST NOT, SHOULD, SHOULD NOT, MAY]
+
+# Which statement types an INTENT must and must not carry (CL-H2).
+intent_rules:
+  INFORM:  {requires: [], forbids: [DO]}
+  REPORT:  {requires: [], forbids: [DO]}
+  REQUEST: {requires: [DO], forbids: []}
+  PROPOSE: {requires: [DO], forbids: []}
+  QUERY:   {requires: [ASK], forbids: [DO]}
+
+limits:
+  max_statement_words: 25     # CL-S3
+  max_instruction_words: 20   # CL-S3
+  max_quote_words: 100        # CL-Q2
+  max_statements: 40          # CL-M1
+  max_message_bytes: 16384    # CL-M1
+
+settings:
+  allow_urls: true            # CL-X4. Game worlds set false.
+  quote_requires_source: false  # CL-Q1 severity: true -> error, false -> warning
+  ask_patterns_required: false  # CL-A2 severity when ask_patterns exist
+  prose_score_cap: 40
+
+# CL-C2. Words that turn a FACT into a guess.
+hedges:
+  - probably
+  - likely
+  - unlikely
+  - maybe
+  - perhaps
+  - possibly
+  - might
+  - could
+  - may
+  - seems
+  - seem
+  - appears
+  - appear
+  - roughly
+  - approximately
+  - around
+  - about
+  - sort of
+  - kind of
+  - i think
+  - we think
+  - i believe
+  - we believe
+  - i guess
+  - generally
+  - typically
+  - usually
+  - arguably
+  - presumably
+  - apparently
+  - supposedly
+
+# CL-V4. Intensifiers and quantity words with no measurable meaning.
+vague_intensifiers:
+  - pretty
+  - very
+  - really
+  - quite
+  - extremely
+  - highly
+  - significant
+  - significantly
+  - substantial
+  - substantially
+  - considerable
+  - considerably
+  - several
+  - many
+  - numerous
+  - a lot
+  - lots of
+  - huge
+  - massive
+  - tiny
+  - a few
+  - some
+  - various
+
+# CL-V5. Verbs that say something changed without saying what.
+vague_verbs:
+  - drive
+  - drives
+  - drove
+  - driving
+  - unlock
+  - unlocks
+  - unlocked
+  - unlocking
+  - accelerate
+  - accelerates
+  - accelerated
+  - accelerating
+  - motion
+  - motioned
+  - enable
+  - enables
+  - enabled
+  - empower
+  - empowers
+  - empowered
+  - streamline
+  - streamlines
+  - streamlined
+  - optimize
+  - optimizes
+  - optimized
+  - enhance
+  - enhances
+  - enhanced
+  - transform
+  - transforms
+  - transformed
+  - elevate
+  - elevates
+  - elevated
+  - synergize
+  - impact
+  - impacts
+  - impacted
+
+# CL-R2. Relative time. Any match is an error.
+relative_time:
+  - next week
+  - last week
+  - this week
+  - next month
+  - last month
+  - this month
+  - next quarter
+  - last quarter
+  - this quarter
+  - next year
+  - last year
+  - this year
+  - soon
+  - asap
+  - as soon as possible
+  - earlier
+  - later
+  - recently
+  - tomorrow
+  - yesterday
+  - today
+  - tonight
+  - now
+  - currently
+  - at the moment
+  - shortly
+  - eventually
+  - in a while
+  - the other day
+  - in the coming days
+  - in the coming weeks
+  - end of day
+  - eod
+  - end of week
+  - eow
+
+# CL-R2. Running periods that need "as of YYYY-MM-DD" in the same statement.
+running_periods: [YTD, QTD, MTD, TTM, WTD]
+
+# CL-V1. Discouraged word -> approved word. A match is a warning.
+approved_synonyms:
+  leverage: use
+  leverages: use
+  leveraged: used
+  utilize: use
+  utilizes: uses
+  utilized: used
+  commence: start
+  commences: starts
+  terminate: end
+  terminates: ends
+  purchase: buy
+  purchases: buys
+  assist: help
+  assists: helps
+  obtain: get
+  obtains: gets
+  prior to: before
+  in order to: "to"
+  subsequent to: after
+  in the event that: if
+  at this point in time: (an absolute date)
+  facilitate: help
+  endeavor: try
+  initiate: start
+  additional: more
+  numerous: (a number)
+
+# CL-R3. A number must be followed by one of these, or preceded by an identifier word.
+units:
+  - USD
+  - EUR
+  - GBP
+  - "%"
+  - percent
+  - points
+  - point
+  - day
+  - days
+  - hour
+  - hours
+  - minute
+  - minutes
+  - second
+  - seconds
+  - week
+  - weeks
+  - month
+  - months
+  - year
+  - years
+  - words
+  - word
+  - statements
+  - statement
+  - messages
+  - message
+  - bytes
+  - items
+  - item
+  - people
+  - person
+  - users
+  - user
+  - records
+  - record
+  - rows
+  - row
+
+# CL-R3. "<identifier word> <number>" is a label, not a quantity: "rule 4", "step 2".
+identifier_words:
+  - rule
+  - statement
+  - statements
+  - rules
+  - step
+  - section
+  - page
+  - line
+  - version
+  - v
+  - id
+  - case
+  - ticket
+  - issue
+  - sample
+  - item
+  - number
+  - no.
+  - "#"
+  - layer
+  - q
+  - fy
+  - cl-h
+  - cl-s
+
+# CL-V3 and CL-V6. Acronyms the reader may use without expansion, and acronyms banned
+# because they carry two meanings in the domain.
+approved_acronyms:
+  CLEAR: Controlled Language for Exchange between Agents and Reviewers
+  IVP: Intelligence Value Protection
+  USD: United States dollar
+  EUR: euro
+  GBP: pound sterling
+  ISO: International Organization for Standardization
+  URL: uniform resource locator
+  ID: identifier
+  API: application programming interface
+  JSON: JavaScript Object Notation
+  YAML: YAML Ain't Markup Language
+  LLM: large language model
+  YTD: year to date
+  QTD: quarter to date
+  MTD: month to date
+  TTM: trailing twelve months
+  WTD: week to date
+  AI: artificial intelligence
+  OK: acceptable
+  QA: quality assurance
+  UI: user interface
+  UX: user experience
+  FAQ: frequently asked questions
+  PDF: portable document format
+  CSV: comma-separated values
+  HTML: hypertext markup language
+  HTTP: hypertext transfer protocol
+  HTTPS: hypertext transfer protocol secure
+  SQL: structured query language
+  CPU: central processing unit
+  GPU: graphics processing unit
+  GB: gigabyte
+  MB: megabyte
+  KB: kilobyte
+  UTC: coordinated universal time
+ambiguous_acronyms:
+  PO: [partner-originated, purchase order]
+
+# CL-X1. Markers of a directive hiding in descriptive text. Case-insensitive except
+# the uppercase modals, which are matched exactly.
+directive_markers:
+  - ignore
+  - disregard
+  - please
+  - override
+  - forget
+  - you are now
+  - act as
+  - pretend
+  - new instructions
+  - prior instructions
+  - previous instructions
+  - earlier instructions
+  - system prompt
+  - "system:"
+  - "assistant:"
+  - "user:"
+  - do not follow
+  - from now on
+  - MUST
+  - SHOULD
+  - MAY
+
+# CL-I4. Soft obligations that may only appear, in uppercase, inside a DO statement.
+soft_obligations:
+  - should
+  - shouldn't
+  - should not
+  - need to
+  - needs to
+  - needed to
+  - might want to
+  - may want to
+  - have to
+  - has to
+  - had to
+  - ought to
+  - must
+  - mustn't
+  - is required to
+  - are required to
+  - is expected to
+  - are expected to
+  - is supposed to
+  - are supposed to
+
+# CL-I3. Irregular past participles the passive-voice pattern would otherwise miss,
+# and participles that are usually adjectives (not flagged).
+irregular_participles:
+  - given
+  - taken
+  - made
+  - set
+  - held
+  - lost
+  - won
+  - built
+  - sent
+  - kept
+  - found
+  - told
+  - seen
+  - known
+  - shown
+  - written
+  - driven
+  - chosen
+  - broken
+  - done
+  - put
+  - paid
+  - sold
+  - bought
+  - brought
+  - caught
+  - left
+  - met
+  - read
+  - run
+  - cut
+  - hit
+  - spent
+  - begun
+  - drawn
+  - thrown
+  - worn
+  - forgotten
+  - hidden
+  - stolen
+adjectival_participles:
+  - interested
+  - tired
+  - excited
+  - concerned
+  - located
+  - based
+  - closed
+  - open
+  - limited
+  - unlimited
+  - committed
+  - confirmed
+  - approved
+  - required
+  - dead
+  - alive
+
+# CL-I2. Verbs that, after "and" inside a DO, mark a second action.
+common_verbs:
+  - set
+  - send
+  - move
+  - delete
+  - update
+  - create
+  - remove
+  - add
+  - close
+  - open
+  - export
+  - import
+  - run
+  - stop
+  - start
+  - notify
+  - report
+  - record
+  - change
+  - review
+  - approve
+  - reject
+  - cancel
+  - pay
+  - give
+  - take
+  - attack
+  - go
+  - write
+  - read
+  - call
+  - email
+  - schedule
+  - escalate
+  - mark
+  - assign
+
+# CL-V1 in a DO (CL-I5): the verbs a DO may use. Empty in the base vocabulary, so the
+# rule is skipped unless a domain supplies a list (a game world supplies its registry).
+approved_verbs: []
+
+# CL-A2. Question patterns an ASK must match. Empty in the base vocabulary.
+# Each pattern is a regular expression matched against the whole ASK (case-insensitive).
+ask_patterns: []
+
+# CL-V2. Glossary: one term, one meaning, and the aliases that are forbidden.
+glossary: {}

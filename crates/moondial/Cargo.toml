@@ -1,0 +1,13 @@
+[package]
+name = "moondial"
+version = "0.0.2"
+description = "Moondial: an open-source world engine where every value is computed from the clock when it is read. The driver crate; pre-alpha."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+readme = "../../README.md"
+
+[dependencies]
+moondial-time = { path = "../moondial-time", version = "0.1.0" }

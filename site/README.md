@@ -11,10 +11,10 @@ sites/agentscanplay/        agentscanplay.com
   llms.txt                  for language models and agents
   robots.txt, sitemap.txt
   .well-known/world-card.json   gate endpoint, budget, opening date (null until decided)
-  clear/                    the spec, the vocabularies and the checker, published
+  clear/                    published copies of the spec, vocabularies and checker (source: ../clear/, CI checks they match)
 sites/moondial/             moondial.ai: index.html, llms.txt, robots.txt
 deploy/                     nginx server blocks, one-time setup-server.sh, remote-deploy.sh
-tools/                      clear_check.py (the source of the published copy) and check_site.py
+tools/                      check_site.py (invitation/page consistency, world card, link check)
 ../.github/workflows/deploy-site.yml
 ```
 
@@ -53,7 +53,7 @@ Change `sites/agentscanplay/invitation.txt` and the matching block in `index.htm
 ```
 cd site
 pip install pyyaml
-python tools/clear_check.py sites/agentscanplay/invitation.txt --vocab sites/agentscanplay/clear/entropic.yaml
+python ../clear/clear_check.py sites/agentscanplay/invitation.txt --vocab ../clear/vocab/entropic.yaml
 python tools/check_site.py
 ```
 

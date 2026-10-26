@@ -1,0 +1,59 @@
+# CLEAR v0.3 example vocabulary for a sales / partner GTM organization.
+# Illustrates the spec's own examples (opportunity vs deal, PO is ambiguous). A real
+# org vocabulary is built from a scan of the org's documents, as the v0.2 spec describes.
+
+extends: base.yaml
+version: "0.3"
+mode: org
+world: org-example
+
+units:
+  - ARR
+  - MRR
+  - seats
+  - seat
+  - licenses
+  - license
+  - accounts
+  - account
+  - opportunities
+  - opportunity
+
+approved_acronyms:
+  ARR: annual recurring revenue
+  MRR: monthly recurring revenue
+  PDM: partner development manager
+  ISV: independent software vendor
+  IHV: independent hardware vendor
+  GTM: go to market
+  CRM: customer relationship management
+  MBR: monthly business review
+  SOW: statement of work
+ambiguous_acronyms:
+  PO: [partner-originated, purchase order]
+
+approved_synonyms:
+  loop in: tell
+  circle back: reply
+  reach out: contact
+  touch base: meet
+
+glossary:
+  opportunity:
+    definition: A CRM record for a potential sale, with a stage and an estimated ARR.
+    aliases: [deal, opp, oppty, the deal]
+  account:
+    definition: The CRM record for a customer organization.
+    aliases: [acct]
+  customer:
+    definition: The organization that buys; distinct from the account, which is its CRM record.
+    aliases: [client, logo]
+  partner development manager:
+    definition: The AWS owner of a partner relationship. PDM is the same term.
+    aliases: [partner manager, partner rep]
+  technology partner:
+    definition: A partner that builds software or hardware on AWS; includes ISVs and IHVs.
+    aliases: [tech partner]
+  stage:
+    definition: The CRM opportunity stage; one of Prospect, Qualified, Committed, Closed.
+    aliases: [status, phase]

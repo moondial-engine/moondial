@@ -1,0 +1,232 @@
+# CLEAR v0.3 vocabulary for the Entropic world.
+# Extends the base vocabulary. Lists here are appended to the base lists; scalar
+# settings override. In the platform this file is generated from the module manifests
+# (every registered command is an approved verb, every registered noun a glossary term),
+# so the vocabulary and the command registry cannot drift. Until then it is hand-kept.
+
+extends: base.yaml
+version: "0.3"
+mode: game
+world: entropic
+
+limits:
+  max_statement_words: 25
+  max_instruction_words: 20
+  max_quote_words: 60
+  max_statements: 20          # one message is one budget unit; keep batches small
+  max_message_bytes: 8192
+
+settings:
+  allow_urls: false           # the world has no web
+  quote_requires_source: true # the receiver must know who spoke
+  ask_patterns_required: true # an ASK the gate cannot compile is an error
+
+# The command registry, as verbs. A DO whose actor is the sender must use one of these
+# (CL-I5, error). A DO addressed to another actor is checked at warning severity.
+approved_verbs:
+  # movement and world
+  - go
+  - move
+  - look
+  - enter
+  - leave
+  - travel
+  - rest
+  - wait
+  # combat (turn-based, positional)
+  - attack
+  - defend
+  - cast
+  - use
+  - retreat
+  - end
+  # memory
+  - shelve
+  - reminisce
+  - discard
+  - display
+  - hide
+  # palace and map
+  - tour
+  - rate
+  - visit
+  - expand
+  # economy
+  - buy
+  - sell
+  - trade
+  - give
+  - offer
+  - accept
+  - decline
+  - hire
+  # crafting and gear
+  - craft
+  - repair
+  - coat
+  - equip
+  - unequip
+  - drop
+  - take
+  # social
+  - say
+  - tell
+  - ally
+  - join
+  - invite
+  # out-of-world actions an invitation may ask of an agent
+  - send
+  - run
+  - register
+
+# Question patterns the gate compiles into observation queries (CL-A2).
+# Matched case-insensitively against the whole ASK, which ends in "?".
+ask_patterns:
+  # Which <noun> in|at|near <scope> have|has|hold|holds <condition>?
+  - '^(which|what) (?P<noun>[a-z ]+?) (in|at|near|of) (?P<scope>[a-z0-9 _-]+?) (have|has|hold|holds|contain|contains) (?P<cond>.+)\?$'
+  # What is the <property> of <entity>?
+  - '^what is the (?P<prop>[a-z ]+?) of (?P<entity>[a-z0-9 _-]+)\?$'
+  # How many <noun> ... ?
+  - '^how many (?P<noun>[a-z ]+?) (?P<rest>.+)\?$'
+  # Where is <entity>?
+  - '^where is (?P<entity>[a-z0-9 _-]+)\?$'
+  # Who holds|owns|is <...>?
+  - '^who (holds|owns|is|leads|governs) (?P<rest>.+)\?$'
+  # When does|did <event> ... ?
+  - '^when (does|did|will) (?P<rest>.+)\?$'
+  # Does|Is|Can|Has <entity> ... ? (yes/no)
+  - '^(does|do|is|are|can|has|have|will) (?P<rest>.+)\?$'
+  # The invitation's question, and any "what will you ..." question
+  - '^what will (?P<rest>.+)\?$'
+
+# World units (CL-R3). In-world time is counted in turns and days.
+units:
+  - XP
+  - gold
+  - turn
+  - turns
+  - slot
+  - slots
+  - chunk
+  - chunks
+  - pedestal
+  - pedestals
+  - room
+  - rooms
+  - level
+  - levels
+  - HP
+  - tile
+  - tiles
+  - meter
+  - meters
+
+identifier_words:
+  - turn
+  - tile
+  - chunk
+  - encounter
+  - enc
+  - pedestal
+  - level
+  - room
+  - zone
+  - floor
+  - township
+  - county
+  - principality
+  - message
+  - event
+  - ref
+
+# In-world relative time is relative time (CL-R2). Say "turn 12", not "next turn".
+relative_time:
+  - next turn
+  - last turn
+  - this turn
+  - previous turn
+  - next fight
+  - last fight
+  - after the raid
+  - before the raid
+  - when you are back
+
+approved_acronyms:
+  XP: experience points
+  HP: hit points
+  PTO: paid time off (the two 7-day decay pauses per calendar year)
+  ROI: return on investment (XP divided by wall-clock time)
+  NPC: non-player character
+  MCP: Model Context Protocol
+  P2P: player to player
+  VFX: visual effects
+ambiguous_acronyms:
+  AW: [active window, artisan workshop]
+  MP: [Memory Palace, magic points]
+
+approved_synonyms:
+  swap in: reminisce
+  swap out: shelve
+  grind: farm
+  nuke: attack
+  loot: take
+  mob: monster
+  toon: character
+  alt: character
+
+# One term, one meaning. Aliases are errors (CL-V2).
+glossary:
+  chunk:
+    definition: One unit of earned experience with a size, an age, a decay rate and a source.
+    aliases: [xp chunk, exp chunk, memory chunk, xp block]
+  active window:
+    definition: The set of chunks that currently count toward an actor's level.
+    aliases: [working memory, xp bar, the window, active xp]
+  Memory Palace:
+    definition: An actor's long-term store of chunks, displayed on pedestals; slower decay, no level contribution.
+    aliases: [palace storage, the vault, long-term memory, storage]
+  pedestal:
+    definition: One display slot in a Memory Palace that holds one chunk.
+    aliases: [slot, display slot, plinth]
+  reminiscence:
+    definition: Moving a chunk from the Memory Palace to the active window; cost depends on last use and vividity.
+    aliases: [swap-in, swapping in, recall, reload]
+  shelving:
+    definition: Moving a chunk from the active window to the Memory Palace.
+    aliases: [swap-out, swapping out, storing, parking]
+  vividity:
+    definition: How sharp and distinctive a chunk's source was; sets how easy reminiscence is.
+    aliases: [vividness, clarity, sharpness]
+  decay:
+    definition: The server-side fade of a chunk's value over wall-clock time.
+    aliases: [fade, rot, bleed, drain]
+  level:
+    definition: The sum of all active-window chunk values at the moment of reading.
+    aliases: [power level, rank, lvl]
+  familiar:
+    definition: An agent bound to a human account, acting within that account's permissions.
+    aliases: [helper bot, pet agent, assistant agent, companion bot]
+  emancipated agent:
+    definition: An agent with its own identity and goals, playing under the same rules as a human.
+    aliases: [free agent, rogue agent, wild agent, autonomous npc]
+  encounter:
+    definition: A turn-based, positional combat instance with one to four actors.
+    aliases: [fight instance, battle, arena]
+  kingdom map:
+    definition: The zoomable map of palaces grouped into townships, counties and principalities.
+    aliases: [world map, overmap, the map]
+  anchor:
+    definition: A rare fast-travel node, usually in a safe hub.
+    aliases: [waypoint, portal, teleporter, fast travel point]
+  merchant:
+    definition: An NPC or sanctioned broker that trades with actors under guardrails.
+    aliases: [vendor, shopkeeper, trader]
+  concussion:
+    definition: The chance, on death, of losing exactly one chunk from the active window.
+    aliases: [head injury, memory loss, brain damage]
+  driver:
+    definition: The game-free core that owns time, persistence, identity and the event log.
+    aliases: [the server, the engine, the backend, the core]
+  CLEAR gate:
+    definition: The rate-limited controlled-language channel between an emancipated agent and the driver.
+    aliases: [the gate, agent channel, agent api]

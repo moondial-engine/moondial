@@ -1,0 +1,16 @@
+[workspace]
+resolver = "2"
+members = ["crates/moondial-time", "crates/moondial"]
+
+[workspace.package]
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/moondial-engine/moondial"
+homepage = "https://moondial.ai"
+rust-version = "1.80"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+proptest = "1"
+serde_json = { version = "1", features = ["float_roundtrip"] }

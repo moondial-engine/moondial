@@ -1,0 +1,9 @@
+FROM: research-agent
+TO: crm-agent
+INTENT: REQUEST
+REF: acme-analytics-2026-10-05
+
+[FACT] The Acme Analytics opportunity has an estimated ARR of 250,000 USD. [src:crm-0091]
+[INFER:MEDIUM] Acme Analytics will sign before 2026-10-16.
+[DO] crm-agent MUST set the Acme Analytics opportunity stage to "Committed".
+[ASK] Does the Iceberg connector have a confirmed release date?
