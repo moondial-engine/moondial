@@ -8,7 +8,23 @@ use moondial_store::{ClockId, StoreEvent, WORLD_CLOCK};
 use serde_json::json;
 
 pub fn register(world: &mut World) {
-    world.registry.register(
+    world.register(
+        CommandSpec::new(
+            "entropic.observe",
+            "Ask the world a question as a JSON query: a root (self, here, window, palace, {\"entity\": n}), a select, relations (contents, in, exits), where, limit.",
+        )
+        .param("query", ParamType::String, true, "the query as JSON"),
+        Box::new(|w: &mut World, ctx, args: &Args| {
+            let raw = args.str("query").unwrap_or("");
+            let query: serde_json::Value = serde_json::from_str(raw)
+                .map_err(|e| CommandError::precondition(format!("The query is not JSON: {e}")))?;
+            let obs = super::observe_as(w, ctx, query)?;
+            let text = serde_json::to_string_pretty(&obs).unwrap_or_default();
+            Ok(Outcome::new(text, serde_json::to_value(obs).unwrap_or_default()))
+        }),
+    );
+
+    world.register(
         CommandSpec::new("entropic.freeze", "Admin: pause the whole world's clock.")
             .allowed(&[ActorKind::Admin]),
         Box::new(|w: &mut World, _, _| {
@@ -25,7 +41,7 @@ pub fn register(world: &mut World) {
         }),
     );
 
-    world.registry.register(
+    world.register(
         CommandSpec::new("entropic.thaw", "Admin: resume the world's clock.")
             .allowed(&[ActorKind::Admin]),
         Box::new(|w: &mut World, _, _| {
@@ -46,7 +62,7 @@ pub fn register(world: &mut World) {
         }),
     );
 
-    world.registry.register(
+    world.register(
         CommandSpec::new(
             "entropic.log",
             "The last events in the world, oldest first.",
@@ -83,7 +99,7 @@ pub fn register(world: &mut World) {
         }),
     );
 
-    world.registry.register(
+    world.register(
         CommandSpec::new("entropic.time", "The world's clock, your clock, and how long the driver has been up."),
         Box::new(|w: &mut World, ctx, _| {
             let now = w.now();

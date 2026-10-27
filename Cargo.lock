@@ -489,6 +489,7 @@ dependencies = [
  "argon2",
  "axum",
  "moondial-log",
+ "moondial-query",
  "moondial-registry",
  "moondial-store",
  "moondial-time",
@@ -506,6 +507,18 @@ name = "moondial-log"
 version = "0.1.0"
 dependencies = [
  "moondial-time",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "moondial-query"
+version = "0.1.0"
+dependencies = [
+ "moondial-store",
+ "moondial-time",
+ "proptest",
  "serde",
  "serde_json",
  "thiserror",

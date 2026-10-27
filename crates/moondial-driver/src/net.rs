@@ -32,6 +32,10 @@ use tokio::net::{TcpListener, TcpStream};
 pub struct Shared {
     pub world: Arc<Mutex<World>>,
     pub admin_token: Option<String>,
+    /// Per-actor observation budget.
+    pub budget: Arc<Mutex<crate::observe::Budget>>,
+    /// Limits every observation is checked against.
+    pub limits: moondial_query::Limits,
     /// Origins the browser client may call from (`MOONDIAL_CORS_ORIGINS`, comma-separated).
     pub cors_origins: Vec<String>,
 }
@@ -42,7 +46,11 @@ impl Shared {
     }
 }
 
-fn split_args(rest: &str) -> Value {
+fn split_args(verb: &str, rest: &str) -> Value {
+    if verb == "observe" {
+        // JSON has spaces in it: the whole rest of the line is the one argument.
+        return Value::Array(vec![Value::String(rest.to_string())]);
+    }
     Value::Array(
         rest.split_whitespace()
             .map(|s| Value::String(s.to_string()))
@@ -147,7 +155,7 @@ fn run_line(
                 return Err("Not logged in. Type: login <name> <passphrase>".into());
             };
             let ctx = CallContext { actor: name, kind };
-            match world.call(&ctx, verb, &split_args(rest)) {
+            match world.call(&ctx, verb, &split_args(verb, rest)) {
                 Ok(out) => Ok(out.summary),
                 Err(CommandError::Unknown { name }) => {
                     Err(format!("Unknown command '{name}'. Type help."))
@@ -323,6 +331,64 @@ async fn command(
     }
 }
 
+#[derive(Deserialize)]
+struct ObserveBody {
+    actor: String,
+    #[serde(default)]
+    passphrase: String,
+    query: crate::observe::Request,
+}
+
+/// `POST /v0/observe {actor, passphrase, query}`: the observation query, with the
+/// legal commands and an event cursor. Errors carry a `reason` a client can act on.
+async fn observe_http(
+    State(s): State<Shared>,
+    headers: HeaderMap,
+    Json(body): Json<ObserveBody>,
+) -> Reply {
+    let token = headers
+        .get("x-moondial-admin")
+        .and_then(|v| v.to_str().ok());
+    let admin = s.is_admin(token);
+    let mut w = lock(&s)?;
+    http_login(&mut w, &body.actor, &body.passphrase)?;
+    let now = w.now();
+    s.budget
+        .lock()
+        .map_err(|_| err_json(StatusCode::INTERNAL_SERVER_ERROR, "budget lock poisoned"))?
+        .spend(&body.actor, now)
+        .map_err(|e| {
+            (
+                StatusCode::TOO_MANY_REQUESTS,
+                Json(json!({"ok": false, "error": e.to_string(), "detail": e})),
+            )
+        })?;
+    let viewer = if admin {
+        Viewer::admin()
+    } else {
+        Viewer::actor(&body.actor)
+    };
+    let kind = if admin {
+        ActorKind::Admin
+    } else {
+        ActorKind::Citizen
+    };
+    match w.observe(&viewer, kind, &body.query, &s.limits) {
+        Ok(obs) => Ok(Json(json!({"ok": true, "observation": obs}))),
+        Err(e) => {
+            let status = match e {
+                moondial_query::QueryError::RootNotVisible
+                | moondial_query::QueryError::UnknownRoot { .. } => StatusCode::NOT_FOUND,
+                _ => StatusCode::UNPROCESSABLE_ENTITY,
+            };
+            Err((
+                status,
+                Json(json!({"ok": false, "error": e.to_string(), "detail": e})),
+            ))
+        }
+    }
+}
+
 async fn view(
     State(s): State<Shared>,
     Path(id): Path<u64>,
@@ -384,6 +450,7 @@ pub fn router(shared: Shared) -> Router {
         .route("/v0/commands", get(commands))
         .route("/v0/login", post(login))
         .route("/v0/command", post(command))
+        .route("/v0/observe", post(observe_http))
         .route("/v0/view/{id}", get(view))
         .route("/v0/log", get(log))
         .layer(cors)

@@ -6,7 +6,7 @@ use moondial_log::Actor;
 use moondial_registry::{
     ActorKind, Args, CallContext, CommandError, CommandSpec, Outcome, ParamType,
 };
-use moondial_store::{EntityId, Field, StoreEvent, Viewer};
+use moondial_store::{EntityId, Field, StoreEvent};
 use moondial_time::TimedValue;
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
@@ -70,18 +70,33 @@ pub fn level(world: &World, window: EntityId) -> f64 {
         .sum()
 }
 
-fn chunk_rows(world: &World, container: EntityId, viewer: &Viewer) -> Vec<Value> {
-    let now = world.now();
-    world
-        .store
-        .children(container)
-        .filter(|e| e.kind == "chunk")
-        .filter_map(|e| world.store.view(e.id, viewer, now))
-        .map(|v| {
-            let c = &v["components"][CHUNK];
-            json!({"id": v["id"], "source": c["source"], "tier": c["tier"], "size": c["size"], "vividity": c["vividity"], "value": c["value"]})
+/// The query behind `chunks` and `palace`: every chunk in a container, every field.
+pub fn chunks_query(container: EntityId) -> Value {
+    json!({
+        "root": {"entity": container.0},
+        "select": {},
+        "relations": {"contents": {"kinds": ["chunk"], "select": {CHUNK: "*"}}}
+    })
+}
+
+/// Chunk rows rendered from an observation of a window or palace.
+fn chunk_rows(
+    world: &World,
+    ctx: &CallContext,
+    container: EntityId,
+) -> Result<(Vec<Value>, Value), CommandError> {
+    let obs = super::observe_as(world, ctx, chunks_query(container))?;
+    let rows = obs.observation.root["relations"]["contents"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|n| {
+            let c = &n["components"][CHUNK];
+            json!({"id": n["id"], "source": c["source"], "tier": c["tier"], "size": c["size"], "vividity": c["vividity"], "value": c["value"]})
         })
-        .collect()
+        .collect();
+    Ok((rows, serde_json::to_value(obs).unwrap_or(Value::Null)))
 }
 
 fn rows_text(rows: &[Value]) -> Vec<String> {
@@ -129,14 +144,14 @@ fn resolve_chunk(
 }
 
 pub fn register(world: &mut World, curves: Curves) {
-    world.registry.register(
+    world.register(
         CommandSpec::new(
             "entropic.chunks",
             "Your active window: every chunk, its current value, and your level.",
         ),
         Box::new(|w: &mut World, ctx, _| {
             let f = me(w, ctx)?;
-            let rows = chunk_rows(w, f.window, &Viewer::actor(&ctx.actor));
+            let (rows, observation) = chunk_rows(w, ctx, f.window)?;
             let level: f64 = rows.iter().filter_map(|r| r["value"].as_f64()).sum();
             let attack = super::combat::attack_for_level(level);
             let text = if rows.is_empty() {
@@ -149,30 +164,33 @@ pub fn register(world: &mut World, curves: Curves) {
             };
             Ok(Outcome::new(
                 text,
-                json!({"level": level, "attack": attack, "chunks": rows}),
+                json!({"level": level, "attack": attack, "chunks": rows, "observation": observation}),
             ))
         }),
     );
 
-    world.registry.register(
+    world.register(
         CommandSpec::new(
             "entropic.palace",
             "Your Memory Palace: shelved chunks, fading slowly, counting for nothing.",
         ),
         Box::new(|w: &mut World, ctx, _| {
             let f = me(w, ctx)?;
-            let rows = chunk_rows(w, f.palace, &Viewer::actor(&ctx.actor));
+            let (rows, observation) = chunk_rows(w, ctx, f.palace)?;
             let text = if rows.is_empty() {
                 "Your palace is empty.".to_string()
             } else {
                 format!("Palace\n{}", rows_text(&rows).join("\n"))
             };
-            Ok(Outcome::new(text, json!({"chunks": rows})))
+            Ok(Outcome::new(
+                text,
+                json!({"chunks": rows, "observation": observation}),
+            ))
         }),
     );
 
     let c = curves.clone();
-    world.registry.register(
+    world.register(
         CommandSpec::new("entropic.earn", "Admin: conjure a chunk by hand.")
             .param("source", ParamType::String, true, "what it is a memory of")
             .param(
@@ -205,7 +223,7 @@ pub fn register(world: &mut World, curves: Curves) {
     );
 
     let c = curves.clone();
-    world.registry.register(
+    world.register(
         CommandSpec::new("entropic.shelve", "Move a chunk from your window into your palace, where it fades slower and counts for nothing.")
             .param("chunk", ParamType::Entity, true, "a chunk in your window"),
         Box::new(move |w: &mut World, ctx, args: &Args| {
@@ -225,7 +243,7 @@ pub fn register(world: &mut World, curves: Curves) {
     );
 
     let c = curves;
-    world.registry.register(
+    world.register(
         CommandSpec::new(
             "entropic.reminisce",
             "Bring a chunk back from your palace into your window, at its current value.",
@@ -279,7 +297,7 @@ pub fn register(world: &mut World, curves: Curves) {
         }),
     );
 
-    world.registry.register(
+    world.register(
         CommandSpec::new("entropic.pto", "Pause your own clock. Nothing of yours fades or heals until you resume. (The real rules allow two 7-day windows a year; the slice does not enforce that yet.)"),
         Box::new(|w: &mut World, ctx, _| {
             me(w, ctx)?;
@@ -292,7 +310,7 @@ pub fn register(world: &mut World, curves: Curves) {
         }),
     );
 
-    world.registry.register(
+    world.register(
         CommandSpec::new("entropic.resume", "End your PTO. Your clock runs again."),
         Box::new(|w: &mut World, ctx, _| {
             me(w, ctx)?;

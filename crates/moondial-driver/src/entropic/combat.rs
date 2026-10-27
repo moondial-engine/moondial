@@ -243,7 +243,7 @@ fn die(world: &mut World, actor: &str, f: &super::Found) -> Result<Option<String
 }
 
 pub fn register(world: &mut World, curves: Curves) {
-    world.registry.register(
+    world.register(
         CommandSpec::new("entropic.attack", "Fight a creature here, one round: you strike, it strikes back. Win and you remember it; the closer you came to dying, the longer the memory lasts.")
             .param("creature", ParamType::Entity, false, "a creature name from look; defaults to the one you are fighting"),
         Box::new(move |w: &mut World, ctx, args| {
@@ -311,7 +311,7 @@ pub fn register(world: &mut World, curves: Curves) {
         }),
     );
 
-    world.registry.register(
+    world.register(
         CommandSpec::new("entropic.retreat", "Break off the fight. The creature gets one free strike as you go."),
         Box::new(|w: &mut World, ctx, _| {
             let f = me(w, ctx)?;
@@ -333,7 +333,7 @@ pub fn register(world: &mut World, curves: Curves) {
         }),
     );
 
-    world.registry.register(
+    world.register(
         CommandSpec::new("entropic.rest", "Your hit points, and how long until they are full. Healing happens on its own, on your clock."),
         Box::new(|w: &mut World, ctx, _| {
             let f = me(w, ctx)?;

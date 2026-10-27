@@ -30,6 +30,7 @@
     "browser": "https://agentscanplay.com/play/",
     "text": "nc play.agentscanplay.com 7778, then: login <name> <passphrase>",
     "http": "POST https://play.agentscanplay.com/v0/command {\"actor\",\"passphrase\",\"command\",\"args\"}; GET /v0/commands lists them",
+    "observe": "POST https://play.agentscanplay.com/v0/observe {\"actor\",\"passphrase\",\"query\"}: the observation query (root, select, relations, where, after); see the README",
     "health": "https://play.agentscanplay.com/health",
     "source": "https://github.com/moondial-engine/moondial/tree/main/crates/moondial-driver"
   },

@@ -10,14 +10,14 @@
 mod combat;
 mod identity;
 mod memory;
-mod rooms;
+pub mod rooms;
 mod system;
 
 use crate::world::World;
 use moondial_log::Actor;
 use moondial_registry::{CallContext, CommandError};
 use moondial_store::{
-    ClockId, ComponentSchema, EntityId, Field, FieldKind, StoreEvent, Visibility,
+    ClockId, ComponentSchema, EntityId, Field, FieldKind, RelationKind, StoreEvent, Visibility,
 };
 use moondial_time::{Bounds, Curve, Duration, TimedValue};
 use serde_json::{json, Value};
@@ -82,6 +82,43 @@ pub const CREATURE: &str = "entropic.creature";
 pub const MAX_HP: f64 = 30.0;
 /// Hit points regained per second of the citizen's active time.
 pub const HP_PER_SECOND: f64 = 0.1;
+
+/// The relations a client may follow. Declared beside the schemas so the registry
+/// describes shapes, relations and commands from one place.
+pub fn relations() -> Vec<(&'static str, &'static str, RelationKind)> {
+    vec![
+        (
+            "contents",
+            "What is inside: citizens and creatures in a room, chunks in a window or palace.",
+            RelationKind::Children { kinds: vec![] },
+        ),
+        (
+            "in",
+            "The container: a citizen's room, a chunk's window or palace.",
+            RelationKind::Parent,
+        ),
+        (
+            "exits",
+            "The rooms an exit leads to; each carries `via`, the exit name.",
+            RelationKind::Field {
+                component: EXITS.into(),
+                field: "exits".into(),
+            },
+        ),
+    ]
+}
+
+/// A store registry with the slice's schemas and relations.
+pub fn registry() -> moondial_store::Registry {
+    let mut r = moondial_store::Registry::new();
+    for s in schemas() {
+        r.register(s);
+    }
+    for (name, description, kind) in relations() {
+        r.register_relation(name, description, kind);
+    }
+    r
+}
 
 pub fn schemas() -> Vec<ComponentSchema> {
     vec![
@@ -318,6 +355,24 @@ fn body_fields(now: moondial_time::Timestamp) -> BTreeMap<String, Field> {
     fields.insert("max_hp".into(), Field::Plain(json!(MAX_HP)));
     fields.insert("engaged".into(), Field::Plain(Value::Null));
     fields
+}
+
+/// Run an observation as the calling actor, for commands that render from one.
+pub(crate) fn observe_as(
+    world: &World,
+    ctx: &CallContext,
+    query: Value,
+) -> Result<crate::observe::Observed, CommandError> {
+    let req: crate::observe::Request = serde_json::from_value(query)
+        .map_err(|e| CommandError::internal(format!("bad built-in query: {e}")))?;
+    let viewer = if ctx.kind == moondial_registry::ActorKind::Admin {
+        moondial_store::Viewer::admin()
+    } else {
+        moondial_store::Viewer::actor(&ctx.actor)
+    };
+    world
+        .observe(&viewer, ctx.kind, &req, &moondial_query::Limits::default())
+        .map_err(|e| CommandError::precondition(e.to_string()))
 }
 
 fn me(world: &World, ctx: &CallContext) -> Result<Found, CommandError> {

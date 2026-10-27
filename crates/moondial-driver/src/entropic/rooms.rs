@@ -6,7 +6,7 @@ use super::{internal, me, plain_str, EXITS, ROOM, SPAWN};
 use crate::world::World;
 use moondial_log::Actor;
 use moondial_registry::{CommandSpec, Outcome, ParamType};
-use moondial_store::{EntityId, Field, StoreEvent, Viewer};
+use moondial_store::{EntityId, Field, StoreEvent};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 
@@ -207,37 +207,65 @@ pub fn room_of(world: &World, citizen: EntityId) -> Option<EntityId> {
     world.store.entity(citizen).and_then(|e| e.parent)
 }
 
-/// Describe a room as `actor` sees it: name, description, exits, creatures, others here.
+/// The query behind `look`: the room's name, description and exits, and what is here.
+pub fn look_query(room: EntityId) -> Value {
+    json!({
+        "root": {"entity": room.0},
+        "select": {ROOM: ["name", "description"], EXITS: "*"},
+        "relations": {
+            "contents": {
+                "kinds": ["citizen", "creature"],
+                "select": {super::CITIZEN: ["name"], super::CREATURE: ["name", "hp", "max_hp"]}
+            }
+        }
+    })
+}
+
+/// Describe a room as `actor` sees it. Runs the observation query and renders prose
+/// from the structure, which is the text client's job: the driver sends components,
+/// the client makes sentences.
 pub fn describe(
     world: &mut World,
     actor: &str,
+    ctx: &moondial_registry::CallContext,
     room: EntityId,
 ) -> Result<Outcome, moondial_registry::CommandError> {
     super::combat::maybe_spawn(world, room).map_err(internal)?;
-    let now = world.now();
-    let view = world
-        .store
-        .view(room, &Viewer::actor(actor), now)
-        .ok_or_else(|| internal("room vanished"))?;
-    let name = view["components"][ROOM]["name"]
+    let obs = super::observe_as(world, ctx, look_query(room))?;
+    let root = &obs.observation.root;
+    let name = root["components"][ROOM]["name"]
         .as_str()
         .unwrap_or("?")
         .to_string();
-    let desc = view["components"][ROOM]["description"]
+    let desc = root["components"][ROOM]["description"]
         .as_str()
         .unwrap_or("")
         .to_string();
-    let exits: Vec<String> = exits_of(world, room).keys().cloned().collect();
-    let others: Vec<String> = world
-        .store
-        .children(room)
-        .filter(|e| e.kind == "citizen")
-        .filter_map(|e| e.owner.clone())
+    let exits: Vec<String> = root["components"][EXITS]["exits"]
+        .as_object()
+        .map(|m| m.keys().cloned().collect())
+        .unwrap_or_default();
+    let here = root["relations"]["contents"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    let others: Vec<String> = here
+        .iter()
+        .filter(|n| n["kind"] == "citizen")
+        .filter_map(|n| {
+            n["components"][super::CITIZEN]["name"]
+                .as_str()
+                .map(str::to_string)
+        })
         .filter(|n| n != actor)
         .collect();
-    let creatures: Vec<Value> = super::combat::creatures_in(world, room)
-        .into_iter()
-        .map(|(id, name, hp, max_hp)| json!({"id": id.0, "name": name, "hp": hp, "max_hp": max_hp}))
+    let creatures: Vec<Value> = here
+        .iter()
+        .filter(|n| n["kind"] == "creature")
+        .map(|n| {
+            let c = &n["components"][super::CREATURE];
+            json!({"id": n["id"], "name": c["name"], "hp": c["hp"], "max_hp": c["max_hp"]})
+        })
         .collect();
     let mut text = format!("{name}. {desc}");
     if !exits.is_empty() {
@@ -264,12 +292,12 @@ pub fn describe(
     });
     Ok(Outcome::new(
         text,
-        json!({"room": name, "description": desc, "exits": exits, "creatures": creatures, "citizens": others}),
+        json!({"room": name, "description": desc, "exits": exits, "creatures": creatures, "citizens": others, "observation": obs}),
     ))
 }
 
 pub fn register(world: &mut World) {
-    world.registry.register(
+    world.register(
         CommandSpec::new(
             "entropic.look",
             "Describe where you are: exits, what is here, who is here.",
@@ -277,11 +305,11 @@ pub fn register(world: &mut World) {
         Box::new(|w: &mut World, ctx, _| {
             let f = me(w, ctx)?;
             let room = room_of(w, f.citizen).ok_or_else(|| internal("citizen has no room"))?;
-            describe(w, &ctx.actor, room)
+            describe(w, &ctx.actor, ctx, room)
         }),
     );
 
-    world.registry.register(
+    world.register(
         CommandSpec::new(
             "entropic.travel",
             "Take an exit. You cannot travel while something is fighting you; retreat first.",
@@ -316,7 +344,7 @@ pub fn register(world: &mut World) {
                 },
             )
             .map_err(internal)?;
-            let mut out = describe(w, &ctx.actor, to)?;
+            let mut out = describe(w, &ctx.actor, ctx, to)?;
             out.summary = format!("You go {exit}. {}", out.summary);
             Ok(out)
         }),

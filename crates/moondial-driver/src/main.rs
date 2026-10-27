@@ -12,10 +12,11 @@
 
 mod entropic;
 mod net;
+mod observe;
 mod world;
 
 use moondial_log::WorldId;
-use moondial_store::{Registry, Store};
+use moondial_store::Store;
 use std::sync::{Arc, Mutex};
 use world::{LogBacking, World};
 
@@ -39,11 +40,11 @@ fn main() {
         LogBacking::File(data.clone().into())
     };
 
-    let mut registry = Registry::new();
-    for s in entropic::schemas() {
-        registry.register(s);
-    }
-    let mut world = match World::open(WorldId(world_name.clone()), Store::new(registry), backing) {
+    let mut world = match World::open(
+        WorldId(world_name.clone()),
+        Store::new(entropic::registry()),
+        backing,
+    ) {
         Ok(w) => w,
         Err(e) => {
             eprintln!("cannot open world {world_name}: {e}");
@@ -78,6 +79,8 @@ fn main() {
     let shared = net::Shared {
         world: Arc::new(Mutex::new(world)),
         admin_token: std::env::var("MOONDIAL_ADMIN_TOKEN").ok(),
+        budget: Arc::new(Mutex::new(observe::Budget::new(30, 10_000))),
+        limits: moondial_query::Limits::default(),
         cors_origins: env_or(
             "MOONDIAL_CORS_ORIGINS",
             "https://agentscanplay.com,https://www.agentscanplay.com",

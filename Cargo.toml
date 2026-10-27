@@ -5,6 +5,7 @@ members = [
     "crates/moondial-log",
     "crates/moondial-store",
     "crates/moondial-registry",
+    "crates/moondial-query",
     "crates/moondial-driver",
     "crates/moondial",
 ]

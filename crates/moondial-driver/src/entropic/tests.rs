@@ -2,19 +2,15 @@ use super::*;
 use crate::world::LogBacking;
 use moondial_log::WorldId;
 use moondial_registry::{ActorKind, Outcome};
-use moondial_store::{Registry, Store, Viewer};
+use moondial_store::{Store, Viewer};
 use moondial_time::Timestamp;
 
 const PASS: &str = "correct-horse-battery";
 
 fn open(dir: &std::path::Path, at: Timestamp) -> World {
-    let mut registry = Registry::new();
-    for s in schemas() {
-        registry.register(s);
-    }
     let mut w = World::open(
         WorldId("test".into()),
-        Store::new(registry),
+        Store::new(registry()),
         LogBacking::File(dir.to_path_buf()),
     )
     .unwrap();
@@ -417,4 +413,94 @@ fn strangers_see_a_chunk_exists_but_not_what_it_is_worth() {
     assert_eq!(theirs["components"][CHUNK]["source"], json!("lich"));
     assert!(theirs["components"][CHUNK].get("value").is_none());
     assert!(theirs["components"][CHUNK].get("size").is_none());
+}
+
+#[test]
+fn observe_is_the_text_client_s_eyes() {
+    let mut w = open(tempfile::tempdir().unwrap().path(), Timestamp(0));
+    login(&mut w, "dave", "test", PASS).unwrap();
+    login(&mut w, "tyler", "test", PASS).unwrap();
+    admin(&mut w, "dave", "earn", json!(["hydra", 100, 0.5]));
+
+    // `here` from dave's point of view, through the command, like the text port.
+    let q = r#"{"root":"here","select":{"entropic.room":["name"]},"relations":{"contents":{"kinds":["citizen"],"select":{"entropic.citizen":["name"]}},"exits":{"select":{"entropic.room":["name"]}}}}"#;
+    let out = ok(&mut w, "dave", "observe", json!([q]));
+    let root = &out.result["root"];
+    assert_eq!(
+        root["components"]["entropic.room"]["name"],
+        json!("The Gate")
+    );
+    let names: Vec<&str> = root["relations"]["contents"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|n| {
+            n["components"]["entropic.citizen"]["name"]
+                .as_str()
+                .unwrap()
+        })
+        .collect();
+    assert_eq!(names, vec!["dave", "tyler"]);
+    assert_eq!(root["relations"]["exits"][0]["via"], json!("east"));
+    assert!(
+        out.result["commands"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|c| c == "travel"),
+        "legal commands come with the observation, even from inside a command"
+    );
+    let cursor = out.result["cursor"].as_u64().unwrap();
+
+    // tyler asks for dave's window: sources yes, values no.
+    let out = ok(
+        &mut w,
+        "tyler",
+        "observe",
+        json!([
+            r#"{"root":{"window":"dave"},"select":{},"relations":{"contents":{"select":{"entropic.chunk":"*"}}}}"#
+        ]),
+    );
+    let chunk = &out.result["root"]["relations"]["contents"][0]["components"]["entropic.chunk"];
+    assert_eq!(chunk["source"], json!("hydra"));
+    assert!(chunk.get("value").is_none() && chunk.get("vividity").is_none());
+
+    // Events since the cursor: dave travels; tyler, still at the Gate, sees dave leave.
+    ok(&mut w, "dave", "travel", json!(["east"]));
+    let out = ok(
+        &mut w,
+        "tyler",
+        "observe",
+        json!([format!(
+            r#"{{"root":"self","select":{{}},"after":{cursor}}}"#
+        )]),
+    );
+    let kinds: Vec<&str> = out.result["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| e["kind"].as_str().unwrap())
+        .collect();
+    assert!(kinds.contains(&"store.entity_moved"), "{kinds:?}");
+    assert!(out.result["cursor"].as_u64().unwrap() > cursor);
+
+    // Errors are legible.
+    let err = call(
+        &mut w,
+        "dave",
+        ActorKind::Citizen,
+        "observe",
+        json!([r#"{"root":"here","relations":{"content":{}}}"#]),
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("did you mean contents"), "{err}");
+    let err = call(
+        &mut w,
+        "dave",
+        ActorKind::Citizen,
+        "observe",
+        json!(["{nope"]),
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("not JSON"), "{err}");
 }

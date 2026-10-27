@@ -115,15 +115,54 @@ impl ComponentSchema {
         });
         self
     }
-    fn get(&self, field: &str) -> Option<&FieldSchema> {
+    /// Look a field up.
+    pub fn get(&self, field: &str) -> Option<&FieldSchema> {
         self.fields.iter().find(|f| f.name == field)
     }
 }
 
-/// The component schemas a world knows.
+/// How a relation is followed from an entity.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "how", rename_all = "snake_case")]
+pub enum RelationKind {
+    /// The entities inside this one (`parent == self`), optionally only some kinds.
+    Children {
+        /// Entity kinds to include; empty means all.
+        #[serde(default)]
+        kinds: Vec<String>,
+    },
+    /// The entity this one is inside.
+    Parent,
+    /// Entity ids held in a plain field: a single id, an array of ids, or a map of
+    /// label to id (an exit name to a room, say). The field's own visibility applies, so
+    /// a relation through a hidden field is empty for whoever cannot see the field.
+    Field {
+        /// The component.
+        component: String,
+        /// The field.
+        field: String,
+    },
+}
+
+/// A relation a module declares, so a client can ask for it by name in an observation
+/// query and discover it from the registry.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RelationSchema {
+    /// Relation name: `contents`, `in`, `exits`.
+    pub name: String,
+    /// What it means, for the registry listing.
+    pub description: String,
+    /// How to follow it.
+    #[serde(flatten)]
+    pub kind: RelationKind,
+}
+
+/// The component schemas and relations a world knows.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Registry {
     components: BTreeMap<String, ComponentSchema>,
+    #[serde(default)]
+    relations: BTreeMap<String, RelationSchema>,
 }
 
 impl Registry {
@@ -142,6 +181,31 @@ impl Registry {
     /// All registered schemas.
     pub fn schemas(&self) -> impl Iterator<Item = &ComponentSchema> {
         self.components.values()
+    }
+    /// Register (or replace) a relation.
+    pub fn register_relation(
+        &mut self,
+        name: impl Into<String>,
+        description: impl Into<String>,
+        kind: RelationKind,
+    ) {
+        let name = name.into();
+        self.relations.insert(
+            name.clone(),
+            RelationSchema {
+                name,
+                description: description.into(),
+                kind,
+            },
+        );
+    }
+    /// Look a relation up.
+    pub fn relation(&self, name: &str) -> Option<&RelationSchema> {
+        self.relations.get(name)
+    }
+    /// All registered relations.
+    pub fn relations(&self) -> impl Iterator<Item = &RelationSchema> {
+        self.relations.values()
     }
 }
 

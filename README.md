@@ -24,6 +24,8 @@ crates/moondial-store  entities and components: versioned schemas, per-field vis
                        a projection over the log, with time-evaluated fields reconciled on read
 crates/moondial-registry
                        the command registry: typed, discoverable commands with per-actor-kind permission
+crates/moondial-query  the observation query: a JSON document naming a root and a projection, answered with
+                       exactly those fields as one actor may see them, within declared limits
 crates/moondial-driver the driver binary: loads a world, replays its log, listens on a text port and an HTTP port
 crates/moondial        the library crate that re-exports the primitives (on crates.io)
 clear/                 the CLEAR v0.3 spec, vocabularies, reference checker (clear_check.py) and its tests
@@ -41,11 +43,25 @@ curl -s localhost:7777/v0/commands      # the same commands, as JSON
 
 Or the test server: `nc play.agentscanplay.com 7778`. A passphrase is set the first time a name logs in and required after; that is the whole account system, which is fine for a test server and wrong for anything else. `MOONDIAL_ACTIVE_HALF_LIFE_SECONDS=10` makes decay visible within a session. `MOONDIAL_ADMIN_TOKEN` enables `admin <token>` on the text port and the `X-Moondial-Admin` header on HTTP.
 
+### Ask the world a question
+
+Every client sees the world through one observation query, in JSON: a root, the components and fields wanted, relations to follow, to a bounded depth. The reply is exactly those fields after per-field visibility, the commands you may call, and an event cursor. `look`, `chunks` and `palace` are queries rendered as prose; `observe` runs one raw, on either port:
+
+```
+observe {"root":"here","select":{"entropic.room":["name"]},
+         "relations":{"contents":{"kinds":["creature"],"select":{"entropic.creature":["name","hp"]}},
+                      "exits":{"select":{"entropic.room":["name"]}}}}
+```
+
+Roots: `self`, `here`, `window`, `palace` (yours, or `{"window":"tyler"}` for another's: you still see only what is yours to see), `{"room":"fogbank"}`, `{"entity":12}`. Relations: `contents`, `in`, `exits`. A `where` filter runs on the visible view, so a hidden field cannot be probed. Limits (depth 4, breadth 100, 200 entities, 30 queries per 10 s per actor) reject a query whole with a typed reason; unknown names come back with the nearest known one. The crate's property test queries random worlds as a stranger and asserts no owner or admin field ever appears.
+
 Over HTTP, every call carries the passphrase:
 
 ```
 curl -s -X POST https://play.agentscanplay.com/v0/command -H 'content-type: application/json' \
   -d '{"actor":"you","passphrase":"at least eight characters","command":"look"}'
+curl -s -X POST https://play.agentscanplay.com/v0/observe -H 'content-type: application/json' \
+  -d '{"actor":"you","passphrase":"...","query":{"root":"here","relations":{"contents":{}},"after":0}}'
 ```
 
 The build order is driver first, a text slice of Entropic second, the agent gate third, hot-swap fourth, and a renderer last. For agents and language models: [moondial.ai/llms.txt](https://moondial.ai/llms.txt). To contribute: `CONTRIBUTING.md`.

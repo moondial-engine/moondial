@@ -9,6 +9,7 @@ use moondial_registry::{ActorKind, CallContext, CommandError, Outcome, Registry}
 use moondial_store::{Store, StoreError, StoreEvent};
 use moondial_time::Timestamp;
 use serde_json::Value;
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Where the log lives.
@@ -24,7 +25,9 @@ pub struct World {
     pub id: WorldId,
     pub store: Store,
     pub log: Box<dyn EventLog + Send>,
-    pub registry: Registry<World>,
+    /// The command registry. Shared so a handler running inside [`World::call`] can
+    /// still ask what commands exist (an observation lists the legal ones).
+    pub registry: Arc<Registry<World>>,
     pub started: Timestamp,
     /// Set by tests to freeze the clock; `None` reads the system clock.
     pub fixed_now: Option<Timestamp>,
@@ -44,7 +47,7 @@ impl World {
             id,
             store,
             log,
-            registry: Registry::new(),
+            registry: Arc::new(Registry::new()),
             started,
             fixed_now: None,
             rng: started.0 as u64 | 1,
@@ -107,18 +110,28 @@ impl World {
             .unwrap_or_default()
     }
 
-    /// Run a command through the registry. The registry borrows the world mutably, so the
-    /// registry itself is moved out for the duration of the call and put back after.
+    /// Run a command through the registry. The handler borrows the world mutably while
+    /// the registry is shared, so the registry stays readable during the call.
     pub fn call(
         &mut self,
         ctx: &CallContext,
         name: &str,
         args: &Value,
     ) -> Result<Outcome, CommandError> {
-        let registry = std::mem::take(&mut self.registry);
-        let out = registry.call(self, ctx, name, args);
-        self.registry = registry;
-        out
+        let registry = Arc::clone(&self.registry);
+        registry.call(self, ctx, name, args)
+    }
+
+    /// Register a command. Only possible while nothing else holds the registry, which
+    /// is the case at boot; a module registering mid-call is a bug and panics.
+    pub fn register(
+        &mut self,
+        spec: moondial_registry::CommandSpec,
+        handler: moondial_registry::Handler<World>,
+    ) {
+        Arc::get_mut(&mut self.registry)
+            .expect("commands are registered at boot, not inside a call")
+            .register(spec, handler);
     }
 
     /// The commands an actor kind may call, as the registry describes them.
