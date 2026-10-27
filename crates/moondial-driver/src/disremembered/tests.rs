@@ -726,3 +726,35 @@ fn a_misshapen_query_is_the_asker_s_mistake_and_says_what_was_expected() {
     assert!(text.contains("\"op\""), "{text}");
     assert!(!text.contains("built-in"), "{text}");
 }
+
+#[test]
+fn a_log_from_other_modules_is_refused_with_directions() {
+    use moondial_log::{EventLog, FileLog, NewEvent};
+    let dir = tempfile::tempdir().unwrap();
+    let id = moondial_log::WorldId("w".into());
+    // A world whose first event creates an entity with a component this driver never had.
+    {
+        let mut log = FileLog::open(dir.path()).unwrap();
+        log.append(
+            &id,
+            NewEvent {
+                at: Timestamp(0),
+                kind: "store.component_set".into(),
+                actor: moondial_log::Actor::Driver,
+                cause: None,
+                payload: json!({"op": "component_set", "id": 1, "component": "entropic.room",
+                    "fields": {"name": {"kind": "plain", "value": "x"}}}),
+            },
+        )
+        .unwrap();
+    }
+    let err = World::open(
+        id,
+        moondial_store::Store::new(super::registry()),
+        crate::world::LogBacking::File(dir.path().into()),
+    )
+    .err()
+    .expect("a foreign log must not open");
+    assert!(err.contains("entropic.room"), "{err}");
+    assert!(err.contains("MOONDIAL_WORLD"), "{err}");
+}

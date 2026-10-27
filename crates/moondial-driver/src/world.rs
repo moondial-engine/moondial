@@ -64,7 +64,19 @@ impl World {
             // pending jobs from the same pass over the log.
             let mut fresh = Store::new(world.store.registry().clone());
             moondial_log::replay(world.log.as_ref(), &world.id, Cursor::START, &mut fresh)
-                .map_err(|e| e.to_string())?;
+                .map_err(|e| match e {
+                    // A log written under another set of modules: say so, and what to do.
+                    moondial_log::ReplayError::Projection {
+                        at,
+                        error: moondial_store::StoreError::UnknownComponent(c),
+                    } => format!(
+                        "the log for world {} was written by modules this driver does not have: \
+                         event #{} uses component {c}. Move that log aside, or run this driver \
+                         under a different MOONDIAL_WORLD, or run the modules that wrote it.",
+                        world.id.0, at.0
+                    ),
+                    e => e.to_string(),
+                })?;
             world.store = fresh;
             for e in world
                 .log
