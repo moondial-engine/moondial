@@ -18,7 +18,7 @@ use axum::http::{HeaderMap, HeaderName, StatusCode};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use moondial_log::Cursor;
-use moondial_registry::{ActorKind, CallContext, CommandError};
+use moondial_registry::{ActorKind, CallContext};
 use moondial_store::{EntityId, Viewer};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -99,6 +99,12 @@ fn help_text(world: &World, kind: ActorKind) -> String {
             s.description
         ));
     }
+    lines.push(
+        "  observe <json>  Ask the world a question as a query (a read; not speech).".to_string(),
+    );
+    lines.push(
+        "  clear [on|off]  Show replies as the CLEAR the world wrote, or as prose.".to_string(),
+    );
     lines.push("  quit".to_string());
     lines.join("\n")
 }
@@ -106,6 +112,7 @@ fn help_text(world: &World, kind: ActorKind) -> String {
 fn run_line(
     shared: &Shared,
     actor: &mut Option<(String, ActorKind)>,
+    raw: &mut bool,
     line: &str,
 ) -> Result<String, String> {
     let line = line.trim();
@@ -157,17 +164,60 @@ fn run_line(
                 help_text(&world, kind)
             })
         }
-        _ => {
+        "clear" => {
+            // Show replies as the CLEAR the world wrote, or as prose.
+            *raw = match rest {
+                "on" => true,
+                "off" => false,
+                _ => !*raw,
+            };
+            Ok(if *raw {
+                "Replies are shown as CLEAR. Type clear off for prose.".into()
+            } else {
+                "Replies are shown as prose. Type clear on for CLEAR.".into()
+            })
+        }
+        "observe" => {
+            // A read, not speech: the query runs outside the gate.
             let Some((name, kind)) = actor.clone() else {
                 return Err("Not logged in. Type: login <name> <passphrase>".into());
             };
             let ctx = CallContext { actor: name, kind };
             match world.call(&ctx, verb, &split_args(verb, rest)) {
                 Ok(out) => Ok(out.summary),
-                Err(CommandError::Unknown { name }) => {
-                    Err(format!("Unknown command '{name}'. Type help."))
-                }
                 Err(e) => Err(e.to_string()),
+            }
+        }
+        _ => {
+            // Everything else is speech: the line becomes a one-statement REQUEST and
+            // goes through the gate, like an agent's message.
+            let Some((name, kind)) = actor.clone() else {
+                return Err("Not logged in. Type: login <name> <passphrase>".into());
+            };
+            let text = crate::gate::compile(&name, &world.id.0, line, world.now());
+            let mut budget = shared
+                .hour_budget
+                .lock()
+                .map_err(|_| "budget lock poisoned".to_string())?;
+            let passage = crate::gate::pass(
+                &mut world,
+                &shared.checker,
+                &mut budget,
+                &crate::disremembered::ask::Asks,
+                &name,
+                kind,
+                crate::gate::Via::Text,
+                &text,
+            );
+            let shown = if *raw {
+                passage.reply.trim_end().to_string()
+            } else {
+                passage.prose
+            };
+            if passage.ok {
+                Ok(shown)
+            } else {
+                Err(shown)
             }
         }
     }
@@ -205,6 +255,7 @@ async fn handle_tcp(shared: Shared, stream: TcpStream) {
         .await;
     let mut actor: Option<(String, ActorKind)> = None;
     let mut cursor: u64 = 0;
+    let mut raw = false;
     while let Ok(Some(line)) = lines.next_line().await {
         if line.trim() == "quit" {
             let _ = w.write_all(b"The world goes on without you.\n").await;
@@ -214,7 +265,7 @@ async fn handle_tcp(shared: Shared, stream: TcpStream) {
             Some((name, _)) => narrative_since(&shared, name, &mut cursor),
             None => Vec::new(),
         };
-        let reply = match run_line(&shared, &mut actor, &line) {
+        let reply = match run_line(&shared, &mut actor, &mut raw, &line) {
             Ok(s) => s,
             Err(e) => format!("! {e}"),
         };
@@ -365,29 +416,97 @@ async fn command(
     };
     let mut w = lock(&s)?;
     http_login(&mut w, &body.actor, &body.passphrase)?;
-    let ctx = CallContext {
-        actor: body.actor.clone(),
+    if body.command == "observe" {
+        // A read, not speech: runs outside the gate.
+        let ctx = CallContext {
+            actor: body.actor.clone(),
+            kind,
+        };
+        let outcome = w.call(&ctx, &body.command, &body.args);
+        drop(w);
+        return match outcome {
+            Ok(out) => Ok(Json(
+                json!({"ok": true, "summary": out.summary, "result": out.result}),
+            )),
+            Err(e) => Err((
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(json!({"ok": false, "error": e.to_string(), "detail": e})),
+            )),
+        };
+    }
+    let mut budget = s
+        .hour_budget
+        .lock()
+        .map_err(|_| err_json(StatusCode::INTERNAL_SERVER_ERROR, "budget lock poisoned"))?;
+    let passage = compiled_passage(
+        &mut w,
+        &s,
+        &mut budget,
+        &body.actor,
         kind,
-    };
-    let outcome = w.call(&ctx, &body.command, &body.args);
+        crate::gate::Via::Http,
+        &body.command,
+        &body.args,
+    );
+    drop(budget);
     drop(w);
     let _ = s.changed.send(());
-    match outcome {
-        Ok(out) => Ok(Json(
-            json!({"ok": true, "summary": out.summary, "result": out.result}),
-        )),
-        Err(e) => {
-            let status = match e {
-                CommandError::Internal { .. } => StatusCode::INTERNAL_SERVER_ERROR,
-                CommandError::NotAllowed { .. } => StatusCode::FORBIDDEN,
-                CommandError::Unknown { .. } => StatusCode::NOT_FOUND,
-                _ => StatusCode::UNPROCESSABLE_ENTITY,
-            };
-            Err((
-                status,
-                Json(json!({"ok": false, "error": e.to_string(), "detail": e})),
-            ))
-        }
+    Ok(Json(passage_json(&passage)))
+}
+
+/// Compile a command and its arguments into a REQUEST and pass it through the gate.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn compiled_passage(
+    w: &mut World,
+    s: &Shared,
+    budget: &mut crate::gate::HourBudget,
+    actor: &str,
+    kind: ActorKind,
+    via: crate::gate::Via,
+    command: &str,
+    args: &Value,
+) -> crate::gate::Passage {
+    let words: Vec<String> = args
+        .as_array()
+        .map(|a| {
+            a.iter()
+                .map(|v| match v {
+                    Value::String(s) => s.clone(),
+                    other => other.to_string(),
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    let line = if words.is_empty() {
+        command.to_string()
+    } else {
+        format!("{command} {}", words.join(" "))
+    };
+    let text = crate::gate::compile(actor, &w.id.0, &line, w.now());
+    crate::gate::pass(
+        w,
+        &s.checker,
+        budget,
+        &crate::disremembered::ask::Asks,
+        actor,
+        kind,
+        via,
+        &text,
+    )
+}
+
+/// A compiled passage as the command reply: `ok`, the prose as `summary`, the first
+/// statement's result, and the CLEAR the world wrote as `reply`.
+pub(crate) fn passage_json(p: &crate::gate::Passage) -> Value {
+    let result = p
+        .outcomes
+        .first()
+        .map(|o| o.result.clone())
+        .unwrap_or(Value::Null);
+    if p.ok {
+        json!({"ok": true, "summary": p.prose, "result": result, "message": p.message, "reply": p.reply, "verdict": p.verdict})
+    } else {
+        json!({"ok": false, "error": p.prose, "detail": result, "message": p.message, "reply": p.reply, "verdict": p.verdict, "findings": p.findings})
     }
 }
 
@@ -473,6 +592,8 @@ async fn gate_http(State(s): State<Shared>, Json(body): Json<GateBody>) -> Reply
         &mut budget,
         &crate::disremembered::ask::Asks,
         &body.actor,
+        ActorKind::Citizen,
+        crate::gate::Via::Gate,
         &body.message,
     );
     drop(budget);

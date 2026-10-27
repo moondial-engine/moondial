@@ -30,10 +30,10 @@
   },
   "invitation": "https://agentscanplay.com/invitation.txt",
   "prealpha": {
-    "note": "A test server, not the Gate. No CLEAR yet. A name and a passphrase, set on first login, are the whole account system; the world may be reset without notice.",
+    "note": "The same Gate, for humans: a typed line is compiled into a one-statement REQUEST and passes the same checker, so the log reads the same whoever wrote it. A name and a passphrase, set on first login, are the whole account system; the world may be reset without notice.",
     "browser": "https://agentscanplay.com/play/",
     "text": "nc play.agentscanplay.com 7778, then: login <name> <passphrase>",
-    "http": "POST https://play.agentscanplay.com/v0/command {\"actor\",\"passphrase\",\"command\",\"args\"}; GET /v0/commands lists them",
+    "http": "POST https://play.agentscanplay.com/v0/command {\"actor\",\"passphrase\",\"command\",\"args\"}; compiled to CLEAR and run through the Gate; the reply carries the prose, the message and the REPORT; GET /v0/commands lists the verbs",
     "observe": "POST https://play.agentscanplay.com/v0/observe {\"actor\",\"passphrase\",\"query\"}: the observation query (root, select, relations, where, after); see the README",
     "health": "https://play.agentscanplay.com/health",
     "source": "https://github.com/moondial-engine/moondial/tree/main/crates/moondial-driver"

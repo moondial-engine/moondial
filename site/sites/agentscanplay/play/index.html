@@ -49,6 +49,9 @@
   .line.sys { color: var(--dim); }
   .line.tell { color: var(--ink); }
   .line.tell::before { content: "* "; color: var(--dust); }
+  .line.clear { color: var(--dim); font-size: 12px; white-space: pre-wrap; border-left: 2px solid var(--line); padding-left: 10px; margin: 2px 0 6px; }
+  header label { color: var(--dim); font-size: 13px; cursor: pointer; margin-left: 14px; white-space: nowrap; }
+  header label input { vertical-align: -1px; margin-right: 4px; }
   .line.cmd { color: var(--ink); }
   .line.cmd b { color: var(--dust); font-weight: 400; display: inline-block; min-width: 11ch; }
   .line.cmd i { color: var(--dim); font-style: normal; }
@@ -125,7 +128,7 @@
 <body>
 <header>
   <div class="title"><a href="/">Agents can play</a> — Disremembered</div>
-  <div class="state" id="state"><b>Pre-alpha.</b> The world may be reset without notice.</div>
+  <div class="state"><span id="state"><b>Pre-alpha.</b> The world may be reset without notice.</span><label title="Every line you type becomes a CLEAR message and goes through the same gate an agent uses. Show the message and the world's reply."><input type="checkbox" id="showclear"> show CLEAR</label></div>
 </header>
 <div id="main">
   <aside id="scene" aria-label="The scene">
@@ -286,6 +289,11 @@
       if (command === "quit") { print("The world goes on without you.", "sys"); logout(); }
     } else {
       print(body.error || "Refused.", "err");
+    }
+    // The glass: what crossed the gate, word for word, when asked for.
+    if (body.reply && $("showclear").checked) {
+      if (body.message) print(body.message.trim(), "clear");
+      print(body.reply.trim(), "clear");
     }
   }
 

@@ -11,6 +11,14 @@
 //!
 //! One passing message costs one unit of an hourly budget; a failed one costs a
 //! fraction. Legibility is public standing, not a cost.
+//!
+//! CLEAR is the only way to act in the world. A human's terminal line (`attack wisp`)
+//! is compiled into a one-statement REQUEST by the text port, the HTTP command
+//! endpoint or the session, and goes through the same gate: checked by the same rules,
+//! logged word for word as `gate.message` and `gate.reply`, run by the same code. Only
+//! messages that arrive raw at `/v0/gate` are charged to the hourly budget; the budget
+//! is the knob on agent traffic, not a tax on typing. Observation is a read, not
+//! speech, and stays outside the gate.
 
 use crate::world::World;
 use moondial_clear::{merge, parse_raw, CheckResult, Checker, Message, Statement};
@@ -171,6 +179,27 @@ impl Report {
     }
 }
 
+impl Report {
+    /// The reply for a human: quotes as they are, and the world's own statements;
+    /// the receipts (event ids, which rule, which precondition) stay in the CLEAR form.
+    pub fn prose(&self) -> String {
+        let mut out: Vec<String> = Vec::new();
+        for line in &self.lines {
+            match line {
+                Line::Quote { text, .. } => out.push(text.clone()),
+                Line::Fact { text, src } => {
+                    let receipt = src.starts_with("ev-")
+                        || matches!(src.as_str(), "precondition" | "registry" | "driver");
+                    if !receipt {
+                        out.push(sentence(text));
+                    }
+                }
+            }
+        }
+        out.join("\n")
+    }
+}
+
 /// Make sure a FACT ends with a period and holds no line breaks.
 fn sentence(text: &str) -> String {
     let t = one_line(text);
@@ -250,15 +279,77 @@ pub struct Passage {
     pub findings: Vec<moondial_clear::Finding>,
     /// Budget left this hour, in messages.
     pub budget_remaining: f64,
+    /// Whether every statement the world ran succeeded (and the message passed).
+    pub ok: bool,
+    /// The reply as prose for a human: the narrator's quotes and the world's own
+    /// statements, without the event receipts.
+    pub prose: String,
+    /// What each DO the world ran came to.
+    pub outcomes: Vec<StatementOutcome>,
+    /// The message as the checker read it (for a compiled line, what the line became).
+    pub message: String,
 }
 
-/// Run one message through the gate for an authenticated actor.
+/// One DO's outcome.
+#[derive(Debug, Clone, Serialize)]
+pub struct StatementOutcome {
+    /// The statement's index in the message.
+    pub statement: usize,
+    /// The verb it named.
+    pub verb: String,
+    /// Whether the command ran.
+    pub ok: bool,
+    /// The command's result, when it ran.
+    pub result: Value,
+}
+
+/// Where a message came in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Via {
+    /// Raw CLEAR at `/v0/gate`; budgeted.
+    Gate,
+    /// Compiled from a terminal line on the text port.
+    Text,
+    /// Compiled from `POST /v0/command`.
+    Http,
+    /// Compiled from a session `command` frame.
+    Session,
+}
+
+impl Via {
+    fn name(self) -> &'static str {
+        match self {
+            Via::Gate => "gate",
+            Via::Text => "text",
+            Via::Http => "http",
+            Via::Session => "session",
+        }
+    }
+}
+
+/// Compile a terminal line (`attack the wisp`) into a REQUEST from `actor` to `world`:
+/// one DO, MUST, the line's first word as the verb. What a human types is what the
+/// checker reads; a line the checker refuses comes back with the rule it broke.
+pub fn compile(actor: &str, world: &str, line: &str, now: Timestamp) -> String {
+    let body = one_line(line);
+    let body = body.trim_end_matches('.');
+    format!(
+        "FROM: {actor}\nTO: {world}\nINTENT: REQUEST\nREF: {actor}-{}\n\n[DO] {actor} MUST {body}.\n",
+        iso_minute(now)
+    )
+}
+
+/// Run one message through the gate for an authenticated actor. `kind` is what the
+/// channel authenticated the actor as; raw gate messages are always citizens.
+#[allow(clippy::too_many_arguments)]
 pub fn pass(
     world: &mut World,
     checker: &Checker,
     budget: &mut HourBudget,
     asks: &dyn AskBinding,
     actor: &str,
+    kind: ActorKind,
+    via: Via,
     text: &str,
 ) -> Passage {
     let world_name = world.id.0.clone();
@@ -267,23 +358,36 @@ pub fn pass(
     let msg = &result.message;
     let r#ref = msg.field("REF").filter(|r| !r.is_empty());
     let mut report = Report::new(&world_name, actor, r#ref);
+    let mut outcomes = Vec::new();
 
-    if let Err(resets) = budget.check(actor, now) {
-        report.fact(
-            format!("{actor} has spent the message budget for the hour as of {}; the budget resets at {}", iso_minute(now), iso_minute(resets)),
-            "budget",
-        );
-        return finish(world, result, report, false, budget.remaining(actor, now));
+    if via == Via::Gate {
+        if let Err(resets) = budget.check(actor, now) {
+            report.fact(
+                format!("{actor} has spent the message budget for the hour as of {}; the budget resets at {}", iso_minute(now), iso_minute(resets)),
+                "budget",
+            );
+            return finish(
+                world,
+                text.to_string(),
+                result,
+                report,
+                false,
+                budget.remaining(actor, now),
+                outcomes,
+            );
+        }
     }
 
     let passed = result.verdict == "PASS";
-    budget.charge(actor, now, passed);
+    if via == Via::Gate {
+        budget.charge(actor, now, passed);
+    }
     // Every message that crosses the Gate is in the log, word for word, as the
     // invitation promises. Humans read it like any other event.
     let _ = world.note(
         moondial_log::Actor::Citizen(actor.to_string()),
         "gate.message",
-        serde_json::json!({"from": actor, "text": text, "verdict": result.verdict, "score": result.score}),
+        serde_json::json!({"from": actor, "text": text, "verdict": result.verdict, "score": result.score, "via": via.name()}),
     );
 
     // The sender must be who they say they are, and must be talking to this world.
@@ -298,7 +402,15 @@ pub fn pass(
             "The world acts only on messages whose FROM is the authenticated sender",
             "gate",
         );
-        return finish(world, result, report, false, budget.remaining(actor, now));
+        return finish(
+            world,
+            text.to_string(),
+            result,
+            report,
+            false,
+            budget.remaining(actor, now),
+            outcomes,
+        );
     }
     if passed && to != world_name {
         report.fact(
@@ -309,17 +421,33 @@ pub fn pass(
             "The world does not relay messages between actors in this version",
             "gate",
         );
-        return finish(world, result, report, false, budget.remaining(actor, now));
+        return finish(
+            world,
+            text.to_string(),
+            result,
+            report,
+            false,
+            budget.remaining(actor, now),
+            outcomes,
+        );
     }
 
     if !passed {
         rejection(&result, &mut report);
-        return finish(world, result, report, false, budget.remaining(actor, now));
+        return finish(
+            world,
+            text.to_string(),
+            result,
+            report,
+            false,
+            budget.remaining(actor, now),
+            outcomes,
+        );
     }
 
     let intent = msg.field("INTENT").unwrap_or("");
     match intent {
-        "REQUEST" => run_request(world, msg, actor, &mut report),
+        "REQUEST" => run_request(world, msg, actor, kind, &mut report, &mut outcomes),
         "QUERY" => run_query(world, msg, actor, asks, &mut report),
         "PROPOSE" => {
             report.fact("The world does not take proposals in this version", "gate");
@@ -340,15 +468,25 @@ pub fn pass(
         }
     }
     let acted = matches!(intent, "REQUEST" | "QUERY");
-    finish(world, result, report, acted, budget.remaining(actor, now))
+    finish(
+        world,
+        text.to_string(),
+        result,
+        report,
+        acted,
+        budget.remaining(actor, now),
+        outcomes,
+    )
 }
 
 fn finish(
     world: &mut World,
+    message: String,
     result: CheckResult,
     report: Report,
     acted: bool,
     budget_remaining: f64,
+    outcomes: Vec<StatementOutcome>,
 ) -> Passage {
     let reply = report.render();
     let _ = world.note(
@@ -356,13 +494,18 @@ fn finish(
         "gate.reply",
         serde_json::json!({"to": report.to, "text": reply, "acted": acted}),
     );
+    let ok = acted && outcomes.iter().all(|o| o.ok);
     Passage {
+        message,
         verdict: result.verdict,
         score: result.score,
         acted,
+        prose: report.prose(),
         reply,
         findings: result.findings,
         budget_remaining,
+        ok,
+        outcomes,
     }
 }
 
@@ -399,9 +542,19 @@ fn rejection(result: &CheckResult, report: &mut Report) {
         ),
         "clear_check",
     );
+    if result.findings.iter().any(|f| f.rule == "CL-I5") {
+        report.fact("Type help for the verbs this world runs", "gate");
+    }
 }
 
-fn run_request(world: &mut World, msg: &Message, actor: &str, report: &mut Report) {
+fn run_request(
+    world: &mut World,
+    msg: &Message,
+    actor: &str,
+    kind: ActorKind,
+    report: &mut Report,
+    outcomes: &mut Vec<StatementOutcome>,
+) {
     let dos: Vec<&Statement> = msg
         .statements
         .iter()
@@ -443,10 +596,16 @@ fn run_request(world: &mut World, msg: &Message, actor: &str, report: &mut Repor
             .unwrap_or(0);
         let ctx = CallContext {
             actor: actor.to_string(),
-            kind: ActorKind::Citizen,
+            kind,
         };
         match world.call(&ctx, &verb, &args) {
             Ok(out) => {
+                outcomes.push(StatementOutcome {
+                    statement: n,
+                    verb: verb.clone(),
+                    ok: true,
+                    result: out.result.clone(),
+                });
                 let after = world
                     .log
                     .head(&world.id)
@@ -467,6 +626,12 @@ fn run_request(world: &mut World, msg: &Message, actor: &str, report: &mut Repor
                 report.quote(out.summary, &world.id.0);
             }
             Err(e) => {
+                outcomes.push(StatementOutcome {
+                    statement: n,
+                    verb: verb.clone(),
+                    ok: false,
+                    result: serde_json::to_value(&e).unwrap_or(Value::Null),
+                });
                 let (reason, src) = match &e {
                     CommandError::Unknown { .. } => ("names no command this world has", "registry"),
                     CommandError::NotAllowed { .. } => {
@@ -585,7 +750,27 @@ mod tests {
         actor: &str,
         text: &str,
     ) -> Passage {
-        let p = pass(w, checker, budget, &Asks, actor, text);
+        send_via(w, checker, budget, actor, Via::Gate, text)
+    }
+
+    fn send_via(
+        w: &mut World,
+        checker: &Checker,
+        budget: &mut HourBudget,
+        actor: &str,
+        via: Via,
+        text: &str,
+    ) -> Passage {
+        let p = pass(
+            w,
+            checker,
+            budget,
+            &Asks,
+            actor,
+            ActorKind::Citizen,
+            via,
+            text,
+        );
         // The world's own replies pass the same checker, always.
         let verdict = checker.check(&p.reply);
         assert_eq!(
@@ -849,5 +1034,79 @@ mod tests {
             iso_minute(Timestamp(1_793_100_000_000)),
             "2026-10-27T11:20Z"
         );
+    }
+
+    #[test]
+    fn a_terminal_line_is_a_message_through_the_same_gate() {
+        let mut w = world();
+        let checker = checker();
+        let mut budget = HourBudget::new(60.0, 0.25);
+        let now = w.now();
+
+        // What a human types compiles to one DO, and the prose is the narrator's.
+        let text = compile("spacepants", "disremembered", "travel to the east", now);
+        assert!(
+            text.contains("[DO] spacepants MUST travel to the east."),
+            "{text}"
+        );
+        let p = send_via(
+            &mut w,
+            &checker,
+            &mut budget,
+            "spacepants",
+            Via::Text,
+            &text,
+        );
+        assert!(p.ok, "{}", p.reply);
+        assert!(p.prose.starts_with("You go east."), "{}", p.prose);
+        assert!(
+            !p.prose.contains("Statement 1"),
+            "receipts stay in CLEAR: {}",
+            p.prose
+        );
+        assert_eq!(p.outcomes.len(), 1);
+        assert_eq!(p.outcomes[0].verb, "travel");
+
+        // The message and the reply are in the log word for word, marked by channel,
+        // and typing is not charged to the agent budget.
+        let events = w.log.read_all(&w.id, moondial_log::Cursor::START).unwrap();
+        let sent = events
+            .iter()
+            .rev()
+            .find(|e| e.kind == "gate.message")
+            .expect("the line is in the log");
+        assert_eq!(sent.payload["via"], "text");
+        assert_eq!(sent.payload["text"], text);
+        assert!(events.iter().rev().any(|e| e.kind == "gate.reply"));
+        assert_eq!(budget.remaining("spacepants", now), 60.0);
+
+        // A refused command is not ok, and the prose says why in the world's words.
+        let text = compile("spacepants", "disremembered", "shelve chunk-99", now);
+        let p = send_via(
+            &mut w,
+            &checker,
+            &mut budget,
+            "spacepants",
+            Via::Text,
+            &text,
+        );
+        assert!(!p.ok);
+        assert!(p.acted);
+        assert!(!p.prose.is_empty());
+
+        // A word the world has no verb for fails the checker, and the reply says what
+        // to do, in CLEAR that passes the checker (send_via asserts that).
+        let text = compile("spacepants", "disremembered", "east", now);
+        let p = send_via(
+            &mut w,
+            &checker,
+            &mut budget,
+            "spacepants",
+            Via::Text,
+            &text,
+        );
+        assert!(!p.ok && !p.acted);
+        assert!(p.prose.contains("CL-I5"), "{}", p.prose);
+        assert!(p.prose.contains("Type help"), "{}", p.prose);
     }
 }

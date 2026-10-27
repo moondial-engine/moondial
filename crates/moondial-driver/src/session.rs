@@ -178,12 +178,23 @@ async fn run(socket: WebSocket, s: Shared) {
                             send!(json!({"type": "result", "id": id, "ok": false, "error": "log in first"}));
                             continue;
                         };
+                        let kind = if admin { ActorKind::Admin } else { ActorKind::Citizen };
                         let reply = {
                             let Ok(mut w) = s.world.lock() else { continue };
-                            let ctx = CallContext { actor: name, kind: if admin { ActorKind::Admin } else { ActorKind::Citizen } };
-                            match w.call(&ctx, &command, &args) {
-                                Ok(out) => json!({"type": "result", "id": id, "ok": true, "summary": out.summary, "result": out.result}),
-                                Err(e) => json!({"type": "result", "id": id, "ok": false, "error": e.to_string(), "detail": e}),
+                            if command == "observe" {
+                                // A read, not speech: runs outside the gate.
+                                let ctx = CallContext { actor: name, kind };
+                                match w.call(&ctx, &command, &args) {
+                                    Ok(out) => json!({"type": "result", "id": id, "ok": true, "summary": out.summary, "result": out.result}),
+                                    Err(e) => json!({"type": "result", "id": id, "ok": false, "error": e.to_string(), "detail": e}),
+                                }
+                            } else {
+                                let Ok(mut budget) = s.hour_budget.lock() else { continue };
+                                let p = crate::net::compiled_passage(&mut w, &s, &mut budget, &name, kind, crate::gate::Via::Session, &command, &args);
+                                let mut v = crate::net::passage_json(&p);
+                                v["type"] = json!("result");
+                                v["id"] = id;
+                                v
                             }
                         };
                         let _ = s.changed.send(());
