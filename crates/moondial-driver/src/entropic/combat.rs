@@ -1,5 +1,7 @@
-//! Encounters: turn-based, one round per `attack`. Creatures only act when struck or
-//! fled from, because the driver has no scheduler yet; when it does, they will hunt.
+//! Encounters: one round per `attack`, and the creature's own strikes on the scheduler
+//! while you stay engaged, so a fight has a clock. Aggressive creatures ambush whoever
+//! walks in. Rooms refill on respawn jobs. What happens to you while you are not typing
+//! arrives as narrative events.
 //!
 //! Your attack follows your level, so a faded window hits softer. A win at low hit points
 //! earns a chunk with high vividity, and vivid chunks fade slower: the fights you almost
@@ -21,6 +23,12 @@ pub struct CreatureDef {
     pub hp: f64,
     pub attack: f64,
     pub xp: f64,
+    /// Attacks whoever walks in, a few seconds after they arrive.
+    pub aggressive: bool,
+    /// Seconds between its own strikes while engaged.
+    pub strike_seconds: i64,
+    /// How it announces itself when it ambushes.
+    pub ambush: &'static str,
 }
 
 pub const CREATURES: &[CreatureDef] = &[
@@ -30,6 +38,9 @@ pub const CREATURES: &[CreatureDef] = &[
         hp: 8.0,
         attack: 2.0,
         xp: 15.0,
+        aggressive: false,
+        strike_seconds: 12,
+        ambush: "drifts closer.",
     },
     CreatureDef {
         key: "hollow",
@@ -37,6 +48,9 @@ pub const CREATURES: &[CreatureDef] = &[
         hp: 20.0,
         attack: 4.0,
         xp: 60.0,
+        aggressive: true,
+        strike_seconds: 10,
+        ambush: "stands up out of the water and comes at you.",
     },
     CreatureDef {
         key: "revenant",
@@ -44,6 +58,9 @@ pub const CREATURES: &[CreatureDef] = &[
         hp: 45.0,
         attack: 7.0,
         xp: 200.0,
+        aggressive: true,
+        strike_seconds: 8,
+        ambush: "steps out of a niche. It has been waiting.",
     },
 ];
 
@@ -53,6 +70,27 @@ const BASE_ATTACK: f64 = 3.0;
 const LEVEL_PER_ATTACK: f64 = 10.0;
 /// On death, the chance in a hundred of losing one window chunk.
 const CONCUSSION_PERCENT: u32 = 50;
+/// Seconds between arriving in a room and an aggressive creature noticing you.
+const AMBUSH_SECONDS: i64 = 4;
+
+pub const JOB_RESPAWN: &str = "entropic.respawn";
+pub const JOB_STRIKE: &str = "entropic.strike";
+pub const JOB_AMBUSH: &str = "entropic.ambush";
+pub const NARRATIVE: &str = "entropic.narrative";
+
+/// Something that happened to a citizen while they were not typing. The text port
+/// prints it after their next command; the browser client polls for it.
+pub fn narrate(world: &mut World, actor: &str, text: impl Into<String>) {
+    let _ = world.note(
+        Actor::Driver,
+        NARRATIVE,
+        json!({"to": actor, "text": text.into()}),
+    );
+}
+
+fn creature_def(world: &World, creature: EntityId) -> Option<&'static CreatureDef> {
+    plain_str(world, creature, CREATURE, "name").and_then(def)
+}
 
 fn def(key: &str) -> Option<&'static CreatureDef> {
     CREATURES.iter().find(|c| c.key == key)
@@ -77,18 +115,14 @@ pub fn creatures_in(world: &World, room: EntityId) -> Vec<(EntityId, String, f64
         .collect()
 }
 
-/// Fill the room to its count once its respawn time has come. Called on look and attack,
-/// since the driver has no scheduler yet.
-pub fn maybe_spawn(world: &mut World, room: EntityId) -> Result<(), StoreError> {
+/// Fill the room to its count now. Respawn jobs call this; nothing else does.
+pub fn fill(world: &mut World, room: EntityId) -> Result<usize, StoreError> {
     let Some(key) = plain_str(world, room, SPAWN, "creature").map(str::to_string) else {
-        return Ok(());
+        return Ok(0);
     };
     let count = plain_num(world, room, SPAWN, "count").unwrap_or(0.0) as usize;
-    let next_at = plain_num(world, room, SPAWN, "next_at").unwrap_or(0.0) as i64;
-    if world.now().0 < next_at {
-        return Ok(());
-    }
-    let Some(d) = def(&key) else { return Ok(()) };
+    let Some(d) = def(&key) else { return Ok(0) };
+    let mut spawned = 0;
     for _ in creatures_in(world, room).len()..count {
         let id = world.store.allocate_id();
         world.record(
@@ -115,24 +149,93 @@ pub fn maybe_spawn(world: &mut World, room: EntityId) -> Result<(), StoreError> 
                 fields,
             },
         )?;
+        spawned += 1;
+    }
+    Ok(spawned)
+}
+
+/// Schedule the room's refill after its respawn interval, unless one is pending.
+fn schedule_respawn(world: &mut World, room: EntityId) -> Result<(), String> {
+    let secs = plain_num(world, room, SPAWN, "respawn_seconds").unwrap_or(60.0) as i64;
+    let due = world.now().plus(moondial_time::Duration::seconds(secs));
+    world
+        .schedule_once(JOB_RESPAWN, due, json!({"room": room.0}), |p| {
+            p["room"] == room.0
+        })
+        .map(|_| ())
+}
+
+/// At boot: every room below its count gets a refill job due now, unless one is pending.
+pub fn ensure_spawns(world: &mut World) -> Result<(), String> {
+    let rooms: Vec<EntityId> = world
+        .store
+        .entities()
+        .filter(|e| e.kind == "room" && e.components.contains_key(SPAWN))
+        .map(|e| e.id)
+        .collect();
+    for room in rooms {
+        let count = plain_num(world, room, SPAWN, "count").unwrap_or(0.0) as usize;
+        if creatures_in(world, room).len() < count {
+            let now = world.now();
+            world.schedule_once(JOB_RESPAWN, now, json!({"room": room.0}), |p| {
+                p["room"] == room.0
+            })?;
+        }
     }
     Ok(())
 }
 
-/// A kill starts the room's respawn timer.
-fn start_respawn(world: &mut World, room: EntityId) -> Result<(), StoreError> {
-    let respawn_ms =
-        (plain_num(world, room, SPAWN, "respawn_seconds").unwrap_or(60.0) * 1000.0) as i64;
-    let next = world.now().0 + respawn_ms;
-    world.record(
-        Actor::Driver,
-        StoreEvent::FieldSet {
-            id: room,
-            component: SPAWN.into(),
-            field: "next_at".into(),
-            value: json!(next),
-        },
-    )?;
+/// A citizen has arrived in a room: anything aggressive there will notice them soon.
+pub fn on_arrival(
+    world: &mut World,
+    actor: &str,
+    citizen: EntityId,
+    room: EntityId,
+) -> Result<(), String> {
+    let hunters: Vec<EntityId> = creatures_in(world, room)
+        .into_iter()
+        .filter(|(id, _, _, _)| creature_def(world, *id).is_some_and(|d| d.aggressive))
+        .map(|c| c.0)
+        .collect();
+    let due = world
+        .now()
+        .plus(moondial_time::Duration::seconds(AMBUSH_SECONDS));
+    for creature in hunters {
+        world.schedule_once(
+            JOB_AMBUSH,
+            due,
+            json!({"creature": creature.0, "citizen": citizen.0, "actor": actor}),
+            |p| p["creature"] == creature.0 && p["citizen"] == citizen.0,
+        )?;
+    }
+    Ok(())
+}
+
+/// The creature will strike on its own while the fight lasts.
+fn schedule_strike(
+    world: &mut World,
+    actor: &str,
+    citizen: EntityId,
+    creature: EntityId,
+) -> Result<(), String> {
+    let secs = creature_def(world, creature)
+        .map(|d| d.strike_seconds)
+        .unwrap_or(10);
+    let due = world.now().plus(moondial_time::Duration::seconds(secs));
+    world
+        .schedule_once(
+            JOB_STRIKE,
+            due,
+            json!({"creature": creature.0, "citizen": citizen.0, "actor": actor}),
+            |p| p["creature"] == creature.0 && p["citizen"] == citizen.0,
+        )
+        .map(|_| ())
+}
+
+/// The fight is over for this citizen: no more strikes come.
+fn end_fight(world: &mut World, citizen: EntityId) -> Result<(), String> {
+    world.cancel(JOB_STRIKE, |p| p["citizen"] == citizen.0)?;
+    world.cancel(JOB_AMBUSH, |p| p["citizen"] == citizen.0)?;
     Ok(())
 }
 
@@ -229,6 +332,7 @@ fn die(world: &mut World, actor: &str, f: &super::Found) -> Result<Option<String
     }
     let home = super::rooms::arrival(world).ok_or_else(|| internal("the Threshold is missing"))?;
     set_engaged(world, actor, f.citizen, None).map_err(internal)?;
+    end_fight(world, f.citizen).map_err(internal)?;
     world
         .record(
             Actor::Driver,
@@ -243,13 +347,74 @@ fn die(world: &mut World, actor: &str, f: &super::Found) -> Result<Option<String
 }
 
 pub fn register(world: &mut World, curves: Curves) {
+    world.on_job(
+        JOB_RESPAWN,
+        Box::new(|w: &mut World, job| {
+            let room = EntityId(job.payload["room"].as_u64().unwrap_or(0));
+            fill(w, room).map(|_| ()).map_err(|e| e.to_string())
+        }),
+    );
+
+    world.on_job(
+        JOB_STRIKE,
+        Box::new(|w: &mut World, job| {
+            let creature = EntityId(job.payload["creature"].as_u64().unwrap_or(0));
+            let citizen = EntityId(job.payload["citizen"].as_u64().unwrap_or(0));
+            let actor = job.payload["actor"].as_str().unwrap_or("").to_string();
+            // The fight must still be on: both exist, same room, still engaged.
+            let same_room = w.store.entity(creature).and_then(|c| c.parent) == w.store.entity(citizen).and_then(|c| c.parent);
+            if !same_room || engaged_with(w, citizen) != Some(creature) {
+                return Ok(());
+            }
+            let cname = plain_str(w, creature, CREATURE, "name").unwrap_or("?").to_string();
+            let (taken, dead) = creature_strikes(w, creature, citizen).map_err(|e| e.to_string())?;
+            if dead {
+                let f = super::find_citizen(w, &actor).ok_or("citizen vanished")?;
+                let lost = die(w, &actor, &f).map_err(|e| e.to_string())?;
+                narrate(w, &actor, match lost {
+                    Some(c) => format!("The {cname} hits you for {taken:.0}. You go down. Concussion: you have lost {c}. You wake at the Threshold."),
+                    None => format!("The {cname} hits you for {taken:.0}. You go down, and wake at the Threshold with everything you had."),
+                });
+                return Ok(());
+            }
+            narrate(w, &actor, format!("The {cname} hits you for {taken:.0}. You have {:.0}/{:.0}.", hp(w, citizen), super::MAX_HP));
+            schedule_strike(w, &actor, citizen, creature)
+        }),
+    );
+
+    world.on_job(
+        JOB_AMBUSH,
+        Box::new(|w: &mut World, job| {
+            let creature = EntityId(job.payload["creature"].as_u64().unwrap_or(0));
+            let citizen = EntityId(job.payload["citizen"].as_u64().unwrap_or(0));
+            let actor = job.payload["actor"].as_str().unwrap_or("").to_string();
+            let same_room = w.store.entity(creature).and_then(|c| c.parent) == w.store.entity(citizen).and_then(|c| c.parent);
+            if !same_room || w.store.entity(creature).is_none() || engaged_with(w, citizen).is_some() {
+                return Ok(());
+            }
+            let Some(d) = creature_def(w, creature) else { return Ok(()) };
+            set_engaged(w, &actor, citizen, Some(creature)).map_err(|e| e.to_string())?;
+            let (taken, dead) = creature_strikes(w, creature, citizen).map_err(|e| e.to_string())?;
+            if dead {
+                let f = super::find_citizen(w, &actor).ok_or("citizen vanished")?;
+                let lost = die(w, &actor, &f).map_err(|e| e.to_string())?;
+                narrate(w, &actor, match lost {
+                    Some(c) => format!("The {} {} It hits you for {taken:.0}. You go down. Concussion: you have lost {c}. You wake at the Threshold.", d.name, d.ambush),
+                    None => format!("The {} {} It hits you for {taken:.0}. You go down, and wake at the Threshold with everything you had.", d.name, d.ambush),
+                });
+                return Ok(());
+            }
+            narrate(w, &actor, format!("The {} {} It hits you for {taken:.0}. You have {:.0}/{:.0}. Attack it, or retreat.", d.name, d.ambush, hp(w, citizen), super::MAX_HP));
+            schedule_strike(w, &actor, citizen, creature)
+        }),
+    );
+
     world.register(
         CommandSpec::new("entropic.attack", "Fight a creature here, one round: you strike, it strikes back. Win and you remember it; the closer you came to dying, the longer the memory lasts.")
             .param("creature", ParamType::Entity, false, "a creature name from look; defaults to the one you are fighting"),
         Box::new(move |w: &mut World, ctx, args| {
             let f = me(w, ctx)?;
             let room = super::rooms::room_of(w, f.citizen).ok_or_else(|| internal("citizen has no room"))?;
-            maybe_spawn(w, room).map_err(internal)?;
             let here = creatures_in(w, room);
             let target = match args.str("creature") {
                 Some(name) if !name.is_empty() => {
@@ -266,6 +431,8 @@ pub fn register(world: &mut World, curves: Curves) {
             let cname = plain_str(w, creature, CREATURE, "name").unwrap_or("?").to_string();
             if engaged_with(w, f.citizen) != Some(creature) {
                 set_engaged(w, &ctx.actor, f.citizen, Some(creature)).map_err(internal)?;
+                end_fight(w, f.citizen).map_err(internal)?;
+                schedule_strike(w, &ctx.actor, f.citizen, creature).map_err(internal)?;
             }
 
             // You strike.
@@ -281,8 +448,9 @@ pub fn register(world: &mut World, curves: Curves) {
                 let vividity = (1.0 - my_hp / super::MAX_HP).clamp(0.0, 1.0);
                 let xp = plain_num(w, creature, CREATURE, "xp").unwrap_or(0.0);
                 w.record(Actor::Driver, StoreEvent::EntityRemoved { id: creature }).map_err(internal)?;
-                start_respawn(w, room).map_err(internal)?;
+                schedule_respawn(w, room).map_err(internal)?;
                 set_engaged(w, &ctx.actor, f.citizen, None).map_err(internal)?;
+                end_fight(w, f.citizen).map_err(internal)?;
                 let chunk = super::memory::earn_chunk(w, &ctx.actor, f.window, &cname, xp, vividity, &curves)?;
                 lines.push(format!(
                     "The {cname} comes apart. You remember it: chunk-{} worth {xp:.0} XP, vividity {:.2}{}.",
@@ -321,6 +489,7 @@ pub fn register(world: &mut World, curves: Curves) {
             let cname = plain_str(w, creature, CREATURE, "name").unwrap_or("?").to_string();
             let (taken, dead) = creature_strikes(w, creature, f.citizen).map_err(internal)?;
             set_engaged(w, &ctx.actor, f.citizen, None).map_err(internal)?;
+            end_fight(w, f.citizen).map_err(internal)?;
             if dead {
                 let lost = die(w, &ctx.actor, &f)?;
                 let msg = match &lost {

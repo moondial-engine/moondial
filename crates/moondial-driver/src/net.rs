@@ -170,6 +170,30 @@ fn run_line(
     }
 }
 
+/// Narrative events addressed to `actor` after `cursor`, and the new cursor. What the
+/// world did to you while you were not typing; the text port prints it before the
+/// reply to your next command.
+fn narrative_since(shared: &Shared, actor: &str, cursor: &mut u64) -> Vec<String> {
+    let Ok(w) = shared.world.lock() else {
+        return Vec::new();
+    };
+    let head = w.log.head(&w.id).ok().flatten().map(|s| s.0).unwrap_or(0);
+    if *cursor == 0 {
+        *cursor = head;
+        return Vec::new();
+    }
+    let lines: Vec<String> = w
+        .log
+        .read(&w.id, Cursor { after: *cursor }, 500)
+        .unwrap_or_default()
+        .iter()
+        .filter(|e| e.kind == crate::entropic::NARRATIVE && e.payload["to"] == actor)
+        .filter_map(|e| e.payload["text"].as_str().map(|t| format!("* {t}")))
+        .collect();
+    *cursor = head;
+    lines
+}
+
 async fn handle_tcp(shared: Shared, stream: TcpStream) {
     let (r, mut w) = stream.into_split();
     let mut lines = BufReader::new(r).lines();
@@ -177,16 +201,27 @@ async fn handle_tcp(shared: Shared, stream: TcpStream) {
         .write_all(b"Entropic on Moondial (pre-alpha). Type: login <name> <passphrase>\n> ")
         .await;
     let mut actor: Option<(String, ActorKind)> = None;
+    let mut cursor: u64 = 0;
     while let Ok(Some(line)) = lines.next_line().await {
         if line.trim() == "quit" {
             let _ = w.write_all(b"The world goes on without you.\n").await;
             break;
         }
+        let mut out = match actor.as_ref() {
+            Some((name, _)) => narrative_since(&shared, name, &mut cursor),
+            None => Vec::new(),
+        };
         let reply = match run_line(&shared, &mut actor, &line) {
             Ok(s) => s,
             Err(e) => format!("! {e}"),
         };
-        if w.write_all(format!("{reply}\n> ").as_bytes())
+        if cursor == 0 {
+            if let Some((name, _)) = actor.as_ref() {
+                narrative_since(&shared, name, &mut cursor); // a fresh login starts here
+            }
+        }
+        out.push(reply);
+        if w.write_all(format!("{}\n> ", out.join("\n")).as_bytes())
             .await
             .is_err()
         {

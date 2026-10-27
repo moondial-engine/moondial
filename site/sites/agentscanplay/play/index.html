@@ -45,6 +45,8 @@
   .line.err { color: var(--dim); }
   .line.err::before { content: "! "; color: var(--dust); }
   .line.sys { color: var(--dim); }
+  .line.tell { color: var(--ink); }
+  .line.tell::before { content: "* "; color: var(--dust); }
   .line.cmd { color: var(--ink); }
   .line.cmd b { color: var(--dust); font-weight: 400; display: inline-block; min-width: 11ch; }
   .line.cmd i { color: var(--dim); font-style: normal; }
@@ -95,6 +97,26 @@
   const form = document.getElementById("f");
 
   let actor = null, passphrase = null;
+  let cursor = 0, polling = null;
+
+  // The world moves while you are not typing. Every few seconds, ask what happened to
+  // you since the last thing you saw; the reply's cursor marks where the log stood.
+  async function poll() {
+    if (!actor) return;
+    try {
+      const { status, body } = await api("/v0/observe", { actor, passphrase, query: { root: "self", select: {}, commands: false, after: cursor } });
+      if (status === 401) { print(body.error, "err"); logout(); return; }
+      if (!body || !body.ok) return;
+      const obs = body.observation;
+      for (const e of obs.events || []) {
+        if (e.kind === "entropic.narrative" && e.payload && e.payload.to === actor) print(e.payload.text, "tell");
+      }
+      cursor = obs.cursor;
+    } catch (e) {}
+  }
+  function startPolling() { stopPolling(); polling = setInterval(poll, 5000); }
+  function stopPolling() { if (polling) { clearInterval(polling); polling = null; } }
+  document.addEventListener("visibilitychange", () => { if (document.hidden) stopPolling(); else if (actor) { poll(); startPolling(); } });
   let asking = null;            // "name" | "passphrase" while logging in
   let pendingName = null;
   const history = []; let hi = 0;
@@ -132,6 +154,7 @@
     const { status, body } = await api("/v0/command", { actor, passphrase, command, args });
     if (status === 0 || !body) { print("The world did not answer. Try again in a moment.", "err"); return; }
     if (body.ok) {
+      await poll();
       print(body.summary);
       if (command === "quit") { print("The world goes on without you.", "sys"); logout(); }
     } else if (status === 401) {
@@ -151,10 +174,14 @@
     print(body.fresh
       ? "Welcome, " + name + ". Your passphrase is set; you will need it next time. You are at the Threshold. Type help."
       : "Welcome back, " + name + ".", "sys");
+    // Start the cursor at now: what happened before you logged in is not news.
+    try { const h = await api("/health"); if (h.body) cursor = h.body.events || 0; } catch (e) {}
     await run("look", []);
+    startPolling();
     return true;
   }
   function logout() {
+    stopPolling();
     actor = null; passphrase = null;
     try { sessionStorage.removeItem("entropic.pass"); } catch (e) {}
     setState("<b>Pre-alpha.</b> The world may be reset without notice.");

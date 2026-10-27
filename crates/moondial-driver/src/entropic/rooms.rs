@@ -240,7 +240,6 @@ pub fn describe(
     ctx: &moondial_registry::CallContext,
     room: EntityId,
 ) -> Result<Outcome, moondial_registry::CommandError> {
-    super::combat::maybe_spawn(world, room).map_err(internal)?;
     let obs = super::observe_as(world, ctx, look_query(room))?;
     let root = &obs.observation.root;
     let name = root["components"][ROOM]["name"]
@@ -354,6 +353,7 @@ pub fn register(world: &mut World) {
                 },
             )
             .map_err(internal)?;
+            super::combat::on_arrival(w, &ctx.actor, f.citizen, to).map_err(internal)?;
             let mut out = describe(w, &ctx.actor, ctx, to)?;
             out.summary = format!("You go {exit}. {}", out.summary);
             Ok(out)

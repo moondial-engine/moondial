@@ -18,6 +18,7 @@ fn open(dir: &std::path::Path, at: Timestamp) -> World {
     w.seed(7);
     ensure_world(&mut w).unwrap();
     register(&mut w, Curves::with_half_life(Duration::seconds(10)));
+    w.tick(); // the rooms fill
     w
 }
 
@@ -163,8 +164,9 @@ fn a_fight_earns_a_chunk_whose_vividity_is_how_close_you_came() {
         (level(&mut w, "dave") - 15.0).abs() < 1e-9,
         "a wisp is worth 15"
     );
+    let fog = rooms::room_by_key(&w, "fogbank").unwrap();
     assert_eq!(
-        w.store.entities().filter(|e| e.kind == "creature").count(),
+        combat::creatures_in(&w, fog).len(),
         1,
         "one wisp left; the other respawns later"
     );
@@ -533,4 +535,104 @@ fn no_game_name_is_a_clear_reserved_word_or_alias() {
         Some("the gate (an alias of CLEAR gate)")
     );
     assert_eq!(checker.collision("FACT room").as_deref(), Some("FACT"));
+}
+
+#[test]
+fn the_world_moves_on_its_own() {
+    let dir = tempfile::tempdir().unwrap();
+    let t0 = Timestamp(1_000_000);
+    let mut w = open(dir.path(), t0);
+    let f = login(&mut w, "dave", "test", PASS).unwrap();
+    let narrative = |w: &World, after: u64| -> Vec<String> {
+        w.log
+            .read_all(&w.id, moondial_log::Cursor { after })
+            .unwrap()
+            .iter()
+            .filter(|e| e.kind == combat::NARRATIVE && e.payload["to"] == "dave")
+            .map(|e| e.payload["text"].as_str().unwrap().to_string())
+            .collect()
+    };
+
+    // Rooms filled on the boot tick without anyone looking.
+    let fog = rooms::room_by_key(&w, "fogbank").unwrap();
+    assert_eq!(combat::creatures_in(&w, fog).len(), 2);
+
+    // Kill a wisp: the room refills on its respawn job, not on a look.
+    ok(&mut w, "dave", "travel", json!(["east"]));
+    let out = fight(&mut w, "dave");
+    assert_eq!(out.result["killed"], json!(true), "{}", out.summary);
+    assert_eq!(combat::creatures_in(&w, fog).len(), 1);
+    w.fixed_now = Some(t0.plus(Duration::seconds(30)));
+    assert_eq!(w.tick(), 0, "respawn is 60 s");
+    w.fixed_now = Some(t0.plus(Duration::seconds(61)));
+    assert_eq!(w.tick(), 1);
+    assert_eq!(
+        combat::creatures_in(&w, fog).len(),
+        2,
+        "the fog refilled on its own"
+    );
+
+    // Engage a wisp and wait: it strikes on its own every 12 s and says so.
+    let head = events(&w);
+    let round = ok(&mut w, "dave", "attack", json!(["wisp"]));
+    assert_eq!(round.result["killed"], json!(false), "{}", round.summary);
+    let hp_after_round = combat::hp(&w, f.citizen);
+    w.fixed_now = Some(t0.plus(Duration::seconds(61 + 13)));
+    assert_eq!(w.tick(), 1, "one strike job due");
+    assert!(
+        combat::hp(&w, f.citizen) < hp_after_round + 1.3,
+        "the wisp struck (healing is 0.1 per second)"
+    );
+    let lines = narrative(&w, head);
+    assert_eq!(lines.len(), 1, "{lines:?}");
+    assert!(lines[0].starts_with("The wisp hits you for"), "{lines:?}");
+    assert!(
+        w.jobs
+            .has(combat::JOB_STRIKE, |p| p["citizen"] == f.citizen.0),
+        "the next strike is scheduled"
+    );
+
+    // Retreat ends the chain.
+    ok(&mut w, "dave", "retreat", json!([]));
+    assert!(!w
+        .jobs
+        .has(combat::JOB_STRIKE, |p| p["citizen"] == f.citizen.0));
+    w.fixed_now = Some(t0.plus(Duration::seconds(200)));
+    assert_eq!(w.tick(), 0);
+
+    // Walk into the Shallows: a hollow ambushes after a few seconds.
+    ok(&mut w, "dave", "travel", json!(["north"]));
+    assert!(w
+        .jobs
+        .has(combat::JOB_AMBUSH, |p| p["citizen"] == f.citizen.0));
+    let head = events(&w);
+    w.fixed_now = Some(t0.plus(Duration::seconds(205)));
+    assert!(w.tick() >= 1);
+    assert!(
+        combat::engaged_with(&w, f.citizen).is_some(),
+        "ambushed and engaged"
+    );
+    let lines = narrative(&w, head);
+    assert!(
+        lines
+            .iter()
+            .any(|l| l.starts_with("The hollow stands up out of the water")),
+        "{lines:?}"
+    );
+    // Only one hollow jumped him; the other ambush job was dropped because he is engaged.
+    assert_eq!(lines.len(), 1, "{lines:?}");
+
+    // A frozen world holds everything, including the hollow's next strike.
+    admin(&mut w, "dave", "freeze", json!([]));
+    w.fixed_now = Some(t0.plus(Duration::seconds(400)));
+    assert_eq!(w.tick(), 0);
+    admin(&mut w, "dave", "thaw", json!([]));
+    assert!(w.tick() >= 1);
+
+    // Everything above survives a restart: the pending strike is still pending.
+    let pending_before: Vec<String> = w.jobs.pending().map(|j| j.kind.clone()).collect();
+    drop(w);
+    let w = open(dir.path(), t0.plus(Duration::seconds(401)));
+    let pending_after: Vec<String> = w.jobs.pending().map(|j| j.kind.clone()).collect();
+    assert_eq!(pending_before, pending_after);
 }

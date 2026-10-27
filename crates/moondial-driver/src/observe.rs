@@ -128,6 +128,15 @@ fn visible(world: &World, viewer: &Viewer, now: Timestamp, e: &Event) -> bool {
     if e.kind.starts_with("store.clock_") {
         return true;
     }
+    // Addressed to the viewer: narrative, a reply through the Gate.
+    if let (Some(to), Some(me)) = (
+        e.payload.get("to").and_then(Value::as_str),
+        viewer.actor.as_deref(),
+    ) {
+        if to == me {
+            return true;
+        }
+    }
     match e.payload.get("id").and_then(Value::as_u64) {
         Some(id) => world.store.view(EntityId(id), viewer, now).is_some(),
         None => false,

@@ -12,6 +12,7 @@
 
 mod entropic;
 mod gate;
+mod jobs;
 mod net;
 mod observe;
 mod world;
@@ -57,6 +58,10 @@ fn main() {
         std::process::exit(1);
     }
     entropic::register(&mut world, entropic::Curves::from_env());
+    let ran = world.tick();
+    if ran > 0 {
+        eprintln!("ran {ran} jobs that came due while the driver was down");
+    }
     let events = world
         .log
         .head(&world.id)
@@ -101,7 +106,17 @@ fn main() {
         .expect("tokio runtime");
     rt.block_on(async move {
         let a = tokio::spawn(net::serve_tcp(shared.clone(), tcp));
-        let b = tokio::spawn(net::serve_http(shared, http));
+        let b = tokio::spawn(net::serve_http(shared.clone(), http));
+        // The scheduler: every due job, once a second.
+        tokio::spawn(async move {
+            let mut every = tokio::time::interval(std::time::Duration::from_secs(1));
+            loop {
+                every.tick().await;
+                if let Ok(mut w) = shared.world.lock() {
+                    w.tick();
+                }
+            }
+        });
         tokio::select! {
             _ = tokio::signal::ctrl_c() => eprintln!("shutting down"),
             _ = a => eprintln!("tcp listener stopped"),

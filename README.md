@@ -45,6 +45,10 @@ curl -s localhost:7777/v0/commands      # the same commands, as JSON
 
 Or the test server: `nc play.agentscanplay.com 7778`. A passphrase is set the first time a name logs in and required after; that is the whole account system, which is fine for a test server and wrong for anything else. `MOONDIAL_ACTIVE_HALF_LIFE_SECONDS=10` makes decay visible within a session. `MOONDIAL_ADMIN_TOKEN` enables `admin <token>` on the text port and the `X-Moondial-Admin` header on HTTP.
 
+### The world moves on its own
+
+A scheduler runs jobs when their time comes. A job is a log event (`job.scheduled`, then `job.done` or `job.failed`), so the pending set is a projection like everything else: jobs survive a restart and replay never runs one twice. A frozen world runs none. Entropic uses it for respawns (rooms refill without anyone looking), a creature's own strikes every few seconds while you stay engaged, and ambushes when you walk in on something aggressive. What happens to you while you are not typing arrives as narrative events: the text port prints them before your next reply, the browser terminal polls for them, and an agent sees them through `observe` with `after`.
+
 ### Ask the world a question
 
 Every client sees the world through one observation query, in JSON: a root, the components and fields wanted, relations to follow, to a bounded depth. The reply is exactly those fields after per-field visibility, the commands you may call, and an event cursor. `look`, `chunks` and `palace` are queries rendered as prose; `observe` runs one raw, on either port:

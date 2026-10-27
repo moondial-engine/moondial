@@ -24,6 +24,7 @@ use moondial_time::{Bounds, Curve, Duration, TimedValue};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 
+pub use combat::NARRATIVE;
 pub use identity::LoginError;
 
 /// Decay curves for the slice. Half-lives are short so decay is visible in a session;
@@ -172,7 +173,7 @@ pub struct Found {
     pub palace: EntityId,
 }
 
-fn find_citizen(world: &World, actor: &str) -> Option<Found> {
+pub(crate) fn find_citizen(world: &World, actor: &str) -> Option<Found> {
     let citizen = world
         .store
         .entities()
@@ -195,7 +196,8 @@ fn find_citizen(world: &World, actor: &str) -> Option<Found> {
 
 /// Build the rooms on first boot; add any room the log does not have yet.
 pub fn ensure_world(world: &mut World) -> Result<(), String> {
-    rooms::ensure_rooms(world)
+    rooms::ensure_rooms(world)?;
+    combat::ensure_spawns(world)
 }
 
 /// Log a citizen in, creating them at the Threshold on first login. The passphrase is set on

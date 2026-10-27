@@ -572,6 +572,7 @@ mod tests {
             &mut w,
             entropic::Curves::with_half_life(Duration::seconds(600)),
         );
+        w.tick();
         entropic::login(&mut w, "lantern-7", "test", PASS).unwrap();
         entropic::login(&mut w, "spacepants", "test", PASS).unwrap();
         w

@@ -33,6 +33,10 @@ pub struct World {
     pub fixed_now: Option<Timestamp>,
     /// Dice state. Outcomes are recorded as events, so replay never rolls again.
     rng: u64,
+    /// Pending jobs, a projection over `job.*` events.
+    pub jobs: crate::jobs::Jobs,
+    /// Job handlers by kind, registered at boot.
+    pub(crate) job_handlers: Arc<std::collections::HashMap<String, crate::jobs::JobHandler>>,
 }
 
 impl World {
@@ -51,14 +55,26 @@ impl World {
             started,
             fixed_now: None,
             rng: started.0 as u64 | 1,
+            jobs: crate::jobs::Jobs::default(),
+            job_handlers: Arc::new(std::collections::HashMap::new()),
         };
         let head = world.log.head(&world.id).map_err(|e| e.to_string())?;
         if head.is_some() {
-            // Replay into a fresh store that knows the same schemas.
+            // Replay into a fresh store that knows the same schemas, and rebuild the
+            // pending jobs from the same pass over the log.
             let mut fresh = Store::new(world.store.registry().clone());
             moondial_log::replay(world.log.as_ref(), &world.id, Cursor::START, &mut fresh)
                 .map_err(|e| e.to_string())?;
             world.store = fresh;
+            for e in world
+                .log
+                .read_all(&world.id, Cursor::START)
+                .map_err(|e| e.to_string())?
+            {
+                if e.kind.starts_with("job.") {
+                    world.jobs.apply(&e.kind, e.seq.0, &e.payload);
+                }
+            }
         }
         Ok(world)
     }
