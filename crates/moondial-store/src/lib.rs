@@ -84,7 +84,7 @@ pub struct FieldSchema {
 /// A component schema as a module registers it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ComponentSchema {
-    /// Component name, namespaced by module: `entropic.chunk`.
+    /// Component name, namespaced by module: `disremembered.chunk`.
     pub name: String,
     /// Schema version; migrations run between versions.
     pub version: u32,

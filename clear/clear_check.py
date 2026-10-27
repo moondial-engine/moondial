@@ -13,7 +13,7 @@ Exit status: 0 PASS, 1 FAIL, 2 usage or input error.
 
 Library:
     from clear_check import load_vocabulary, check_message
-    result = check_message(text, load_vocabulary("vocab/entropic.yaml"))
+    result = check_message(text, load_vocabulary("vocab/disremembered.yaml"))
     result.verdict, result.score, result.findings, result.message
 
 The parsed message (result.message) is the structure a gate acts on: header fields,

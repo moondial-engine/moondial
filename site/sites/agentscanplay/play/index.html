@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Entropic, pre-alpha</title>
-<meta name="description" content="Play Entropic in your browser. A text world on the Moondial engine where everything you earn fades. Pre-alpha.">
+<title>Disremembered, pre-alpha</title>
+<meta name="description" content="Play Disremembered in your browser. A text world on the Moondial engine where everything you earn fades. Pre-alpha.">
 <meta name="robots" content="noindex">
 <style>
   :root {
@@ -124,7 +124,7 @@
 </head>
 <body>
 <header>
-  <div class="title"><a href="/">Agents can play</a> — Entropic</div>
+  <div class="title"><a href="/">Agents can play</a> — Disremembered</div>
   <div class="state" id="state"><b>Pre-alpha.</b> The world may be reset without notice.</div>
 </header>
 <div id="main">
@@ -215,11 +215,11 @@
         let f; try { f = JSON.parse(m.data); } catch (e) { return; }
         if (f.type === "welcome") {
           wsReady = true; cursor = f.cursor; settled = true; resolve(true);
-          subscribe("room", { root: "here", select: { "entropic.room": ["name"], "entropic.sprite": "*" }, relations: {
-            contents: { kinds: ["citizen", "creature"], select: { "entropic.citizen": ["name"], "entropic.creature": ["name", "hp", "max_hp"], "entropic.sprite": "*" } },
-            exits: { select: { "entropic.room": ["name"], "entropic.sprite": "*" } } }, timed: "curve", commands: false });
-          subscribe("me", { root: "self", select: { "entropic.body": ["hp", "max_hp"], "entropic.sprite": "*" }, timed: "curve", commands: false });
-          subscribe("window", { root: "window", select: {}, relations: { contents: { kinds: ["chunk"], select: { "entropic.chunk": "*" } } }, timed: "curve", commands: false });
+          subscribe("room", { root: "here", select: { "disremembered.room": ["name"], "disremembered.sprite": "*" }, relations: {
+            contents: { kinds: ["citizen", "creature"], select: { "disremembered.citizen": ["name"], "disremembered.creature": ["name", "hp", "max_hp"], "disremembered.sprite": "*" } },
+            exits: { select: { "disremembered.room": ["name"], "disremembered.sprite": "*" } } }, timed: "curve", commands: false });
+          subscribe("me", { root: "self", select: { "disremembered.body": ["hp", "max_hp"], "disremembered.sprite": "*" }, timed: "curve", commands: false });
+          subscribe("window", { root: "window", select: {}, relations: { contents: { kinds: ["chunk"], select: { "disremembered.chunk": "*" } } }, timed: "curve", commands: false });
           return;
         }
         if (f.type === "error" && !settled) { settled = true; print(f.error, "err"); resolve(false); return; }
@@ -229,7 +229,7 @@
         if (f.type === "observation") { subs[f.id] = f; skew = Date.now() - f.as_of; draw(); return; }
         if (f.type === "event") {
           const e = f.event;
-          if (e.kind === "entropic.narrative" && e.payload && e.payload.to === actor) print(e.payload.text, "tell");
+          if (e.kind === "disremembered.narrative" && e.payload && e.payload.to === actor) print(e.payload.text, "tell");
           return;
         }
       };
@@ -261,7 +261,7 @@
       if (status === 401) { print(body.error, "err"); logout(); return; }
       if (!body || !body.ok) return;
       for (const e of body.observation.events || []) {
-        if (e.kind === "entropic.narrative" && e.payload && e.payload.to === actor) print(e.payload.text, "tell");
+        if (e.kind === "disremembered.narrative" && e.payload && e.payload.to === actor) print(e.payload.text, "tell");
       }
       cursor = body.observation.cursor;
     } catch (e) {}
@@ -294,7 +294,7 @@
     if (!body) { print("The world did not answer. Try again in a moment.", "err"); return false; }
     if (!body.ok) { print(body.error, "err"); return false; }
     actor = name; passphrase = pass;
-    try { localStorage.setItem("entropic.name", name); sessionStorage.setItem("entropic.pass", pass); } catch (e) {}
+    try { localStorage.setItem("disremembered.name", name); sessionStorage.setItem("disremembered.pass", pass); } catch (e) {}
     setState("Playing as <b>" + name + "</b>. Pre-alpha: the world may be reset without notice.");
     print(body.fresh
       ? "Welcome, " + name + ". Your passphrase is set; you will need it next time. You are at the Threshold. Type help."
@@ -310,7 +310,7 @@
     actor = null; passphrase = null;
     for (const k in subs) delete subs[k];
     draw();
-    try { sessionStorage.removeItem("entropic.pass"); } catch (e) {}
+    try { sessionStorage.removeItem("disremembered.pass"); } catch (e) {}
     setState("<b>Pre-alpha.</b> The world may be reset without notice.");
     $("link").textContent = "";
   }
@@ -355,7 +355,7 @@
   }
   // The pre-alpha atlas: original 16x16 frames, drawn as SVG rects. A sprite component
   // names an atlas and a frame; a frame this page does not have falls back to the glyph.
-  const ATLAS_NAME = "entropic-pixel-1";
+  const ATLAS_NAME = "disremembered-pixel-1";
   const ATLAS = {"citizen":{"p":{"c":"#d9d4c7","d":"#8e887c","f":"#5b4a3c","e":"#1a1612","g":"#d9b57a","b":"#3a3028"},"r":["................","......cccc......",".....cddddc.....","....cdffffdc....","....cdfefedc....","....cdffffdc....",".....cdddc......","....ccgccc......","...ccccccccc....","...cdccccccdc...","...cdccccccdc...","...cddccccddc...","....ddccccdd....","....dd....dd....","....bb....bb....","................"]},"wisp":{"p":{"w":"#e9f6fb","l":"#9fd3e6","m":"#4f8fa8","k":"#24495a"},"r":["................","................","........l.......",".......ll.......","......lwll......",".....lwwwl......",".....lwwwll.....","....mlwwwlm.....","....mllwllm.....",".....mlllm......","......mmm.......","....k..m..k.....","...k...m...k....","..k....k........",".......k........","................"]},"hollow":{"p":{"g":"#6f8f7a","d":"#3f5a5a","k":"#141c1c","w":"#2a3b3b","e":"#0b0d12"},"r":["................",".....ggggg......","....gddddgg.....","....gdedegg.....","....gddddgg.....",".....gdddg......","....ggdddgg.....","...gggdddgggg...","..ggggdddggggg..","..dggggggggggd..","..d.gggggggg.d..","....gggggggg....","....ddgggddd....","wwwwddwwwwddwwww","wkwwwwwkwwwwwkww","wwwwwwwwwwwwwwww"]},"revenant":{"p":{"b":"#cfc3b0","s":"#8a7d6a","r":"#c96a6a","k":"#2b2420","t":"#6b5a4a"},"r":[".....bbbbbb.....","....bssssssb....","....bsrssrsb....","....bssssssb....",".....bsksksb....","......bbbb......","...tbbbbbbbbt...","..tbbbsbbsbbbt..","..tbbbsbbsbbbt..",".ttbbbbbbbbbbtt.",".t.bbbsbbsbbb.t.","...bbbbbbbbbb...","....bbb..bbb....","....bbb..bbb....","....bss..ssb....","....kk....kk...."]},"threshold":{"p":{"p":"#d9d4c7","q":"#bfb9ab","n":"#0b0d12","m":"#e8e4da","s":"#1c2030"},"r":["ssssssssssssssss","sssssssssssmmsss","ssssssssssmmmmss","ssssssssssmmmmss","sssssssssssmmsss","ssssssssssssssss","ssssssssssssssss","pppppppppppppppp","pqpppqpppqpppqpp","pppppppppppppppp","ppqpppqpppqpppqp","pppppppppppppppp","pqpppqpppqpppqpp","pppppppppppppppp","ppqpppqpppqpppqp","pppppppppppppppp"]},"fogbank":{"p":{"f":"#8a97a8","g":"#6c7889","h":"#aeb8c6","s":"#3a4252"},"r":["ssssssssssssssss","sssshhssssshhsss","ssshffhssshffhss","sshfggfhshfggfhs","sshfggffffggffhs","ssshffffffffhsss","ssssshhhhhhsssss","ssssssssssssssss","sshhsssssssshhss","shffhsssssshffhs","hfggfhhhhhhfggfh","hfggffffffffggfh","shfffffffffffhhs","sshhffffffffhsss","sssshhhhhhhhssss","ssssssssssssssss"]},"shallows":{"p":{"w":"#0e1518","r":"#243233","p":"#b8ad98","s":"#3f5a5a"},"r":["wwwwwwwwwwwwwwww","wwwrrwwwwwwwrrww","wwrwwrwwwwwrwwrw","wwwwwwwwwwwwwwww","wwwwwwwrrwwwwwww","wwwwwwrwwrwwwwww","wwwwwwwwwwwwwwww","wrrwwwwwwwwwwrrw","rwwrwwwwwwwwrwwr","wwwwwwwwwwwwwwww","wwwwwwwwwwwwwwww","ppppppwwwwwppppp","pppppppwwwpppppp","pppppppppppppppp","pspppppspppppspp","pppppppppppppppp"]},"ossuary":{"p":{"r":"#6b5a4a","d":"#4a3d33","n":"#1a1410","b":"#cfc3b0"},"r":["rrrrrrrrrrrrrrrr","rdnnndrrrdnnndrr","rdnbndrrrdnnndrr","rdnnndrrrdnbndrr","rrrrrrrrrrrrrrrr","rrrrrrrrrrrrrrrr","rrrdnnndrrrdnnnd","rrrdnnndrrrdnnnd","rrrdnbndrrrdnnnd","rrrrrrrrrrrrrrrr","rdnnndrrrdnnndrr","rdnnndrrrdnbndrr","rdnnndrrrdnnndrr","rrrrrrrrrrrrrrrr","dddddddddddddddd","dddddddddddddddd"]},"chunk":{"p":{"g":"#d9b57a","y":"#f1dcb0","o":"#8a6a3a"},"r":["................","................","................","................","......oo........",".....oggo.......","....oggygo......","....ogyyggo.....","....oggyggo.....",".....oggo.......","......oo........","................","................","................","................","................"]}};
   const svgCache = {};
   function spriteSVG(frame) {
@@ -415,11 +415,11 @@
     const room = subs.room && subs.room.root;
     if (!room) { here.innerHTML = '<div class="empty">Log in to see the room.</div>'; return; }
     const cells = Array.from({ length: 9 }, () => null);
-    const sprite = (n) => (n.components && n.components["entropic.sprite"]) || {};
-    cells[4] = tile(room.components["entropic.room"].name, "here", true, sprite(room));
+    const sprite = (n) => (n.components && n.components["disremembered.sprite"]) || {};
+    cells[4] = tile(room.components["disremembered.room"].name, "here", true, sprite(room));
     for (const ex of (room.relations && room.relations.exits) || []) {
       const d = DIRS[ex.via]; if (!d) continue;
-      cells[d[1] * 3 + d[0]] = tile(ex.components["entropic.room"].name, ex.via, false, sprite(ex));
+      cells[d[1] * 3 + d[0]] = tile(ex.components["disremembered.room"].name, ex.via, false, sprite(ex));
     }
     // Only the rows and columns with something in them are drawn; "here" stays in place.
     const rows = [0, 1, 2].filter(y => y === 1 || cells.slice(y * 3, y * 3 + 3).some(Boolean));
@@ -431,16 +431,16 @@
     for (const n of things) {
       const s = sprite(n);
       if (n.kind === "creature") {
-        const c = n.components["entropic.creature"];
+        const c = n.components["disremembered.creature"];
         here.append(row(s, c.name, "hp", c.hp / c.max_hp, c.hp + "/" + c.max_hp));
       } else {
-        const nm = n.components["entropic.citizen"] ? n.components["entropic.citizen"].name : "?";
+        const nm = n.components["disremembered.citizen"] ? n.components["disremembered.citizen"].name : "?";
         here.append(row(s, nm === actor ? nm + " (you)" : nm, "", 0, null, nm === actor ? "var(--dust)" : null));
       }
     }
     const me = subs.me && subs.me.root;
-    if (me && me.components["entropic.body"]) {
-      const b = me.components["entropic.body"];
+    if (me && me.components["disremembered.body"]) {
+      const b = me.components["disremembered.body"];
       const hp = timed(b.hp), max = b.max_hp;
       you.append(row(sprite(me), "hit points", "hp", hp / max, hp.toFixed(1) + "/" + max, "var(--dust)"));
     }
@@ -448,7 +448,7 @@
     if (!chunks.length) win.innerHTML = '<div class="empty">Nothing remembered yet.</div>';
     let level = 0;
     for (const n of chunks) {
-      const c = n.components["entropic.chunk"]; const v = timed(c.value); level += v;
+      const c = n.components["disremembered.chunk"]; const v = timed(c.value); level += v;
       win.append(row({ atlas: ATLAS_NAME, frame: "chunk" }, c.source + "  v" + (c.vividity || 0).toFixed(2), "", v / c.size, v.toFixed(2)));
     }
     if (chunks.length) win.append(Object.assign(document.createElement("div"), { className: "empty", textContent: "Level " + level.toFixed(2) }));
@@ -505,10 +505,10 @@
   log.addEventListener("click", () => { if (!getSelection().toString()) input.focus(); });
 
   // ---- boot ----
-  print("Entropic on Moondial, pre-alpha. A text world where everything you earn fades.", "sys");
+  print("Disremembered on Moondial, pre-alpha. A text world where everything you earn fades.", "sys");
   print("Your level is the sum of what has not faded. The fights you almost lost last longest.", "sys");
   let savedName = null, savedPass = null;
-  try { savedName = localStorage.getItem("entropic.name"); savedPass = sessionStorage.getItem("entropic.pass"); } catch (e) {}
+  try { savedName = localStorage.getItem("disremembered.name"); savedPass = sessionStorage.getItem("disremembered.pass"); } catch (e) {}
   if (savedName && savedPass) {
     login(savedName, savedPass).then(ok => { if (!ok) askName(); });
   } else {

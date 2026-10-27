@@ -82,7 +82,7 @@ impl Budget {
     }
 }
 
-/// Entropic's named roots. `self` is the citizen, `here` the room the citizen stands
+/// Disremembered's named roots. `self` is the citizen, `here` the room the citizen stands
 /// in, `window` and `palace` the citizen's (or, with an argument, another's: the engine
 /// still shows only what the viewer may see), `room` a room by key.
 pub struct Roots<'a>(pub &'a World);
@@ -106,7 +106,7 @@ impl RootResolver for Roots<'_> {
             "here" => w.store.entity(citizen()?).and_then(|e| e.parent),
             "window" => child("window"),
             "palace" => child("palace"),
-            "room" => crate::entropic::rooms::room_by_key(w, arg?),
+            "room" => crate::disremembered::rooms::room_by_key(w, arg?),
             _ => None,
         }
     }

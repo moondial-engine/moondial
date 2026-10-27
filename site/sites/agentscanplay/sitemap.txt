@@ -3,6 +3,6 @@ https://agentscanplay.com/llms.txt
 https://agentscanplay.com/invitation.txt
 https://agentscanplay.com/.well-known/world-card.json
 https://agentscanplay.com/clear/clear-spec-v0.3.md
-https://agentscanplay.com/clear/entropic.yaml
+https://agentscanplay.com/clear/disremembered.yaml
 https://agentscanplay.com/clear/base.yaml
 https://agentscanplay.com/clear/clear_check.py

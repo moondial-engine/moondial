@@ -79,7 +79,7 @@ pub struct Event {
     /// When the driver stamped it.
     pub at: Timestamp,
     /// Event type, namespaced by the module that defines it: `store.entity_created`,
-    /// `clock.paused`, `entropic.chunk_earned`.
+    /// `clock.paused`, `disremembered.chunk_earned`.
     pub kind: String,
     /// Who caused it.
     pub actor: Actor,
@@ -528,9 +528,9 @@ mod tests {
     fn events_round_trip_through_json() {
         let e = Event {
             seq: Seq(7),
-            world: WorldId::from("entropic"),
+            world: WorldId::from("disremembered"),
             at: Timestamp(1_700_000_000_000),
-            kind: "entropic.chunk_earned".into(),
+            kind: "disremembered.chunk_earned".into(),
             actor: Actor::Familiar("fam-1".into(), "spacepants".into()),
             cause: Some(Seq(6)),
             payload: json!({"value": 4200.5, "source": "void-lich"}),

@@ -15,7 +15,7 @@ import clear_check as cc  # noqa: E402
 
 BASE = cc.load_vocabulary(os.path.join(ROOT, "vocab", "base.yaml"))
 ORG = cc.load_vocabulary(os.path.join(ROOT, "vocab", "org-example.yaml"))
-GAME = cc.load_vocabulary(os.path.join(ROOT, "vocab", "entropic.yaml"))
+GAME = cc.load_vocabulary(os.path.join(ROOT, "vocab", "disremembered.yaml"))
 
 HEADER = "FROM: a\nTO: b\nINTENT: {intent}\n\n"
 
@@ -38,12 +38,12 @@ def check(body: str, intent: str = "INFORM", vocab=BASE):
     ("01_prose_handoff.txt", ORG, "FAIL", 40),
     ("02_clear_handoff.txt", ORG, "PASS", 100),
     ("03_clear_injection.txt", ORG, "FAIL", 40),
-    ("04_entropic_request.txt", GAME, "PASS", 100),
+    ("04_disremembered_request.txt", GAME, "PASS", 100),
     ("05_driver_report.txt", GAME, "PASS", 100),
     ("06_invitation.txt", GAME, "PASS", 100),
-    ("07_entropic_query.txt", GAME, "PASS", 100),
-    ("08_entropic_propose.txt", GAME, "PASS", 100),
-    ("09_entropic_bad_request.txt", GAME, "FAIL", 40),
+    ("07_disremembered_query.txt", GAME, "PASS", 100),
+    ("08_disremembered_propose.txt", GAME, "PASS", 100),
+    ("09_disremembered_bad_request.txt", GAME, "FAIL", 40),
 ])
 def test_samples(name, vocab, verdict, score):
     text = open(os.path.join(ROOT, "samples", name), encoding="utf-8").read()
@@ -145,11 +145,11 @@ def test_i4_soft_obligation_outside_do():
 
 
 def test_i5_approved_verbs_game():
-    r = cc.check_message("FROM: lantern-7\nTO: entropic\nINTENT: REQUEST\n\n[DO] lantern-7 MUST nuke the hydra.", GAME)
+    r = cc.check_message("FROM: lantern-7\nTO: disremembered\nINTENT: REQUEST\n\n[DO] lantern-7 MUST nuke the hydra.", GAME)
     assert "CL-I5" in rules(r, "error")
     r = cc.check_message("FROM: lantern-7\nTO: spacepants\nINTENT: PROPOSE\n\n[DO] spacepants MUST nuke the hydra.", GAME)
     assert "CL-I5" in rules(r, "warning")
-    r = cc.check_message("FROM: lantern-7\nTO: entropic\nINTENT: REQUEST\n\n[DO] lantern-7 MUST attack the hydra.", GAME)
+    r = cc.check_message("FROM: lantern-7\nTO: disremembered\nINTENT: REQUEST\n\n[DO] lantern-7 MUST attack the hydra.", GAME)
     assert "CL-I5" not in rules(r)
     # No approved verbs in the base vocabulary: rule skipped.
     assert "CL-I5" not in rules(check("[DO] b MUST nuke the hydra.", "REQUEST"))
@@ -247,11 +247,11 @@ def test_x2_x3_x4():
 def test_a1_a2_questions():
     assert "CL-A1" in rules(check("[ASK] Is it done? Is it late?", "QUERY"), "error")
     assert "CL-A1" in rules(check("[ASK] Tell me the date.", "QUERY"), "error")
-    r = cc.check_message("FROM: a\nTO: entropic\nINTENT: QUERY\n\n[ASK] Which palaces in township-briar hold a hydra chunk?", GAME)
+    r = cc.check_message("FROM: a\nTO: disremembered\nINTENT: QUERY\n\n[ASK] Which palaces in township-briar hold a hydra chunk?", GAME)
     assert "CL-A2" not in rules(r)
     st = r.message.statements[0]
     assert st.pattern and st.slots.get("scope") == "township-briar"
-    r = cc.check_message("FROM: a\nTO: entropic\nINTENT: QUERY\n\n[ASK] Could you maybe tell me about hydras?", GAME)
+    r = cc.check_message("FROM: a\nTO: disremembered\nINTENT: QUERY\n\n[ASK] Could you maybe tell me about hydras?", GAME)
     assert "CL-A2" in rules(r, "error")
 
 
@@ -284,14 +284,14 @@ def test_score_is_share_of_clean_statements():
 
 def test_cli_json_and_exit_codes():
     script = os.path.join(ROOT, "clear_check.py")
-    vocab = os.path.join(ROOT, "vocab", "entropic.yaml")
+    vocab = os.path.join(ROOT, "vocab", "disremembered.yaml")
     ok = subprocess.run([sys.executable, script, os.path.join(ROOT, "samples", "06_invitation.txt"), "--vocab", vocab, "--json"],
                         capture_output=True, text=True)
     assert ok.returncode == 0
     data = json.loads(ok.stdout)
     assert data["verdict"] == "PASS" and data["score"] == 100
     assert data["message"]["statements"][9]["actor"] == "You"
-    bad = subprocess.run([sys.executable, script, os.path.join(ROOT, "samples", "09_entropic_bad_request.txt"), "--vocab", vocab],
+    bad = subprocess.run([sys.executable, script, os.path.join(ROOT, "samples", "09_disremembered_bad_request.txt"), "--vocab", vocab],
                          capture_output=True, text=True)
     assert bad.returncode == 1
     missing = subprocess.run([sys.executable, script, "/nonexistent/file.txt"], capture_output=True, text=True)

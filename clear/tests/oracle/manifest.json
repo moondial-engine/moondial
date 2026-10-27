@@ -54,26 +54,26 @@
     "expected": "sample_03_clear_injection_default.json"
   },
   {
-    "name": "sample_04_entropic_request",
-    "vocab": "vocab/entropic.yaml",
-    "text": "sample_04_entropic_request.txt",
-    "expected": "sample_04_entropic_request.json"
+    "name": "sample_04_disremembered_request",
+    "vocab": "vocab/disremembered.yaml",
+    "text": "sample_04_disremembered_request.txt",
+    "expected": "sample_04_disremembered_request.json"
   },
   {
-    "name": "sample_04_entropic_request_base",
+    "name": "sample_04_disremembered_request_base",
     "vocab": "vocab/base.yaml",
-    "text": "sample_04_entropic_request_base.txt",
-    "expected": "sample_04_entropic_request_base.json"
+    "text": "sample_04_disremembered_request_base.txt",
+    "expected": "sample_04_disremembered_request_base.json"
   },
   {
-    "name": "sample_04_entropic_request_default",
+    "name": "sample_04_disremembered_request_default",
     "vocab": null,
-    "text": "sample_04_entropic_request_default.txt",
-    "expected": "sample_04_entropic_request_default.json"
+    "text": "sample_04_disremembered_request_default.txt",
+    "expected": "sample_04_disremembered_request_default.json"
   },
   {
     "name": "sample_05_driver_report",
-    "vocab": "vocab/entropic.yaml",
+    "vocab": "vocab/disremembered.yaml",
     "text": "sample_05_driver_report.txt",
     "expected": "sample_05_driver_report.json"
   },
@@ -91,7 +91,7 @@
   },
   {
     "name": "sample_06_invitation",
-    "vocab": "vocab/entropic.yaml",
+    "vocab": "vocab/disremembered.yaml",
     "text": "sample_06_invitation.txt",
     "expected": "sample_06_invitation.json"
   },
@@ -108,68 +108,68 @@
     "expected": "sample_06_invitation_default.json"
   },
   {
-    "name": "sample_07_entropic_query",
-    "vocab": "vocab/entropic.yaml",
-    "text": "sample_07_entropic_query.txt",
-    "expected": "sample_07_entropic_query.json"
+    "name": "sample_07_disremembered_query",
+    "vocab": "vocab/disremembered.yaml",
+    "text": "sample_07_disremembered_query.txt",
+    "expected": "sample_07_disremembered_query.json"
   },
   {
-    "name": "sample_07_entropic_query_base",
+    "name": "sample_07_disremembered_query_base",
     "vocab": "vocab/base.yaml",
-    "text": "sample_07_entropic_query_base.txt",
-    "expected": "sample_07_entropic_query_base.json"
+    "text": "sample_07_disremembered_query_base.txt",
+    "expected": "sample_07_disremembered_query_base.json"
   },
   {
-    "name": "sample_07_entropic_query_default",
+    "name": "sample_07_disremembered_query_default",
     "vocab": null,
-    "text": "sample_07_entropic_query_default.txt",
-    "expected": "sample_07_entropic_query_default.json"
+    "text": "sample_07_disremembered_query_default.txt",
+    "expected": "sample_07_disremembered_query_default.json"
   },
   {
-    "name": "sample_08_entropic_propose",
-    "vocab": "vocab/entropic.yaml",
-    "text": "sample_08_entropic_propose.txt",
-    "expected": "sample_08_entropic_propose.json"
+    "name": "sample_08_disremembered_propose",
+    "vocab": "vocab/disremembered.yaml",
+    "text": "sample_08_disremembered_propose.txt",
+    "expected": "sample_08_disremembered_propose.json"
   },
   {
-    "name": "sample_08_entropic_propose_base",
+    "name": "sample_08_disremembered_propose_base",
     "vocab": "vocab/base.yaml",
-    "text": "sample_08_entropic_propose_base.txt",
-    "expected": "sample_08_entropic_propose_base.json"
+    "text": "sample_08_disremembered_propose_base.txt",
+    "expected": "sample_08_disremembered_propose_base.json"
   },
   {
-    "name": "sample_08_entropic_propose_default",
+    "name": "sample_08_disremembered_propose_default",
     "vocab": null,
-    "text": "sample_08_entropic_propose_default.txt",
-    "expected": "sample_08_entropic_propose_default.json"
+    "text": "sample_08_disremembered_propose_default.txt",
+    "expected": "sample_08_disremembered_propose_default.json"
   },
   {
-    "name": "sample_09_entropic_bad_request",
-    "vocab": "vocab/entropic.yaml",
-    "text": "sample_09_entropic_bad_request.txt",
-    "expected": "sample_09_entropic_bad_request.json"
+    "name": "sample_09_disremembered_bad_request",
+    "vocab": "vocab/disremembered.yaml",
+    "text": "sample_09_disremembered_bad_request.txt",
+    "expected": "sample_09_disremembered_bad_request.json"
   },
   {
-    "name": "sample_09_entropic_bad_request_base",
+    "name": "sample_09_disremembered_bad_request_base",
     "vocab": "vocab/base.yaml",
-    "text": "sample_09_entropic_bad_request_base.txt",
-    "expected": "sample_09_entropic_bad_request_base.json"
+    "text": "sample_09_disremembered_bad_request_base.txt",
+    "expected": "sample_09_disremembered_bad_request_base.json"
   },
   {
-    "name": "sample_09_entropic_bad_request_default",
+    "name": "sample_09_disremembered_bad_request_default",
     "vocab": null,
-    "text": "sample_09_entropic_bad_request_default.txt",
-    "expected": "sample_09_entropic_bad_request_default.json"
+    "text": "sample_09_disremembered_bad_request_default.txt",
+    "expected": "sample_09_disremembered_bad_request_default.json"
   },
   {
     "name": "site_invitation",
-    "vocab": "vocab/entropic.yaml",
+    "vocab": "vocab/disremembered.yaml",
     "text": "site_invitation.txt",
     "expected": "site_invitation.json"
   },
   {
     "name": "prose",
-    "vocab": "vocab/entropic.yaml",
+    "vocab": "vocab/disremembered.yaml",
     "text": "prose.txt",
     "expected": "prose.json"
   },
@@ -427,7 +427,7 @@
   },
   {
     "name": "r2_next_turn",
-    "vocab": "vocab/entropic.yaml",
+    "vocab": "vocab/disremembered.yaml",
     "text": "r2_next_turn.txt",
     "expected": "r2_next_turn.json"
   },
@@ -583,13 +583,13 @@
   },
   {
     "name": "x1_attack_damage",
-    "vocab": "vocab/entropic.yaml",
+    "vocab": "vocab/disremembered.yaml",
     "text": "x1_attack_damage.txt",
     "expected": "x1_attack_damage.json"
   },
   {
     "name": "x1_attack_now",
-    "vocab": "vocab/entropic.yaml",
+    "vocab": "vocab/disremembered.yaml",
     "text": "x1_attack_now.txt",
     "expected": "x1_attack_now.json"
   },
@@ -619,7 +619,7 @@
   },
   {
     "name": "x4_url_game",
-    "vocab": "vocab/entropic.yaml",
+    "vocab": "vocab/disremembered.yaml",
     "text": "x4_url_game.txt",
     "expected": "x4_url_game.json"
   },
@@ -637,7 +637,7 @@
   },
   {
     "name": "a2_unmatched",
-    "vocab": "vocab/entropic.yaml",
+    "vocab": "vocab/disremembered.yaml",
     "text": "a2_unmatched.txt",
     "expected": "a2_unmatched.json"
   },
@@ -649,7 +649,7 @@
   },
   {
     "name": "q1_no_src_game",
-    "vocab": "vocab/entropic.yaml",
+    "vocab": "vocab/disremembered.yaml",
     "text": "q1_no_src_game.txt",
     "expected": "q1_no_src_game.json"
   },
@@ -691,19 +691,19 @@
   },
   {
     "name": "mixed_types",
-    "vocab": "vocab/entropic.yaml",
+    "vocab": "vocab/disremembered.yaml",
     "text": "mixed_types.txt",
     "expected": "mixed_types.json"
   },
   {
     "name": "do_i_actor",
-    "vocab": "vocab/entropic.yaml",
+    "vocab": "vocab/disremembered.yaml",
     "text": "do_i_actor.txt",
     "expected": "do_i_actor.json"
   },
   {
     "name": "acronym_unit",
-    "vocab": "vocab/entropic.yaml",
+    "vocab": "vocab/disremembered.yaml",
     "text": "acronym_unit.txt",
     "expected": "acronym_unit.json"
   },
@@ -727,31 +727,31 @@
   },
   {
     "name": "i5_self_nuke",
-    "vocab": "vocab/entropic.yaml",
+    "vocab": "vocab/disremembered.yaml",
     "text": "i5_self_nuke.txt",
     "expected": "i5_self_nuke.json"
   },
   {
     "name": "i5_other_nuke",
-    "vocab": "vocab/entropic.yaml",
+    "vocab": "vocab/disremembered.yaml",
     "text": "i5_other_nuke.txt",
     "expected": "i5_other_nuke.json"
   },
   {
     "name": "i5_self_attack",
-    "vocab": "vocab/entropic.yaml",
+    "vocab": "vocab/disremembered.yaml",
     "text": "i5_self_attack.txt",
     "expected": "i5_self_attack.json"
   },
   {
     "name": "a2_matched",
-    "vocab": "vocab/entropic.yaml",
+    "vocab": "vocab/disremembered.yaml",
     "text": "a2_matched.txt",
     "expected": "a2_matched.json"
   },
   {
     "name": "a2_where",
-    "vocab": "vocab/entropic.yaml",
+    "vocab": "vocab/disremembered.yaml",
     "text": "a2_where.txt",
     "expected": "a2_where.json"
   },
@@ -775,7 +775,7 @@
   },
   {
     "name": "unicode_words",
-    "vocab": "vocab/entropic.yaml",
+    "vocab": "vocab/disremembered.yaml",
     "text": "unicode_words.txt",
     "expected": "unicode_words.json"
   }

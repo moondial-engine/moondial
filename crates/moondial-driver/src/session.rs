@@ -134,7 +134,7 @@ async fn run(socket: WebSocket, s: Shared) {
         };
     }
 
-    send!(json!({"type": "hello", "world": "entropic", "protocol": "moondial-session/0"}));
+    send!(json!({"type": "hello", "world": "disremembered", "protocol": "moondial-session/0"}));
     loop {
         tokio::select! {
             incoming = rx.next() => {

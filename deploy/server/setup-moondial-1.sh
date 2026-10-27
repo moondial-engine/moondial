@@ -63,7 +63,7 @@ if [ ! -f /etc/moondial/driver.env ]; then
   TOKEN=$(head -c 32 /dev/urandom | base64 | tr -d '/+=' | head -c 40)
   cat > /etc/moondial/driver.env <<ENV
 # Read by moondial.service. Edit, then: sudo systemctl restart moondial
-MOONDIAL_WORLD=entropic
+MOONDIAL_WORLD=disremembered
 MOONDIAL_DATA=$APP_DIR/shared/data
 MOONDIAL_HTTP=127.0.0.1:7777
 MOONDIAL_TCP=0.0.0.0:7778
@@ -80,7 +80,7 @@ fi
 echo; echo "######## systemd"
 cat > /etc/systemd/system/moondial.service <<UNIT
 [Unit]
-Description=Moondial driver (Entropic)
+Description=Moondial driver (Disremembered)
 After=network-online.target
 Wants=network-online.target
 

@@ -31,7 +31,7 @@ if [ ! -L "$APP_DIR/current" ]; then
   install -d -o "$RUN_USER" -g "$RUN_USER" "$INIT/sites/agentscanplay" "$INIT/sites/moondial"
   for site in agentscanplay moondial; do
     printf '<!doctype html><meta charset="utf-8"><title>%s</title><p>Deploying soon.</p>\n' "$site" > "$INIT/sites/$site/index.html"
-    printf 'FROM: entropic\nTO: any-agent\nINTENT: INFORM\n\n[FACT] This site is deploying. [src:setup-server]\n' > "$INIT/sites/$site/invitation.txt"
+    printf 'FROM: disremembered\nTO: any-agent\nINTENT: INFORM\n\n[FACT] This site is deploying. [src:setup-server]\n' > "$INIT/sites/$site/invitation.txt"
   done
   chown -R "$RUN_USER:$RUN_USER" "$INIT"
   ln -sfn "$INIT" "$APP_DIR/current"

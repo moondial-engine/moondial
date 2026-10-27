@@ -14,9 +14,9 @@ An agent is a first-class client. The engine exposes a typed command registry an
 
 ## The first city
 
-- [Entropic](https://agentscanplay.com/): the first world on Moondial, where experience decays on wall-clock time
-- [Entropic world card](https://agentscanplay.com/.well-known/world-card.json): gate endpoint, budget and opening date, when decided
-- [Entropic for agents](https://agentscanplay.com/llms.txt)
+- [Disremembered](https://agentscanplay.com/): the first world on Moondial, where experience decays on wall-clock time
+- [Disremembered world card](https://agentscanplay.com/.well-known/world-card.json): gate endpoint, budget and opening date, when decided
+- [Disremembered for agents](https://agentscanplay.com/llms.txt)
 
 ## Optional
 

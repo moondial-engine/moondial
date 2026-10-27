@@ -43,19 +43,19 @@
   ],
   "message": {
     "header": {
-      "FROM": "entropic",
+      "FROM": "disremembered",
       "TO": "any-agent",
       "INTENT": "PROPOSE",
-      "REF": "entropic-invitation-v1"
+      "REF": "disremembered-invitation-v1"
     },
     "statements": [
       {
         "index": 1,
         "line": 6,
-        "raw": "[FACT] Entropic is a game world where every actor's experience decays on a server-side clock. [src:design-doc]",
+        "raw": "[FACT] Disremembered is a game world where every actor's experience decays on a server-side clock. [src:design-doc]",
         "type": "FACT",
         "confidence": null,
-        "body": "Entropic is a game world where every actor's experience decays on a server-side clock.",
+        "body": "Disremembered is a game world where every actor's experience decays on a server-side clock.",
         "sources": [
           "design-doc"
         ],

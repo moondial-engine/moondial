@@ -53,7 +53,7 @@ Change `sites/agentscanplay/invitation.txt` and the matching block in `index.htm
 ```
 cd site
 pip install pyyaml
-python ../clear/clear_check.py sites/agentscanplay/invitation.txt --vocab ../clear/vocab/entropic.yaml
+python ../clear/clear_check.py sites/agentscanplay/invitation.txt --vocab ../clear/vocab/disremembered.yaml
 python tools/check_site.py
 ```
 

@@ -21,7 +21,7 @@ const T0: Timestamp = Timestamp(1_700_000_000_000);
 fn registry() -> Registry {
     let mut r = Registry::new();
     r.register(
-        ComponentSchema::new("entropic.chunk", 1)
+        ComponentSchema::new("disremembered.chunk", 1)
             .field("value", FieldKind::Timed, Visibility::Owner)
             .field("source", FieldKind::Plain, Visibility::Public),
     );
@@ -37,7 +37,7 @@ fn chunk(v0: f64, at: Timestamp, curve: Curve) -> BTreeMap<String, Field> {
 
 #[test]
 fn a_chunk_decays_correctly_across_logout_and_a_paused_clock() {
-    let world = WorldId::from("entropic-test");
+    let world = WorldId::from("disremembered-test");
     let mut log = MemoryLog::new();
     let mut live = Store::new(registry());
     let dave = Actor::Citizen("dave".into());
@@ -81,7 +81,7 @@ fn a_chunk_decays_correctly_across_logout_and_a_paused_clock() {
         dave.clone(),
         StoreEvent::ComponentSet {
             id: chunk_id,
-            component: "entropic.chunk".into(),
+            component: "disremembered.chunk".into(),
             fields: chunk(
                 100.0,
                 T0,
@@ -96,7 +96,7 @@ fn a_chunk_decays_correctly_across_logout_and_a_paused_clock() {
     // Day 1: dave logs out. Nothing is recorded; the world does not tick.
     let day = |d: i64| Timestamp(T0.0 + Duration::days(d).0);
     let read = |s: &Store, t: Timestamp| {
-        s.read_field(chunk_id, "entropic.chunk", "value", t)
+        s.read_field(chunk_id, "disremembered.chunk", "value", t)
             .unwrap()
             .as_f64()
             .unwrap()
@@ -147,7 +147,7 @@ fn a_chunk_decays_correctly_across_logout_and_a_paused_clock() {
         dave.clone(),
         StoreEvent::FieldRecurved {
             id: chunk_id,
-            component: "entropic.chunk".into(),
+            component: "disremembered.chunk".into(),
             field: "value".into(),
             curve: Curve::PowerLaw {
                 scale: Duration::days(10),
@@ -186,7 +186,7 @@ fn a_chunk_decays_correctly_across_logout_and_a_paused_clock() {
         .view(chunk_id, &Viewer::actor("dave"), day(10))
         .unwrap();
     assert!(
-        (own["components"]["entropic.chunk"]["value"]
+        (own["components"]["disremembered.chunk"]["value"]
             .as_f64()
             .unwrap()
             - 12.5)
@@ -196,10 +196,13 @@ fn a_chunk_decays_correctly_across_logout_and_a_paused_clock() {
     let stranger = live
         .view(chunk_id, &Viewer::actor("someone"), day(10))
         .unwrap();
-    assert!(stranger["components"]["entropic.chunk"]
+    assert!(stranger["components"]["disremembered.chunk"]
         .get("value")
         .is_none());
-    assert_eq!(stranger["components"]["entropic.chunk"]["source"], "hydra");
+    assert_eq!(
+        stranger["components"]["disremembered.chunk"]["source"],
+        "hydra"
+    );
 }
 
 /// A random, valid sequence of store events over a few entities and two clock scopes.
@@ -247,15 +250,15 @@ proptest! {
                     ids.push(id);
                     let scopes = if scoped { vec![ClockId::from("account:x")] } else { vec![] };
                     live.record(&mut log, &world, at, Actor::Driver, StoreEvent::EntityCreated { id, kind: "chunk".into(), owner: Some(format!("o{owner}")), parent: None, scopes }).unwrap();
-                    StoreEvent::ComponentSet { id, component: "entropic.chunk".into(), fields: chunk(100.0, at, Curve::Exponential { half_life: Duration::days(2) }) }
+                    StoreEvent::ComponentSet { id, component: "disremembered.chunk".into(), fields: chunk(100.0, at, Curve::Exponential { half_life: Duration::days(2) }) }
                 }
                 Step::Commit { which, value } => {
                     if ids.is_empty() { continue; }
-                    StoreEvent::FieldCommitted { id: ids[which % ids.len()], component: "entropic.chunk".into(), field: "value".into(), value }
+                    StoreEvent::FieldCommitted { id: ids[which % ids.len()], component: "disremembered.chunk".into(), field: "value".into(), value }
                 }
                 Step::Recurve { which, half_life_days } => {
                     if ids.is_empty() { continue; }
-                    StoreEvent::FieldRecurved { id: ids[which % ids.len()], component: "entropic.chunk".into(), field: "value".into(), curve: Curve::Exponential { half_life: Duration::days(half_life_days) } }
+                    StoreEvent::FieldRecurved { id: ids[which % ids.len()], component: "disremembered.chunk".into(), field: "value".into(), curve: Curve::Exponential { half_life: Duration::days(half_life_days) } }
                 }
                 Step::Pause { account } => {
                     let i = usize::from(account);
@@ -288,8 +291,8 @@ proptest! {
         prop_assert_eq!(&rebuilt, &live);
         let now = Timestamp(t + probe);
         for id in &ids {
-            let a = live.read_field(*id, "entropic.chunk", "value", now).unwrap();
-            let b = rebuilt.read_field(*id, "entropic.chunk", "value", now).unwrap();
+            let a = live.read_field(*id, "disremembered.chunk", "value", now).unwrap();
+            let b = rebuilt.read_field(*id, "disremembered.chunk", "value", now).unwrap();
             prop_assert_eq!(a, b);
         }
     }

@@ -1,5 +1,5 @@
 FROM: a
-TO: entropic
+TO: disremembered
 INTENT: INFORM
 
 [FACT] The café’s door is 2 m wide. [src:x]

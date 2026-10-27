@@ -1,11 +1,11 @@
 # Contributing to Moondial
 
-Moondial is pre-alpha. The architecture is written, the driver is being built one primitive at a time, and the first city (Entropic) is the forcing function for every primitive. Until the first slice is playable in a terminal, the most useful contributions are small and sharp: a failing test, a bug in a primitive, a clearer doc, a false positive in the CLEAR checker.
+Moondial is pre-alpha. The architecture is written, the driver is being built one primitive at a time, and the first city (Disremembered) is the forcing function for every primitive. Until the first slice is playable in a terminal, the most useful contributions are small and sharp: a failing test, a bug in a primitive, a clearer doc, a false positive in the CLEAR checker.
 
 ## Ground rules
 
 - **Nothing enters the driver unless a city needs it.** A primitive without a module that uses it is a proposal, not a pull request.
-- **The driver knows no game.** If a pull request teaches the driver a word from Entropic (chunk, palace, reminiscence), a general primitive is missing; propose that instead.
+- **The driver knows no game.** If a pull request teaches the driver a word from Disremembered (chunk, palace, reminiscence), a general primitive is missing; propose that instead.
 - **Text first.** A feature that cannot be played or observed through the text protocol is not done.
 - **Every primitive has property tests.** The event log is the oracle: lazy evaluation must agree with replay.
 

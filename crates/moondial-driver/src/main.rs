@@ -1,8 +1,8 @@
-//! The Moondial driver, pre-alpha. Loads one world (the Entropic text slice), replays its
+//! The Moondial driver, pre-alpha. Loads one world (the Disremembered text slice), replays its
 //! log, and listens on a text port and an HTTP port. Configuration is by environment:
 //!
 //! - `MOONDIAL_DATA`: directory for the event log (default `./data`); `memory` for none.
-//! - `MOONDIAL_WORLD`: world name (default `entropic`).
+//! - `MOONDIAL_WORLD`: world name (default `disremembered`).
 //! - `MOONDIAL_TCP`: text listener (default `127.0.0.1:7778`).
 //! - `MOONDIAL_HTTP`: HTTP listener (default `127.0.0.1:7777`).
 //! - `MOONDIAL_ADMIN_TOKEN`: enables `admin <token>` and the `X-Moondial-Admin` header.
@@ -10,7 +10,7 @@
 //! - `MOONDIAL_CORS_ORIGINS`: browser origins allowed to call the HTTP port, comma-separated
 //!   (default the agentscanplay.com site).
 
-mod entropic;
+mod disremembered;
 mod gate;
 mod jobs;
 mod net;
@@ -35,7 +35,7 @@ fn main() {
         println!("moondial-driver {}", env!("CARGO_PKG_VERSION"));
         return;
     }
-    let world_name = env_or("MOONDIAL_WORLD", "entropic");
+    let world_name = env_or("MOONDIAL_WORLD", "disremembered");
     let data = env_or("MOONDIAL_DATA", "./data");
     let backing = if data == "memory" {
         LogBacking::Memory
@@ -45,7 +45,7 @@ fn main() {
 
     let mut world = match World::open(
         WorldId(world_name.clone()),
-        Store::new(entropic::registry()),
+        Store::new(disremembered::registry()),
         backing,
     ) {
         Ok(w) => w,
@@ -54,11 +54,11 @@ fn main() {
             std::process::exit(1);
         }
     };
-    if let Err(e) = entropic::ensure_world(&mut world) {
+    if let Err(e) = disremembered::ensure_world(&mut world) {
         eprintln!("cannot build the rooms: {e}");
         std::process::exit(1);
     }
-    entropic::register(&mut world, entropic::Curves::from_env());
+    disremembered::register(&mut world, disremembered::Curves::from_env());
     let ran = world.tick();
     if ran > 0 {
         eprintln!("ran {ran} jobs that came due while the driver was down");

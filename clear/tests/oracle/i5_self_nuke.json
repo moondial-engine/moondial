@@ -23,7 +23,7 @@
   "message": {
     "header": {
       "FROM": "lantern-7",
-      "TO": "entropic",
+      "TO": "disremembered",
       "INTENT": "REQUEST"
     },
     "statements": [
@@ -45,5 +45,5 @@
     ],
     "mode": "clear"
   },
-  "vocabulary": "entropic"
+  "vocabulary": "disremembered"
 }

@@ -16,7 +16,7 @@
   "message": {
     "header": {
       "FROM": "a",
-      "TO": "entropic",
+      "TO": "disremembered",
       "INTENT": "QUERY"
     },
     "statements": [
@@ -76,5 +76,5 @@
     ],
     "mode": "clear"
   },
-  "vocabulary": "entropic"
+  "vocabulary": "disremembered"
 }

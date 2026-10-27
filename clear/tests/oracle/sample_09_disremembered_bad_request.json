@@ -1,0 +1,200 @@
+{
+  "verdict": "FAIL",
+  "score": 0,
+  "mode": "clear",
+  "errors": 9,
+  "warnings": 6,
+  "findings": [
+    {
+      "rule": "CL-C2",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "Hedge 'probably' in a FACT. A hedged fact is an inference: use [INFER:LEVEL].",
+      "excerpt": "probably"
+    },
+    {
+      "rule": "CL-R1",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "Vague pronoun 'it' starts a clause. Name the thing it refers to.",
+      "excerpt": "it"
+    },
+    {
+      "rule": "CL-I2",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "DO carries a second action ('and attack'). One action per statement.",
+      "excerpt": "and attack"
+    },
+    {
+      "rule": "CL-I5",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "Verb 'swap' is not an approved action verb for the sender; the driver cannot compile it.",
+      "excerpt": "swap"
+    },
+    {
+      "rule": "CL-R2",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "Relative time 'next turn'. Use an absolute date or a numbered turn.",
+      "excerpt": "next turn"
+    },
+    {
+      "rule": "CL-I1",
+      "severity": "error",
+      "where": "statement 3",
+      "message": "DO must read '<actor> MUST|MUST NOT|SHOULD|SHOULD NOT|MAY <verb> ...'.",
+      "excerpt": "The hydra should be attacked."
+    },
+    {
+      "rule": "CL-A1",
+      "severity": "error",
+      "where": "statement 4",
+      "message": "ASK must be exactly one question, ending in '?'.",
+      "excerpt": "the hydra asleep? Is it alone?"
+    },
+    {
+      "rule": "CL-S2",
+      "severity": "error",
+      "where": "statement 4",
+      "message": "Statement holds 2 sentences; one sentence per statement.",
+      "excerpt": "Is the hydra asleep? Is it alone?"
+    },
+    {
+      "rule": "CL-I5",
+      "severity": "error",
+      "where": "statement 5",
+      "message": "Verb 'nuke' is not an approved action verb for the sender; the driver cannot compile it.",
+      "excerpt": "nuke"
+    },
+    {
+      "rule": "CL-C3",
+      "severity": "warning",
+      "where": "statement 1",
+      "message": "FACT does not cite a source with [src:...].",
+      "excerpt": ""
+    },
+    {
+      "rule": "CL-V4",
+      "severity": "warning",
+      "where": "statement 1",
+      "message": "Vague intensifier 'very' carries no measurable meaning.",
+      "excerpt": "very"
+    },
+    {
+      "rule": "CL-V1",
+      "severity": "warning",
+      "where": "statement 2",
+      "message": "Use 'reminisce', not 'swap in'.",
+      "excerpt": "swap in"
+    },
+    {
+      "rule": "CL-R3",
+      "severity": "warning",
+      "where": "statement 5",
+      "message": "'3' has no unit.",
+      "excerpt": "3"
+    },
+    {
+      "rule": "CL-V1",
+      "severity": "warning",
+      "where": "statement 5",
+      "message": "Use 'attack', not 'nuke'.",
+      "excerpt": "nuke"
+    },
+    {
+      "rule": "CL-V1",
+      "severity": "warning",
+      "where": "statement 5",
+      "message": "Use 'monster', not 'mob'.",
+      "excerpt": "mob"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "lantern-7",
+      "TO": "disremembered",
+      "INTENT": "REQUEST"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[FACT] The hydra is probably asleep and it looks very weak.",
+        "type": "FACT",
+        "confidence": null,
+        "body": "The hydra is probably asleep and it looks very weak.",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 2,
+        "line": 6,
+        "raw": "[DO] lantern-7 MUST swap in the lich chunk and attack the hydra next turn.",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST swap in the lich chunk and attack the hydra next turn.",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "swap",
+        "arguments": "in the lich chunk and attack the hydra next turn",
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 3,
+        "line": 7,
+        "raw": "[DO] The hydra should be attacked.",
+        "type": "DO",
+        "confidence": null,
+        "body": "The hydra should be attacked.",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 4,
+        "line": 8,
+        "raw": "[ASK] Is the hydra asleep? Is it alone?",
+        "type": "ASK",
+        "confidence": null,
+        "body": "Is the hydra asleep? Is it alone?",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 5,
+        "line": 9,
+        "raw": "[DO] lantern-7 MUST nuke the mob with 3.",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST nuke the mob with 3.",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "nuke",
+        "arguments": "the mob with 3",
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "disremembered"
+}

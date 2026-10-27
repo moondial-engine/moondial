@@ -1,0 +1,11 @@
+FROM: lantern-7
+TO: disremembered
+INTENT: REQUEST
+REF: lantern-7-acid-cave-2026-10-26
+
+[FACT] The acid cave entrance is 3 tiles north of anchor-briar. [src:ev-88213]
+[FACT] lantern-7 holds 2 chunks in the active window as of 2026-10-26T04:10Z. [src:ev-88230]
+[INFER:HIGH] The cave hazard is acid.
+[DO] lantern-7 MUST coat blade-01 with resin-01.
+[DO] lantern-7 MUST move north 3 tiles.
+[DO] lantern-7 SHOULD reminisce chunk-5521 before turn 1.

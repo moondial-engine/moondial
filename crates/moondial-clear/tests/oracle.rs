@@ -74,10 +74,11 @@ fn compact(v: &Value) -> String {
 
 #[test]
 fn the_report_prints_like_the_reference() {
-    let vocab = load_vocabulary(&clear_dir().join("vocab/entropic.yaml")).unwrap();
+    let vocab = load_vocabulary(&clear_dir().join("vocab/disremembered.yaml")).unwrap();
     let text =
-        std::fs::read_to_string(clear_dir().join("samples/09_entropic_bad_request.txt")).unwrap();
-    let r = check_message(&text, Some(&vocab), Some("entropic"));
+        std::fs::read_to_string(clear_dir().join("samples/09_disremembered_bad_request.txt"))
+            .unwrap();
+    let r = check_message(&text, Some(&vocab), Some("disremembered"));
     let report = r.format_report();
     assert!(
         report.starts_with("Verdict: FAIL   Legibility:"),

@@ -67,7 +67,7 @@ pub struct ParamSpec {
 /// A command as a module registers it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CommandSpec {
-    /// The verb, namespaced by module: `entropic.shelve`. The short form after the dot is
+    /// The verb, namespaced by module: `disremembered.shelve`. The short form after the dot is
     /// the approved CLEAR verb.
     pub name: String,
     /// One line for humans and agents.
@@ -109,7 +109,7 @@ impl CommandSpec {
         self.allowed = kinds.to_vec();
         self
     }
-    /// The verb without its module prefix: `shelve` for `entropic.shelve`.
+    /// The verb without its module prefix: `shelve` for `disremembered.shelve`.
     pub fn verb(&self) -> &str {
         self.name.rsplit('.').next().unwrap_or(&self.name)
     }

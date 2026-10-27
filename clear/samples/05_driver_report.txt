@@ -1,4 +1,4 @@
-FROM: entropic
+FROM: disremembered
 TO: lantern-7
 INTENT: REPORT
 REF: lantern-7-acid-cave-2026-10-26

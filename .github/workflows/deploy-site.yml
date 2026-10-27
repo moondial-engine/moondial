@@ -30,14 +30,14 @@ jobs:
           python-version: "3.12"
       - run: pip install --quiet pyyaml
       - name: Invitation passes CLEAR v0.3
-        run: python ../clear/clear_check.py sites/agentscanplay/invitation.txt --vocab ../clear/vocab/entropic.yaml
+        run: python ../clear/clear_check.py sites/agentscanplay/invitation.txt --vocab ../clear/vocab/disremembered.yaml
       - name: Site is consistent
         run: python tools/check_site.py
       - name: Published CLEAR files match the reference under clear/
         run: |
           cmp ../clear/clear_check.py sites/agentscanplay/clear/clear_check.py
           cmp ../clear/vocab/base.yaml sites/agentscanplay/clear/base.yaml
-          cmp ../clear/vocab/entropic.yaml sites/agentscanplay/clear/entropic.yaml
+          cmp ../clear/vocab/disremembered.yaml sites/agentscanplay/clear/disremembered.yaml
           cmp ../clear/clear-spec-v0.3.md sites/agentscanplay/clear/clear-spec-v0.3.md
 
   deploy:

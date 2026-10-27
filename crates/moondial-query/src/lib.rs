@@ -22,10 +22,10 @@
 //! ```json
 //! {
 //!   "root": "here",
-//!   "select": { "entropic.room": ["name", "description"], "entropic.exits": "*" },
+//!   "select": { "disremembered.room": ["name", "description"], "disremembered.exits": "*" },
 //!   "relations": {
-//!     "contents": { "kinds": ["citizen", "creature"], "select": { "entropic.creature": ["name", "hp"] } },
-//!     "exits": { "select": { "entropic.room": ["name"] } }
+//!     "contents": { "kinds": ["citizen", "creature"], "select": { "disremembered.creature": ["name", "hp"] } },
+//!     "exits": { "select": { "disremembered.room": ["name"] } }
 //!   }
 //! }
 //! ```
@@ -113,7 +113,7 @@ pub type Select = BTreeMap<String, FieldSelect>;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Filter {
-    /// `{"field": "entropic.chunk.value", "op": "<", "value": 5}`
+    /// `{"field": "disremembered.chunk.value", "op": "<", "value": 5}`
     Compare {
         /// `component.field`.
         field: String,
@@ -742,10 +742,10 @@ mod tests {
     fn nearest_suggests_typos_not_strangers() {
         assert_eq!(
             nearest(
-                "entropic.chunk",
-                ["entropic.chunks", "entropic.room"].into_iter()
+                "disremembered.chunk",
+                ["disremembered.chunks", "disremembered.room"].into_iter()
             ),
-            Some("entropic.chunks".into())
+            Some("disremembered.chunks".into())
         );
         assert_eq!(
             nearest("contents", ["content", "in", "exits"].into_iter()),

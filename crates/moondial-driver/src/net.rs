@@ -11,7 +11,7 @@
 //! every call. That is fine for a test server and wrong for anything else, and the world
 //! card says so.
 
-use crate::entropic;
+use crate::disremembered;
 use crate::world::World;
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, HeaderName, StatusCode};
@@ -130,7 +130,8 @@ fn run_line(
                 .store
                 .entities()
                 .any(|e| e.kind == "citizen" && e.owner.as_deref() == Some(name));
-            entropic::login(&mut world, name, "terminal", passphrase).map_err(|e| e.to_string())?;
+            disremembered::login(&mut world, name, "terminal", passphrase)
+                .map_err(|e| e.to_string())?;
             *actor = Some((name.to_string(), ActorKind::Citizen));
             Ok(if fresh {
                 format!("Welcome, {name}. Your passphrase is set; you will need it next time. You are at the Threshold. Type help.")
@@ -189,7 +190,7 @@ fn narrative_since(shared: &Shared, actor: &str, cursor: &mut u64) -> Vec<String
         .read(&w.id, Cursor { after: *cursor }, 500)
         .unwrap_or_default()
         .iter()
-        .filter(|e| e.kind == crate::entropic::NARRATIVE && e.payload["to"] == actor)
+        .filter(|e| e.kind == crate::disremembered::NARRATIVE && e.payload["to"] == actor)
         .filter_map(|e| e.payload["text"].as_str().map(|t| format!("* {t}")))
         .collect();
     *cursor = head;
@@ -200,7 +201,7 @@ async fn handle_tcp(shared: Shared, stream: TcpStream) {
     let (r, mut w) = stream.into_split();
     let mut lines = BufReader::new(r).lines();
     let _ = w
-        .write_all(b"Entropic on Moondial (pre-alpha). Type: login <name> <passphrase>\n> ")
+        .write_all(b"Disremembered on Moondial (pre-alpha). Type: login <name> <passphrase>\n> ")
         .await;
     let mut actor: Option<(String, ActorKind)> = None;
     let mut cursor: u64 = 0;
@@ -304,7 +305,7 @@ pub(crate) fn login_for_session(
         .store
         .entities()
         .any(|e| e.kind == "citizen" && e.owner.as_deref() == Some(actor));
-    entropic::login(w, actor, "session", passphrase).map_err(|e| e.to_string())?;
+    disremembered::login(w, actor, "session", passphrase).map_err(|e| e.to_string())?;
     Ok(fresh)
 }
 
@@ -319,11 +320,11 @@ fn http_login(
         .store
         .entities()
         .any(|e| e.kind == "citizen" && e.owner.as_deref() == Some(actor));
-    entropic::login(w, actor, "http", passphrase).map_err(|e| match e {
-        entropic::LoginError::Internal(_) => {
+    disremembered::login(w, actor, "http", passphrase).map_err(|e| match e {
+        disremembered::LoginError::Internal(_) => {
             err_json(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
         }
-        entropic::LoginError::WrongPassphrase { .. } => {
+        disremembered::LoginError::WrongPassphrase { .. } => {
             err_json(StatusCode::UNAUTHORIZED, e.to_string())
         }
         _ => err_json(StatusCode::BAD_REQUEST, e.to_string()),
@@ -470,7 +471,7 @@ async fn gate_http(State(s): State<Shared>, Json(body): Json<GateBody>) -> Reply
         &mut w,
         &s.checker,
         &mut budget,
-        &crate::entropic::ask::Asks,
+        &crate::disremembered::ask::Asks,
         &body.actor,
         &body.message,
     );

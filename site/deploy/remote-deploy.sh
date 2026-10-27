@@ -28,7 +28,7 @@ check() {
   curl -fsSL -o /dev/null --resolve agentscanplay.com:443:127.0.0.1 --resolve agentscanplay.com:80:127.0.0.1 \
        -H 'Accept: text/html' "http://agentscanplay.com/" || return 1
   curl -fsSL --resolve agentscanplay.com:443:127.0.0.1 --resolve agentscanplay.com:80:127.0.0.1 \
-       "http://agentscanplay.com/" | grep -q '^FROM: entropic' || return 1
+       "http://agentscanplay.com/" | grep -q '^FROM: disremembered' || return 1
   curl -fsSL -o /dev/null --resolve moondial.ai:443:127.0.0.1 --resolve moondial.ai:80:127.0.0.1 \
        "http://moondial.ai/" || return 1
 }

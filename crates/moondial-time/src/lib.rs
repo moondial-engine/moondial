@@ -19,7 +19,7 @@
 //!   produced them.
 //! - **Decay curves are monotone.** A decaying curve never increases between reads.
 //!
-//! Curves need not be memoryless. A power-law tail, which Entropic uses for the Memory
+//! Curves need not be memoryless. A power-law tail, which Disremembered uses for the Memory
 //! Palace, gives a different value if re-anchored halfway; that is why reads never
 //! re-anchor and only mutations do. Moving a chunk between tiers is a [`TimedValue::recurve`],
 //! which anchors the current value on the new curve, and that is the intended semantics.
@@ -124,7 +124,7 @@ impl Pause {
 
 /// A clock scope: the record of when time was paused for everything in the scope.
 ///
-/// A scope is an append-only list of pauses in time order. Entropic's PTO is a pause on an
+/// A scope is an append-only list of pauses in time order. Disremembered's PTO is a pause on an
 /// account's scope; a world-wide maintenance freeze is a pause on the world's scope. A
 /// value may belong to several scopes at once (see [`Clock::elapsed`] on a slice).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -240,7 +240,7 @@ impl Clock {
 ///
 /// Every curve maps `(value_at_waterline, active_ms)` to a value. Bounds clamp the result.
 /// Modules may register their own curves through [`CurveFn`]; the families here cover
-/// what Entropic needs.
+/// what Disremembered needs.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Curve {
     /// The value never changes with time.
@@ -452,7 +452,7 @@ impl TimedValue {
         };
     }
 
-    /// Change the curve at `now`, anchoring the current value on the new curve. Entropic's
+    /// Change the curve at `now`, anchoring the current value on the new curve. Disremembered's
     /// shelving and reminiscence are recurves between the active and palace curves.
     pub fn recurve(&mut self, curve: Curve, now: Timestamp, scopes: &[Clock]) {
         let current = self.read_at(now, scopes);

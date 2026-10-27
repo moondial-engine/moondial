@@ -23,19 +23,19 @@ use serde_json::Value;
 use std::collections::HashMap;
 
 const BASE_VOCAB: &str = include_str!("../../../clear/vocab/base.yaml");
-const ENTROPIC_VOCAB: &str = include_str!("../../../clear/vocab/entropic.yaml");
+const DISREMEMBERED_VOCAB: &str = include_str!("../../../clear/vocab/disremembered.yaml");
 
-/// Entropic's vocabulary, as the site publishes it: the base vocabulary with the
+/// Disremembered's vocabulary, as the site publishes it: the base vocabulary with the
 /// world's own layered on.
-pub fn entropic_vocabulary() -> Value {
+pub fn disremembered_vocabulary() -> Value {
     let base = parse_raw(BASE_VOCAB).expect("base vocabulary parses");
-    let world = parse_raw(ENTROPIC_VOCAB).expect("entropic vocabulary parses");
+    let world = parse_raw(DISREMEMBERED_VOCAB).expect("disremembered vocabulary parses");
     merge(&merge(&moondial_clear::default_vocab(), &base), &world)
 }
 
 /// The world's checker, compiled once.
 pub fn checker() -> Checker {
-    Checker::new(&entropic_vocabulary(), "entropic")
+    Checker::new(&disremembered_vocabulary(), "disremembered")
 }
 
 /// The hourly message budget. A passing message costs one; a failed one costs a
@@ -550,7 +550,7 @@ pub fn observe(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::entropic::{self, ask::Asks};
+    use crate::disremembered::{self, ask::Asks};
     use crate::world::LogBacking;
     use moondial_log::WorldId;
     use moondial_store::Store;
@@ -560,21 +560,21 @@ mod tests {
 
     fn world() -> World {
         let mut w = World::open(
-            WorldId("entropic".into()),
-            Store::new(entropic::registry()),
+            WorldId("disremembered".into()),
+            Store::new(disremembered::registry()),
             LogBacking::Memory,
         )
         .unwrap();
         w.fixed_now = Some(Timestamp(1_793_100_000_000));
         w.seed(3);
-        entropic::ensure_world(&mut w).unwrap();
-        entropic::register(
+        disremembered::ensure_world(&mut w).unwrap();
+        disremembered::register(
             &mut w,
-            entropic::Curves::with_half_life(Duration::seconds(600)),
+            disremembered::Curves::with_half_life(Duration::seconds(600)),
         );
         w.tick();
-        entropic::login(&mut w, "lantern-7", "test", PASS).unwrap();
-        entropic::login(&mut w, "spacepants", "test", PASS).unwrap();
+        disremembered::login(&mut w, "lantern-7", "test", PASS).unwrap();
+        disremembered::login(&mut w, "spacepants", "test", PASS).unwrap();
         w
     }
 
@@ -599,7 +599,7 @@ mod tests {
     }
 
     fn msg(from: &str, intent: &str, body: &str) -> String {
-        format!("FROM: {from}\nTO: entropic\nINTENT: {intent}\nREF: {from}-test-1\n\n{body}\n")
+        format!("FROM: {from}\nTO: disremembered\nINTENT: {intent}\nREF: {from}-test-1\n\n{body}\n")
     }
 
     #[test]
@@ -618,7 +618,7 @@ mod tests {
         let reply = &p.reply;
         assert!(
             reply.starts_with(
-                "FROM: entropic\nTO: lantern-7\nINTENT: REPORT\nREF: lantern-7-test-1\n\n"
+                "FROM: disremembered\nTO: lantern-7\nINTENT: REPORT\nREF: lantern-7-test-1\n\n"
             ),
             "{reply}"
         );
@@ -644,7 +644,7 @@ mod tests {
             "{reply}"
         );
         assert!(
-            reply.contains("[QUOTE] There is no chunk 999. [src:entropic]"),
+            reply.contains("[QUOTE] There is no chunk 999. [src:disremembered]"),
             "{reply}"
         );
         assert!((p.budget_remaining - 59.0).abs() < 1e-9);
@@ -781,7 +781,7 @@ mod tests {
         assert!(!p.acted);
         assert!(
             p.reply
-                .contains("addressed to spacepants, and this world is entropic"),
+                .contains("addressed to spacepants, and this world is disremembered"),
             "{}",
             p.reply
         );

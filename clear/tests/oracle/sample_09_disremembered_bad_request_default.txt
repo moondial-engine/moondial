@@ -1,0 +1,9 @@
+FROM: lantern-7
+TO: disremembered
+INTENT: REQUEST
+
+[FACT] The hydra is probably asleep and it looks very weak.
+[DO] lantern-7 MUST swap in the lich chunk and attack the hydra next turn.
+[DO] The hydra should be attacked.
+[ASK] Is the hydra asleep? Is it alone?
+[DO] lantern-7 MUST nuke the mob with 3.
