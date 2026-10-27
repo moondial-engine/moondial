@@ -78,13 +78,17 @@
   @media (min-width: 900px) { #scene { display: block; } }
   #scene h2 { font: 15px/1.3 var(--serif); color: var(--dim); margin: 14px 0 8px; font-weight: 400; }
   #scene h2:first-child { margin-top: 0; }
-  #map { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 62px); gap: 6px; }
-  .tile { border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; color: var(--dim); overflow: hidden; }
+  #map { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 72px); gap: 6px; }
+  .tile { position: relative; border: 1px solid var(--line); border-radius: 4px; color: var(--dim); overflow: hidden; background: var(--night); }
   .tile.here { color: var(--ink); border-color: var(--dust); }
-  .tile .dir { font-size: 11px; color: var(--dim); }
-  .tile .nm { font-size: 12px; line-height: 1.25; }
+  .tile.none { border-color: transparent; background: transparent; }
+  .tile svg { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .85; }
+  .tile .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 2px 6px; background: rgba(11,13,18,.72); display: flex; justify-content: space-between; gap: 6px; }
+  .tile .dir { font-size: 10px; color: var(--dim); }
+  .tile .nm { font-size: 11px; line-height: 1.3; color: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .row { display: flex; align-items: center; gap: 10px; margin: 0 0 6px; }
-  .glyph { width: 26px; height: 26px; border-radius: 4px; display: grid; place-items: center; font-weight: 700; background: var(--night); border: 1px solid var(--line); flex: none; }
+  .glyph { width: 32px; height: 32px; border-radius: 4px; display: grid; place-items: center; font-weight: 700; background: var(--night); border: 1px solid var(--line); flex: none; overflow: hidden; }
+  .glyph svg { width: 28px; height: 28px; display: block; }
   .row .nm { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bar { height: 6px; background: var(--night); border: 1px solid var(--line); border-radius: 3px; overflow: hidden; width: 90px; flex: none; }
   .bar i { display: block; height: 100%; background: var(--dust); width: 0; }
@@ -327,22 +331,56 @@
     if (b.ceiling != null) v = Math.min(b.ceiling, v);
     return v;
   }
+  // The pre-alpha atlas: original 16x16 frames, drawn as SVG rects. A sprite component
+  // names an atlas and a frame; a frame this page does not have falls back to the glyph.
+  const ATLAS_NAME = "entropic-pixel-1";
+  const ATLAS = {"citizen":{"p":{"c":"#d9d4c7","d":"#8e887c","f":"#5b4a3c","e":"#1a1612","g":"#d9b57a","b":"#3a3028"},"r":["................","......cccc......",".....cddddc.....","....cdffffdc....","....cdfefedc....","....cdffffdc....",".....cdddc......","....ccgccc......","...ccccccccc....","...cdccccccdc...","...cdccccccdc...","...cddccccddc...","....ddccccdd....","....dd....dd....","....bb....bb....","................"]},"wisp":{"p":{"w":"#e9f6fb","l":"#9fd3e6","m":"#4f8fa8","k":"#24495a"},"r":["................","................","........l.......",".......ll.......","......lwll......",".....lwwwl......",".....lwwwll.....","....mlwwwlm.....","....mllwllm.....",".....mlllm......","......mmm.......","....k..m..k.....","...k...m...k....","..k....k........",".......k........","................"]},"hollow":{"p":{"g":"#6f8f7a","d":"#3f5a5a","k":"#141c1c","w":"#2a3b3b","e":"#0b0d12"},"r":["................",".....ggggg......","....gddddgg.....","....gdedegg.....","....gddddgg.....",".....gdddg......","....ggdddgg.....","...gggdddgggg...","..ggggdddggggg..","..dggggggggggd..","..d.gggggggg.d..","....gggggggg....","....ddgggddd....","wwwwddwwwwddwwww","wkwwwwwkwwwwwkww","wwwwwwwwwwwwwwww"]},"revenant":{"p":{"b":"#cfc3b0","s":"#8a7d6a","r":"#c96a6a","k":"#2b2420","t":"#6b5a4a"},"r":[".....bbbbbb.....","....bssssssb....","....bsrssrsb....","....bssssssb....",".....bsksksb....","......bbbb......","...tbbbbbbbbt...","..tbbbsbbsbbbt..","..tbbbsbbsbbbt..",".ttbbbbbbbbbbtt.",".t.bbbsbbsbbb.t.","...bbbbbbbbbb...","....bbb..bbb....","....bbb..bbb....","....bss..ssb....","....kk....kk...."]},"threshold":{"p":{"p":"#d9d4c7","q":"#bfb9ab","n":"#0b0d12","m":"#e8e4da","s":"#1c2030"},"r":["ssssssssssssssss","sssssssssssmmsss","ssssssssssmmmmss","ssssssssssmmmmss","sssssssssssmmsss","ssssssssssssssss","ssssssssssssssss","pppppppppppppppp","pqpppqpppqpppqpp","pppppppppppppppp","ppqpppqpppqpppqp","pppppppppppppppp","pqpppqpppqpppqpp","pppppppppppppppp","ppqpppqpppqpppqp","pppppppppppppppp"]},"fogbank":{"p":{"f":"#8a97a8","g":"#6c7889","h":"#aeb8c6","s":"#3a4252"},"r":["ssssssssssssssss","sssshhssssshhsss","ssshffhssshffhss","sshfggfhshfggfhs","sshfggffffggffhs","ssshffffffffhsss","ssssshhhhhhsssss","ssssssssssssssss","sshhsssssssshhss","shffhsssssshffhs","hfggfhhhhhhfggfh","hfggffffffffggfh","shfffffffffffhhs","sshhffffffffhsss","sssshhhhhhhhssss","ssssssssssssssss"]},"shallows":{"p":{"w":"#0e1518","r":"#243233","p":"#b8ad98","s":"#3f5a5a"},"r":["wwwwwwwwwwwwwwww","wwwrrwwwwwwwrrww","wwrwwrwwwwwrwwrw","wwwwwwwwwwwwwwww","wwwwwwwrrwwwwwww","wwwwwwrwwrwwwwww","wwwwwwwwwwwwwwww","wrrwwwwwwwwwwrrw","rwwrwwwwwwwwrwwr","wwwwwwwwwwwwwwww","wwwwwwwwwwwwwwww","ppppppwwwwwppppp","pppppppwwwpppppp","pppppppppppppppp","pspppppspppppspp","pppppppppppppppp"]},"ossuary":{"p":{"r":"#6b5a4a","d":"#4a3d33","n":"#1a1410","b":"#cfc3b0"},"r":["rrrrrrrrrrrrrrrr","rdnnndrrrdnnndrr","rdnbndrrrdnnndrr","rdnnndrrrdnbndrr","rrrrrrrrrrrrrrrr","rrrrrrrrrrrrrrrr","rrrdnnndrrrdnnnd","rrrdnnndrrrdnnnd","rrrdnbndrrrdnnnd","rrrrrrrrrrrrrrrr","rdnnndrrrdnnndrr","rdnnndrrrdnbndrr","rdnnndrrrdnnndrr","rrrrrrrrrrrrrrrr","dddddddddddddddd","dddddddddddddddd"]},"chunk":{"p":{"g":"#d9b57a","y":"#f1dcb0","o":"#8a6a3a"},"r":["................","................","................","................","......oo........",".....oggo.......","....oggygo......","....ogyyggo.....","....oggyggo.....",".....oggo.......","......oo........","................","................","................","................","................"]}};
+  const svgCache = {};
+  function spriteSVG(frame) {
+    const f = ATLAS[frame]; if (!f) return null;
+    if (!svgCache[frame]) {
+      let out = "";
+      f.r.forEach((row, y) => {
+        let x = 0;
+        while (x < 16) {
+          const ch = row[x];
+          if (ch === ".") { x++; continue; }
+          let w = 1; while (x + w < 16 && row[x + w] === ch) w++;
+          out += `<rect x="${x}" y="${y}" width="${w}" height="1" fill="${f.p[ch]}"/>`;
+          x += w;
+        }
+      });
+      svgCache[frame] = out;
+    }
+    const el = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    el.setAttribute("viewBox", "0 0 16 16"); el.setAttribute("shape-rendering", "crispEdges"); el.setAttribute("aria-hidden", "true");
+    el.innerHTML = svgCache[frame];
+    return el;
+  }
+  function art(sprite) {
+    return sprite && sprite.atlas === ATLAS_NAME ? spriteSVG(sprite.frame) : null;
+  }
   const DIRS = { north: [1, 0], south: [1, 2], west: [0, 1], east: [2, 1] };
-  function tile(name, dir, here, tint) {
+  function tile(name, dir, here, sprite) {
     const d = document.createElement("div");
     d.className = "tile" + (here ? " here" : "");
-    if (tint) d.style.borderLeft = "3px solid " + tint;
-    d.innerHTML = '<div class="dir"></div><div class="nm"></div>';
-    d.querySelector(".dir").textContent = dir;
-    d.querySelector(".nm").textContent = name.replace(/^The /, "");
+    const a = art(sprite);
+    if (a) d.append(a); else if (sprite && sprite.tint) d.style.borderLeft = "3px solid " + sprite.tint;
+    const cap = document.createElement("div"); cap.className = "cap";
+    cap.innerHTML = '<span class="nm"></span><span class="dir"></span>';
+    cap.querySelector(".dir").textContent = dir;
+    cap.querySelector(".nm").textContent = name.replace(/^The /, "");
+    d.append(cap);
     return d;
   }
-  function row(glyph, tint, name, barClass, frac, num) {
+  function row(sprite, name, barClass, frac, num, tint) {
     const r = document.createElement("div"); r.className = "row";
-    const g = document.createElement("div"); g.className = "glyph"; g.textContent = glyph; g.style.color = tint || "var(--ink)";
+    const g = document.createElement("div"); g.className = "glyph";
+    const a = art(sprite);
+    if (a) g.append(a); else { g.textContent = (sprite && sprite.glyph) || "?"; g.style.color = tint || (sprite && sprite.tint) || "var(--ink)"; }
     const n = document.createElement("div"); n.className = "nm"; n.textContent = name;
     r.append(g, n);
-    if (barClass) {
+    if (barClass !== null && barClass !== undefined && num !== null) {
       const b = document.createElement("div"); b.className = "bar " + barClass; const i = document.createElement("i"); b.append(i); r.append(b);
       i.style.width = (Math.max(0, Math.min(1, frac)) * 100).toFixed(1) + "%";
     }
@@ -356,36 +394,36 @@
     if (!room) { here.innerHTML = '<div class="empty">Log in to see the room.</div>'; return; }
     const cells = Array.from({ length: 9 }, () => null);
     const sprite = (n) => (n.components && n.components["entropic.sprite"]) || {};
-    cells[4] = tile(room.components["entropic.room"].name, "here", true, sprite(room).tint);
+    cells[4] = tile(room.components["entropic.room"].name, "here", true, sprite(room));
     for (const ex of (room.relations && room.relations.exits) || []) {
       const d = DIRS[ex.via]; if (!d) continue;
-      cells[d[1] * 3 + d[0]] = tile(ex.components["entropic.room"].name, ex.via, false, sprite(ex).tint);
+      cells[d[1] * 3 + d[0]] = tile(ex.components["entropic.room"].name, ex.via, false, sprite(ex));
     }
-    for (const c of cells) map.append(c || Object.assign(document.createElement("div"), { className: "tile", style: "border-color: transparent" }));
+    for (const c of cells) map.append(c || Object.assign(document.createElement("div"), { className: "tile none" }));
     const things = (room.relations && room.relations.contents) || [];
     if (!things.length) here.innerHTML = '<div class="empty">Nothing here.</div>';
     for (const n of things) {
       const s = sprite(n);
       if (n.kind === "creature") {
         const c = n.components["entropic.creature"];
-        here.append(row(s.glyph || "?", s.tint, c.name, "hp", c.hp / c.max_hp, c.hp + "/" + c.max_hp));
+        here.append(row(s, c.name, "hp", c.hp / c.max_hp, c.hp + "/" + c.max_hp));
       } else {
         const nm = n.components["entropic.citizen"] ? n.components["entropic.citizen"].name : "?";
-        here.append(row(s.glyph || "@", nm === actor ? "var(--dust)" : s.tint, nm === actor ? nm + " (you)" : nm));
+        here.append(row(s, nm === actor ? nm + " (you)" : nm, "", 0, null, nm === actor ? "var(--dust)" : null));
       }
     }
     const me = subs.me && subs.me.root;
     if (me && me.components["entropic.body"]) {
       const b = me.components["entropic.body"];
       const hp = timed(b.hp), max = b.max_hp;
-      you.append(row("@", "var(--dust)", "hit points", "hp", hp / max, hp.toFixed(1) + "/" + max));
+      you.append(row(sprite(me), "hit points", "hp", hp / max, hp.toFixed(1) + "/" + max, "var(--dust)"));
     }
     const chunks = (subs.window && subs.window.root.relations && subs.window.root.relations.contents) || [];
     if (!chunks.length) win.innerHTML = '<div class="empty">Nothing remembered yet.</div>';
     let level = 0;
     for (const n of chunks) {
       const c = n.components["entropic.chunk"]; const v = timed(c.value); level += v;
-      win.append(row("·", "var(--dust)", c.source + "  v" + (c.vividity || 0).toFixed(2), "", v / c.size, v.toFixed(2)));
+      win.append(row({ atlas: ATLAS_NAME, frame: "chunk" }, c.source + "  v" + (c.vividity || 0).toFixed(2), "", v / c.size, v.toFixed(2)));
     }
     if (chunks.length) win.append(Object.assign(document.createElement("div"), { className: "empty", textContent: "Level " + level.toFixed(2) }));
   }

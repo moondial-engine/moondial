@@ -155,9 +155,11 @@ pub fn schemas() -> Vec<ComponentSchema> {
             .field("hp", FieldKind::Timed, Visibility::Public)
             .field("max_hp", FieldKind::Plain, Visibility::Public)
             .field("engaged", FieldKind::Plain, Visibility::Owner),
-        ComponentSchema::new(SPRITE, 1)
+        ComponentSchema::new(SPRITE, 2)
             .field("glyph", FieldKind::Plain, Visibility::Public)
-            .field("tint", FieldKind::Plain, Visibility::Public),
+            .field("tint", FieldKind::Plain, Visibility::Public)
+            .field("atlas", FieldKind::Plain, Visibility::Public)
+            .field("frame", FieldKind::Plain, Visibility::Public),
         ComponentSchema::new(CREATURE, 1)
             .field("name", FieldKind::Plain, Visibility::Public)
             .field("hp", FieldKind::Plain, Visibility::Public)
@@ -230,7 +232,7 @@ pub fn login(
                     StoreEvent::ComponentSet {
                         id: f.citizen,
                         component: SPRITE.into(),
-                        fields: sprite_fields("@", "#e8e4da"),
+                        fields: sprite_fields("@", "#e8e4da", "citizen"),
                     },
                 )
                 .map_err(internal)?;
@@ -328,7 +330,7 @@ pub fn login(
             StoreEvent::ComponentSet {
                 id: citizen,
                 component: SPRITE.into(),
-                fields: sprite_fields("@", "#e8e4da"),
+                fields: sprite_fields("@", "#e8e4da", "citizen"),
             },
         )
         .map_err(internal)?;
@@ -367,11 +369,22 @@ pub fn login(
 
 /// A sprite: one glyph and a tint, enough for a terminal renderer and a placeholder for
 /// an atlas frame later.
-pub(crate) fn sprite_fields(glyph: &str, tint: &str) -> BTreeMap<String, Field> {
+pub(crate) fn sprite_fields(glyph: &str, tint: &str, frame: &str) -> BTreeMap<String, Field> {
     let mut fields = BTreeMap::new();
     fields.insert("glyph".into(), Field::Plain(json!(glyph)));
     fields.insert("tint".into(), Field::Plain(json!(tint)));
+    fields.insert("atlas".into(), Field::Plain(json!(ATLAS)));
+    fields.insert("frame".into(), Field::Plain(json!(frame)));
     fields
+}
+
+/// The atlas the slice's frames belong to. A client that has it draws the frame; one
+/// that does not draws the glyph.
+pub const ATLAS: &str = "entropic-pixel-1";
+
+/// Whether an entity's sprite is from before frames existed.
+pub(crate) fn sprite_is_old(world: &World, id: EntityId) -> bool {
+    plain_str(world, id, SPRITE, "frame").is_none()
 }
 
 fn account_fields(passphrase: &str) -> Result<BTreeMap<String, Field>, LoginError> {

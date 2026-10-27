@@ -173,7 +173,8 @@ pub fn ensure_rooms(world: &mut World) -> Result<(), String> {
         let has_sprite = world
             .store
             .entity(id)
-            .is_some_and(|e| e.components.contains_key(super::SPRITE));
+            .is_some_and(|e| e.components.contains_key(super::SPRITE))
+            && !super::sprite_is_old(world, id);
         if !has_sprite {
             world
                 .record(
@@ -181,7 +182,7 @@ pub fn ensure_rooms(world: &mut World) -> Result<(), String> {
                     StoreEvent::ComponentSet {
                         id,
                         component: super::SPRITE.into(),
-                        fields: super::sprite_fields("#", def.tint),
+                        fields: super::sprite_fields("#", def.tint, def.key),
                     },
                 )
                 .map_err(|e| e.to_string())?;

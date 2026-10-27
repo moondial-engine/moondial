@@ -163,7 +163,7 @@ pub fn fill(world: &mut World, room: EntityId) -> Result<usize, StoreError> {
             StoreEvent::ComponentSet {
                 id,
                 component: super::SPRITE.into(),
-                fields: super::sprite_fields(d.glyph, d.tint),
+                fields: super::sprite_fields(d.glyph, d.tint, d.key),
             },
         )?;
         spawned += 1;
@@ -218,7 +218,7 @@ pub fn ensure_spawns(world: &mut World) -> Result<(), String> {
                         StoreEvent::ComponentSet {
                             id,
                             component: super::SPRITE.into(),
-                            fields: super::sprite_fields(d.glyph, d.tint),
+                            fields: super::sprite_fields(d.glyph, d.tint, d.key),
                         },
                     )
                     .map_err(|e| e.to_string())?;
