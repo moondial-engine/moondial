@@ -8,6 +8,7 @@
 //! attack follows your level, and the fights you almost lost last longest.
 
 pub mod ask;
+pub mod building;
 mod combat;
 mod identity;
 mod memory;
@@ -148,10 +149,19 @@ pub fn schemas() -> Vec<ComponentSchema> {
             .field("vividity", FieldKind::Plain, Visibility::Owner)
             .field("source", FieldKind::Plain, Visibility::Public)
             .field("tier", FieldKind::Plain, Visibility::Public),
-        ComponentSchema::new(ROOM, 1)
+        ComponentSchema::new(ROOM, 2)
             .field("key", FieldKind::Plain, Visibility::Public)
             .field("name", FieldKind::Plain, Visibility::Public)
-            .field("description", FieldKind::Plain, Visibility::Public),
+            .field("description", FieldKind::Plain, Visibility::Public)
+            // A dug room's own memory of itself: 1 when visited, fading on the half-life
+            // of the chunk that paid for it. Seed rooms have none and never fade.
+            .field("memory", FieldKind::Timed, Visibility::Public)
+            .field("half_life_ms", FieldKind::Plain, Visibility::Public)
+            // Who else may describe and name it: citizen name to an expiry (ms) or null.
+            .field("permits", FieldKind::Plain, Visibility::Owner)
+            // The room it was dug from, and what memory paid for it.
+            .field("origin", FieldKind::Plain, Visibility::Public)
+            .field("dug_with", FieldKind::Plain, Visibility::Public),
         ComponentSchema::new(EXITS, 1).field("exits", FieldKind::Plain, Visibility::Public),
         ComponentSchema::new(SPAWN, 1)
             .field("creature", FieldKind::Plain, Visibility::Admin)
@@ -287,6 +297,7 @@ pub fn login(
         if combat::engaged_with(world, f.citizen).is_none() {
             if let Some(room) = world.store.entity(f.citizen).and_then(|e| e.parent) {
                 combat::on_arrival(world, actor, f.citizen, room).map_err(LoginError::Internal)?;
+                building::visited(world, room).map_err(LoginError::Internal)?;
             }
         }
         return Ok(f);
@@ -524,6 +535,7 @@ pub fn register(world: &mut World, curves: Curves) {
     combat::register(world, curves.clone());
     memory::register(world, curves);
     speech::register(world);
+    building::register(world);
     system::register(world);
 }
 

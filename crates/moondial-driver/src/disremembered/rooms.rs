@@ -244,7 +244,7 @@ pub fn room_of(world: &World, citizen: EntityId) -> Option<EntityId> {
 pub fn look_query(room: EntityId) -> Value {
     json!({
         "root": {"entity": room.0},
-        "select": {ROOM: ["name", "description"], EXITS: "*"},
+        "select": {ROOM: ["name", "description", "memory", "dug_with"], EXITS: "*"},
         "relations": {
             "contents": {
                 "kinds": ["citizen", "creature"],
@@ -269,10 +269,20 @@ pub fn describe(
         .as_str()
         .unwrap_or("?")
         .to_string();
-    let desc = root["components"][ROOM]["description"]
-        .as_str()
-        .unwrap_or("")
-        .to_string();
+    // A dug room's description is as remembered: whole, dimmed, or faded.
+    let memory = root["components"][ROOM]["memory"].as_f64();
+    let desc = super::building::remembered_description(
+        root["components"][ROOM]["description"]
+            .as_str()
+            .unwrap_or(""),
+        memory,
+    );
+    let desc = if desc.ends_with(['.', '!', '?', '"', '”']) || desc.is_empty() {
+        desc
+    } else {
+        format!("{desc}.")
+    };
+    let dug_by = root["owner"].as_str().map(str::to_string);
     let exits: Vec<String> = root["components"][EXITS]["exits"]
         .as_object()
         .map(|m| m.keys().cloned().collect())
@@ -300,6 +310,13 @@ pub fn describe(
         })
         .collect();
     let mut text = format!("{name}. {desc}");
+    if let Some(who) = &dug_by {
+        let with = root["components"][ROOM]["dug_with"]
+            .as_str()
+            .map(|s| format!(" with the memory of {s}"))
+            .unwrap_or_default();
+        text.push_str(&format!(" Dug by {who}{with}."));
+    }
     if !exits.is_empty() {
         text.push_str(&format!(" Exits: {}.", exits.join(", ")));
     }
@@ -324,7 +341,7 @@ pub fn describe(
     });
     Ok(Outcome::new(
         text,
-        json!({"room": name, "description": desc, "exits": exits, "creatures": creatures, "citizens": others, "observation": obs}),
+        json!({"room": name, "description": desc, "memory": memory, "dug_by": dug_by, "exits": exits, "creatures": creatures, "citizens": others, "observation": obs}),
     ))
 }
 
@@ -377,6 +394,7 @@ pub fn register(world: &mut World) {
             )
             .map_err(internal)?;
             super::combat::on_arrival(w, &ctx.actor, f.citizen, to).map_err(internal)?;
+            super::building::visited(w, to).map_err(internal)?;
             let mut out = describe(w, &ctx.actor, ctx, to)?;
             out.summary = format!("You go {exit}. {}", out.summary);
             Ok(out)

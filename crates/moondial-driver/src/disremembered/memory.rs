@@ -114,7 +114,7 @@ fn rows_text(rows: &[Value]) -> Vec<String> {
         .collect()
 }
 
-fn resolve_chunk(
+pub(crate) fn resolve_chunk(
     world: &World,
     ctx: &CallContext,
     arg: &str,

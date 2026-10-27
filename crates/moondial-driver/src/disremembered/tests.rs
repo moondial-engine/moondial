@@ -807,3 +807,199 @@ fn the_vocabulary_s_signatures_are_the_registry_s() {
         );
     }
 }
+
+/// Players extend the world: a dug room costs a chunk, inherits its half-life, fades
+/// toward a half-remembered line unless visited, keeps its name and exits regardless,
+/// is the digger's to describe and name, and theirs to share by permit.
+#[test]
+fn players_dig_rooms_that_fade_but_stay() {
+    let mut w = open(tempfile::tempdir().unwrap().path(), Timestamp(0));
+    login(&mut w, "dave", "test", PASS).unwrap();
+    login(&mut w, "tyler", "test", PASS).unwrap();
+    // A vivid chunk: a long half-life, which the room will inherit.
+    let out = admin(&mut w, "dave", "earn", json!(["hydra", 100, 1.0]));
+    let chunk = format!("chunk-{}", out.result["chunk"].as_u64().unwrap());
+
+    // No name may carry a reserved word or a glossary alias, and the chunk is spent.
+    let err = call(
+        &mut w,
+        "dave",
+        ActorKind::Citizen,
+        "dig",
+        json!(["down", chunk, "The Gate"]),
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("reserves"), "{err}");
+    let out = ok(
+        &mut w,
+        "dave",
+        "dig",
+        json!(["down", chunk, "The Salt Stair"]),
+    );
+    assert!(
+        out.summary
+            .starts_with("You dig down with the memory of hydra."),
+        "{}",
+        out.summary
+    );
+    let room = EntityId(out.result["room"].as_u64().unwrap());
+    assert_eq!(out.result["back"], "up");
+    assert_eq!(out.result["key"], format!("salt-stair-{}", room.0));
+    assert!(
+        w.store
+            .entity(EntityId(
+                chunk.trim_start_matches("chunk-").parse().unwrap()
+            ))
+            .is_none(),
+        "the chunk is spent"
+    );
+    let hl = out.result["half_life_ms"].as_i64().unwrap();
+    assert_eq!(
+        hl,
+        3 * 10 * 1000,
+        "a vividity-1 chunk lasts 3x the test world's 10 s half-life"
+    );
+
+    // One dig from a seed room per citizen; the digger's own rooms are open to them.
+    let out2 = admin(&mut w, "dave", "earn", json!(["wisp", 10, 0.0]));
+    let chunk2 = format!("chunk-{}", out2.result["chunk"].as_u64().unwrap());
+    let err = call(
+        &mut w,
+        "dave",
+        ActorKind::Citizen,
+        "dig",
+        json!(["under", chunk2]),
+    )
+    .unwrap_err();
+    assert!(
+        err.to_string().contains("already dug from this room"),
+        "{err}"
+    );
+    ok(&mut w, "dave", "travel", json!(["down"]));
+    let out3 = ok(&mut w, "dave", "dig", json!(["east", chunk2]));
+    assert_eq!(out3.result["name"], "An Unnamed Digging");
+
+    // Describing and naming are the owner's; a visitor is refused until permitted.
+    ok(
+        &mut w,
+        "dave",
+        "describe",
+        json!(["Steps of salt, each one damp. The air tastes of the sea that is not here."]),
+    );
+    let look = ok(&mut w, "dave", "look", json!([]));
+    assert!(
+        look.summary
+            .starts_with("The Salt Stair. Steps of salt, each one damp."),
+        "{}",
+        look.summary
+    );
+    assert!(
+        look.summary
+            .contains("Dug by dave with the memory of hydra."),
+        "{}",
+        look.summary
+    );
+    ok(&mut w, "tyler", "travel", json!(["down"]));
+    let err = call(
+        &mut w,
+        "tyler",
+        ActorKind::Citizen,
+        "describe",
+        json!(["Mine now."]),
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("permission"), "{err}");
+    let err = call(
+        &mut w,
+        "tyler",
+        ActorKind::Citizen,
+        "permit",
+        json!(["dave"]),
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("owner"), "{err}");
+    ok(&mut w, "dave", "permit", json!(["tyler", 1]));
+    ok(&mut w, "tyler", "name", json!(["The Salt Stair, Swept"]));
+    assert_eq!(
+        ok(&mut w, "tyler", "look", json!([])).result["room"],
+        "The Salt Stair, Swept"
+    );
+    // The permit expires.
+    w.fixed_now = Some(w.now().plus(Duration::seconds(3601)));
+    let err = call(
+        &mut w,
+        "tyler",
+        ActorKind::Citizen,
+        "describe",
+        json!(["Late."]),
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("permission"), "{err}");
+    ok(&mut w, "dave", "permit", json!(["tyler"]));
+    ok(
+        &mut w,
+        "tyler",
+        "describe",
+        json!(["Steps of salt. Swept now, by a friend."]),
+    );
+    ok(&mut w, "dave", "revoke", json!(["tyler"]));
+    assert!(call(
+        &mut w,
+        "tyler",
+        ActorKind::Citizen,
+        "describe",
+        json!(["Again."])
+    )
+    .is_err());
+
+    // The seed rooms are the world's.
+    ok(&mut w, "dave", "travel", json!(["up"]));
+    let err = call(
+        &mut w,
+        "dave",
+        ActorKind::Citizen,
+        "describe",
+        json!(["Mine."]),
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("the world's"), "{err}");
+
+    // Memory fades with nobody there: the description dims, then fades; the room stays.
+    ok(&mut w, "tyler", "travel", json!(["up"]));
+    let full = describe_room(&mut w, "dave", room);
+    assert!(
+        full.starts_with("The Salt Stair, Swept. Steps of salt. Swept now, by a friend."),
+        "{full}"
+    );
+    w.fixed_now = Some(w.now().plus(Duration(hl * 2)));
+    let dim = describe_room(&mut w, "dave", room);
+    assert!(
+        dim.contains("Steps of salt. The rest is hard to recall."),
+        "{dim}"
+    );
+    w.fixed_now = Some(w.now().plus(Duration(hl * 3)));
+    let faded = describe_room(&mut w, "dave", room);
+    assert!(faded.contains(building::HALF_REMEMBERED), "{faded}");
+    assert!(
+        faded.contains("Exits: up, east."),
+        "the exits survive: {faded}"
+    );
+    // A visit remembers it whole again.
+    ok(&mut w, "dave", "travel", json!(["down"]));
+    let back = ok(&mut w, "dave", "look", json!([]));
+    assert!(
+        back.summary
+            .contains("Steps of salt. Swept now, by a friend."),
+        "{}",
+        back.summary
+    );
+    assert!(building::memory(&w, room).unwrap() > 0.99);
+}
+
+fn describe_room(w: &mut World, actor: &str, room: EntityId) -> String {
+    let ctx = CallContext {
+        actor: actor.into(),
+        kind: ActorKind::Citizen,
+    };
+    rooms::describe(w, actor, &ctx, room).unwrap().summary
+}

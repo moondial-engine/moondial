@@ -81,6 +81,12 @@ approved_verbs:
   unequip:
   drop:
   take:
+  # building: players extend the world
+  dig: {params: [{name: exit, type: string, required: true}, {name: chunk, type: entity, required: true}, {name: name, type: text, required: false}]}
+  describe: {params: [{name: text, type: text, required: true}]}
+  name: {params: [{name: name, type: text, required: true}]}
+  permit: {params: [{name: citizen, type: entity, required: true}, {name: hours, type: number, required: false}]}
+  revoke: {params: [{name: citizen, type: entity, required: true}]}
   # social
   say: {params: [{name: text, type: text, required: true}]}
   tell:

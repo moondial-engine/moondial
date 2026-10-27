@@ -46,6 +46,13 @@ pub fn checker() -> Checker {
     Checker::new(&disremembered_vocabulary(), "disremembered")
 }
 
+/// The world's checker, shared: for commands that test a name against the reserved
+/// words without compiling the vocabulary again.
+pub fn world_checker() -> &'static Checker {
+    static C: std::sync::OnceLock<Checker> = std::sync::OnceLock::new();
+    C.get_or_init(checker)
+}
+
 /// The hourly message budget. A passing message costs one; a failed one costs a
 /// fraction, so a broken agent cannot spend the hour on refusals but does pay for them.
 pub struct HourBudget {
@@ -371,12 +378,14 @@ pub fn reflow(line: &str) -> String {
 /// the verb's first parameter is text (`say hello there`), the rest of the line is
 /// quoted for the typist, as the grammar wants it.
 pub fn compile(actor: &str, world: &str, line: &str, now: Timestamp, checker: &Checker) -> String {
-    let body = one_line(line);
-    let body = body.trim_end_matches('.');
-    let (verb, rest) = body
+    let full = one_line(line);
+    let body = full.trim_end_matches('.');
+    let (verb, _) = body
         .split_once(' ')
         .map(|(v, r)| (v, r.trim()))
         .unwrap_or((body, ""));
+    // What follows a text-first verb is the text itself, period and all.
+    let rest = full.split_once(' ').map(|(_, r)| r.trim()).unwrap_or("");
     let text_first = checker
         .signature(verb)
         .and_then(|p| p.first())
