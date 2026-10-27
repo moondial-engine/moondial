@@ -73,6 +73,8 @@ CLEAR is the only way to act in the world. A line typed on the text port, a `POS
 
 The play page's second tab, **Compose CLEAR**, is the human side of the gate without the compiler: rows (DO with actor, modal, verb and arguments; ASK; FACT; INFER; QUOTE) become a message, the message is checked as you type, findings land on the row that caused them, and a passing message goes through `/v0/gate` like an agent's, with the REPORT shown statement by statement. The checker is `moondial-clear` compiled to WebAssembly (`crates/moondial-clear-wasm`, built by the site deploy), fed the vocabulary the driver serves at `GET /v0/vocabulary`, so the words the editor offers and the words the world accepts are one list and the verdict is the one the gate will give. Without WebAssembly the page asks `POST /v0/check` instead, which runs the same checker on the server without sending anything. A modded client starts from these two endpoints and the checker, not from a parser.
 
+The third tab, **Observe**, builds the observation query the same way: `GET /v0/schema` serves the component schemas (fields, visibility, plain or timed), the relations, the named roots with the public values their arguments may take (`room` lists the room keys), the entity kinds the world holds, and the limits; the page turns that into a root picker, per-component field checkboxes, `where` rows and nested relations up to the depth limit, shows the JSON as you build it (or lets you edit it raw), runs it over the session, and renders what came back as a tree with the raw JSON under it. An error shows its typed `reason` and the nearest known name. Nothing on the page knows Disremembered's components by name except the starting query.
+
 Over HTTP, every call carries the passphrase:
 
 ```

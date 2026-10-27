@@ -113,6 +113,20 @@ pub fn relations() -> Vec<(&'static str, &'static str, RelationKind)> {
     ]
 }
 
+/// The named roots an observation may start from, for a client that builds queries:
+/// each with what its argument is, if it takes one, and where a client can list the
+/// values (`room` takes a room key; `window` and `palace` take a citizen's name).
+pub fn roots() -> Value {
+    json!([
+        {"name": "self", "description": "You: the citizen."},
+        {"name": "here", "description": "The room you stand in."},
+        {"name": "window", "description": "Your active window of chunks, or another citizen's: you still see only what is yours to see.", "arg": "citizen", "optional": true},
+        {"name": "palace", "description": "Your Memory Palace, or another citizen's.", "arg": "citizen", "optional": true},
+        {"name": "room", "description": "A room, by key.", "arg": "room key", "values": {"kind": "room", "component": ROOM, "field": "key"}},
+        {"name": "entity", "description": "Any entity, by id.", "arg": "id"}
+    ])
+}
+
 /// A store registry with the slice's schemas and relations.
 pub fn registry() -> moondial_store::Registry {
     let mut r = moondial_store::Registry::new();

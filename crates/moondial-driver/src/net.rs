@@ -362,6 +362,57 @@ async fn vocabulary(State(s): State<Shared>) -> Reply {
     ))
 }
 
+/// `GET /v0/schema`: what an observation can ask for. The component schemas (fields,
+/// visibility, plain or timed), the relations, the named roots and their arguments
+/// with the public values a root argument may take, the entity kinds the world holds,
+/// and the limits a query is checked against. A client builds queries from this
+/// instead of knowing the world.
+async fn schema(State(s): State<Shared>) -> Reply {
+    let w = lock(&s)?;
+    let registry = w.store.registry();
+    let mut roots = crate::disremembered::roots();
+    if let Some(list) = roots.as_array_mut() {
+        for root in list {
+            let Some(from) = root.get("values").cloned() else {
+                continue;
+            };
+            let (kind, component, field) = (
+                from["kind"].as_str().unwrap_or(""),
+                from["component"].as_str().unwrap_or(""),
+                from["field"].as_str().unwrap_or(""),
+            );
+            let public = registry
+                .get(component)
+                .and_then(|c| c.get(field))
+                .is_some_and(|f| f.visibility == moondial_store::Visibility::Public);
+            let mut values: Vec<Value> = Vec::new();
+            if public {
+                for e in w.store.entities().filter(|e| e.kind == kind) {
+                    if let Some(moondial_store::Field::Plain(v)) = e
+                        .components
+                        .get(component)
+                        .and_then(|c| c.fields.get(field))
+                    {
+                        values.push(v.clone());
+                    }
+                }
+            }
+            root["values"] = Value::Array(values);
+        }
+    }
+    let mut kinds: Vec<&str> = w.store.entities().map(|e| e.kind.as_str()).collect();
+    kinds.sort_unstable();
+    kinds.dedup();
+    Ok(Json(json!({
+        "world": w.id.0,
+        "components": registry.schemas().collect::<Vec<_>>(),
+        "relations": registry.relations().collect::<Vec<_>>(),
+        "roots": roots,
+        "kinds": kinds,
+        "limits": s.limits,
+    })))
+}
+
 #[derive(Deserialize)]
 struct CheckBody {
     message: String,
@@ -718,6 +769,7 @@ pub fn router(shared: Shared) -> Router {
         .route("/v0/observe", post(observe_http))
         .route("/v0/gate", post(gate_http))
         .route("/v0/vocabulary", get(vocabulary))
+        .route("/v0/schema", get(schema))
         .route("/v0/check", post(check))
         .route("/v0/session", get(crate::session::upgrade))
         .route("/v0/view/{id}", get(view))
