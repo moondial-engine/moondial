@@ -1,0 +1,111 @@
+{
+  "verdict": "FAIL",
+  "score": 0,
+  "mode": "clear",
+  "errors": 3,
+  "warnings": 1,
+  "findings": [
+    {
+      "rule": "CL-I6",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "'look' takes at most 0 arguments (none); the DO gives 2.",
+      "excerpt": "around the room"
+    },
+    {
+      "rule": "CL-I6",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "'shelve' needs 1 argument (chunk); the DO gives 0.",
+      "excerpt": ""
+    },
+    {
+      "rule": "CL-I6",
+      "severity": "error",
+      "where": "statement 3",
+      "message": "'log' takes an integer for count; the DO gives 'many'.",
+      "excerpt": "many"
+    },
+    {
+      "rule": "CL-V4",
+      "severity": "warning",
+      "where": "statement 3",
+      "message": "Vague intensifier 'many' carries no measurable meaning.",
+      "excerpt": "many"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "lantern-7",
+      "TO": "disremembered",
+      "INTENT": "REQUEST",
+      "REF": "lantern-7-args-1"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 6,
+        "raw": "[DO] lantern-7 MUST look around the room.",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST look around the room.",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "look",
+        "arguments": "around the room",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "around"
+          },
+          {
+            "kind": "ref",
+            "value": "room"
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 2,
+        "line": 7,
+        "raw": "[DO] lantern-7 MUST shelve.",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST shelve.",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "shelve",
+        "arguments": "",
+        "args": [],
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 3,
+        "line": 8,
+        "raw": "[DO] lantern-7 MUST log many.",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST log many.",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "log",
+        "arguments": "many",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "many"
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "disremembered"
+}

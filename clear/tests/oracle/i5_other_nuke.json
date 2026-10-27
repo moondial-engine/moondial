@@ -39,6 +39,12 @@
         "modal": "MUST",
         "verb": "nuke",
         "arguments": "the hydra",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "hydra"
+          }
+        ],
         "pattern": null,
         "slots": {}
       }

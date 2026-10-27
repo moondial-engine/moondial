@@ -32,6 +32,20 @@
         "modal": "MUST",
         "verb": "set",
         "arguments": "x to y and send the report",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "x"
+          },
+          {
+            "kind": "ref",
+            "value": "y and send"
+          },
+          {
+            "kind": "ref",
+            "value": "report"
+          }
+        ],
         "pattern": null,
         "slots": {}
       }

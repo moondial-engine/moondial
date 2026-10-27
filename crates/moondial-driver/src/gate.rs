@@ -253,20 +253,20 @@ pub trait AskBinding {
     fn answer(&self, world: &World, actor: &str, st: &Statement, report: &mut Report) -> bool;
 }
 
-/// Words a DO's arguments may carry that are not arguments: `attack the wisp`,
-/// `travel to the east`, `shelve chunk-5 into the palace`.
-const FILLER: &[&str] = &[
-    "the", "a", "an", "to", "into", "onto", "at", "in", "with", "from", "of", "my", "your",
-    "toward", "towards", "on", "for",
-];
-
-/// Compile a DO's arguments to positional command arguments.
-pub fn compile_arguments(arguments: &str) -> Vec<Value> {
-    arguments
-        .split_whitespace()
-        .map(|w| w.trim_matches(|c: char| matches!(c, ',' | ';' | '.')))
-        .filter(|w| !w.is_empty() && !FILLER.contains(&w.to_ascii_lowercase().as_str()))
-        .map(|w| Value::String(w.to_string()))
+/// A DO's parsed arguments (the checker's `args`, v0.4) as positional command
+/// arguments: a quoted string and a name as strings, a number as a number (its unit,
+/// if any, is dropped; the registry's types carry none).
+pub fn compile_arguments(args: &[Value]) -> Vec<Value> {
+    args.iter()
+        .map(|a| match a.get("kind").and_then(Value::as_str) {
+            Some("number") => a.get("value").cloned().unwrap_or(Value::Null),
+            _ => Value::String(
+                a.get("value")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string(),
+            ),
+        })
         .collect()
 }
 
@@ -367,10 +367,30 @@ pub fn reflow(line: &str) -> String {
 
 /// Compile a terminal line (`attack the wisp`) into a REQUEST from `actor` to `world`:
 /// one DO, MUST, the line's first word as the verb. What a human types is what the
-/// checker reads; a line the checker refuses comes back with the rule it broke.
-pub fn compile(actor: &str, world: &str, line: &str, now: Timestamp) -> String {
+/// checker reads; a line the checker refuses comes back with the rule it broke. When
+/// the verb's first parameter is text (`say hello there`), the rest of the line is
+/// quoted for the typist, as the grammar wants it.
+pub fn compile(actor: &str, world: &str, line: &str, now: Timestamp, checker: &Checker) -> String {
     let body = one_line(line);
     let body = body.trim_end_matches('.');
+    let (verb, rest) = body
+        .split_once(' ')
+        .map(|(v, r)| (v, r.trim()))
+        .unwrap_or((body, ""));
+    let text_first = checker
+        .signature(verb)
+        .and_then(|p| p.first())
+        .and_then(|p| p.get("type"))
+        .and_then(Value::as_str)
+        == Some("text");
+    let quoted;
+    let body = if text_first && !rest.is_empty() && !rest.starts_with('"') && !rest.starts_with('“')
+    {
+        quoted = format!("{verb} \"{}\"", rest.trim_end_matches('"'));
+        quoted.as_str()
+    } else {
+        body
+    };
     format!(
         "FROM: {actor}\nTO: {world}\nINTENT: REQUEST\nREF: {actor}-{}\n\n[DO] {actor} MUST {body}.\n",
         iso_minute(now)
@@ -627,7 +647,7 @@ fn run_request(
             continue;
         }
         let verb = st.verb.clone().unwrap_or_default();
-        let args = Value::Array(compile_arguments(st.arguments.as_deref().unwrap_or("")));
+        let args = Value::Array(compile_arguments(&st.args));
         let before = world
             .log
             .head(&world.id)
@@ -1059,16 +1079,19 @@ mod tests {
     }
 
     #[test]
-    fn arguments_drop_filler_and_times_render_as_iso_minutes() {
+    fn arguments_compile_from_the_parse_and_times_render_as_iso_minutes() {
+        let checker = checker();
+        let r = checker.check("FROM: a\nTO: disremembered\nINTENT: REQUEST\n\n[DO] a MUST say \"hello, there\".\n[DO] a MUST earn hydra 100 0.5.\n");
         assert_eq!(
-            compile_arguments("to the east"),
-            vec![Value::String("east".into())]
+            compile_arguments(&r.message.statements[0].args),
+            vec![Value::String("hello, there".into())]
         );
         assert_eq!(
-            compile_arguments("chunk-5 into the palace."),
+            compile_arguments(&r.message.statements[1].args),
             vec![
-                Value::String("chunk-5".into()),
-                Value::String("palace".into())
+                Value::String("hydra".into()),
+                Value::from(100),
+                Value::from(0.5)
             ]
         );
         assert_eq!(iso_minute(Timestamp(0)), "1970-01-01T00:00Z");
@@ -1086,7 +1109,13 @@ mod tests {
         let now = w.now();
 
         // What a human types compiles to one DO, and the prose is the narrator's.
-        let text = compile("spacepants", "disremembered", "travel to the east", now);
+        let text = compile(
+            "spacepants",
+            "disremembered",
+            "travel to the east",
+            now,
+            &checker,
+        );
         assert!(
             text.contains("[DO] spacepants MUST travel to the east."),
             "{text}"
@@ -1123,7 +1152,13 @@ mod tests {
         assert_eq!(budget.remaining("spacepants", now), 60.0);
 
         // A refused command is not ok, and the prose says why in the world's words.
-        let text = compile("spacepants", "disremembered", "shelve chunk-99", now);
+        let text = compile(
+            "spacepants",
+            "disremembered",
+            "shelve chunk-99",
+            now,
+            &checker,
+        );
         let p = send_via(
             &mut w,
             &checker,
@@ -1138,7 +1173,7 @@ mod tests {
 
         // A word the world has no verb for fails the checker, and the reply says what
         // to do, in CLEAR that passes the checker (send_via asserts that).
-        let text = compile("spacepants", "disremembered", "east", now);
+        let text = compile("spacepants", "disremembered", "east", now, &checker);
         let p = send_via(
             &mut w,
             &checker,
@@ -1150,6 +1185,68 @@ mod tests {
         assert!(!p.ok && !p.acted);
         assert!(p.prose.contains("CL-I5"), "{}", p.prose);
         assert!(p.prose.contains("Type help"), "{}", p.prose);
+
+        // Speech: the typist's words are quoted for them, recorded as said, and heard.
+        disremembered::login(&mut w, "tyler", "test", PASS).unwrap();
+        let tyler = CallContext {
+            actor: "tyler".into(),
+            kind: ActorKind::Citizen,
+        };
+        w.call(&tyler, "travel", &serde_json::json!(["east"]))
+            .expect("tyler joins spacepants in the Fogbank");
+        let text = compile(
+            "spacepants",
+            "disremembered",
+            "say the fog is thinner north",
+            now,
+            &checker,
+        );
+        assert!(
+            text.contains("[DO] spacepants MUST say \"the fog is thinner north\"."),
+            "{text}"
+        );
+        let p = send_via(
+            &mut w,
+            &checker,
+            &mut budget,
+            "spacepants",
+            Via::Text,
+            &text,
+        );
+        assert!(p.ok, "{}", p.reply);
+        assert!(
+            p.prose.starts_with("You say, \"the fog is thinner north\""),
+            "{}",
+            p.prose
+        );
+        let events = w.log.read_all(&w.id, moondial_log::Cursor::START).unwrap();
+        let said = events
+            .iter()
+            .rev()
+            .find(|e| e.kind == disremembered::speech::SAY)
+            .expect("recorded");
+        assert_eq!(said.payload["text"], "the fog is thinner north");
+        let heard = events
+            .iter()
+            .rev()
+            .find(|e| e.kind == disremembered::NARRATIVE && e.payload["to"] == "tyler")
+            .expect("tyler hears it");
+        assert!(heard.payload["text"]
+            .as_str()
+            .unwrap()
+            .contains("spacepants says, \"the fog is thinner north\""));
+
+        // Too many arguments for the verb is the checker's refusal, not the registry's.
+        let text = compile("spacepants", "disremembered", "look around", now, &checker);
+        let p = send_via(
+            &mut w,
+            &checker,
+            &mut budget,
+            "spacepants",
+            Via::Text,
+            &text,
+        );
+        assert!(!p.acted && p.prose.contains("CL-I6"), "{}", p.prose);
     }
 
     #[test]

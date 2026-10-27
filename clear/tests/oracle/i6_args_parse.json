@@ -1,0 +1,166 @@
+{
+  "verdict": "FAIL",
+  "score": 80,
+  "mode": "clear",
+  "errors": 1,
+  "warnings": 3,
+  "findings": [
+    {
+      "rule": "CL-I6",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "'shelve' takes at most 1 argument (chunk); the DO gives 2.",
+      "excerpt": "chunk-5 into the palace"
+    },
+    {
+      "rule": "CL-R3",
+      "severity": "warning",
+      "where": "statement 4",
+      "message": "'100' has no unit.",
+      "excerpt": "100"
+    },
+    {
+      "rule": "CL-R3",
+      "severity": "warning",
+      "where": "statement 4",
+      "message": "'0.5' has no unit.",
+      "excerpt": "0.5"
+    },
+    {
+      "rule": "CL-R3",
+      "severity": "warning",
+      "where": "statement 5",
+      "message": "'3' has no unit.",
+      "excerpt": "3"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "lantern-7",
+      "TO": "disremembered",
+      "INTENT": "REQUEST",
+      "REF": "lantern-7-args-1"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 6,
+        "raw": "[DO] lantern-7 MUST attack the wisp.",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST attack the wisp.",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "attack",
+        "arguments": "the wisp",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "wisp"
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 2,
+        "line": 7,
+        "raw": "[DO] lantern-7 MUST shelve chunk-5 into the palace.",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST shelve chunk-5 into the palace.",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "shelve",
+        "arguments": "chunk-5 into the palace",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "chunk-5"
+          },
+          {
+            "kind": "ref",
+            "value": "palace"
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 3,
+        "line": 8,
+        "raw": "[DO] lantern-7 MUST travel to the east.",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST travel to the east.",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "travel",
+        "arguments": "to the east",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "east"
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 4,
+        "line": 9,
+        "raw": "[DO] lantern-7 MUST earn hydra 100 0.5.",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST earn hydra 100 0.5.",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "earn",
+        "arguments": "hydra 100 0.5",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "hydra"
+          },
+          {
+            "kind": "number",
+            "value": 100
+          },
+          {
+            "kind": "number",
+            "value": 0.5
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 5,
+        "line": 10,
+        "raw": "[DO] lantern-7 MUST log 3.",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST log 3.",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "log",
+        "arguments": "3",
+        "args": [
+          {
+            "kind": "number",
+            "value": 3
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "disremembered"
+}

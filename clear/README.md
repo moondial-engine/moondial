@@ -1,6 +1,6 @@
-# CLEAR v0.3 checker
+# CLEAR v0.4 checker
 
-Layer-1 Legibility check for CLEAR (Controlled Language for Exchange between Agents and Reviewers) messages, with the v0.3 spec and vocabularies for an organization and for the Disremembered game world.
+Layer-1 Legibility check for CLEAR (Controlled Language for Exchange between Agents and Reviewers) messages, with the v0.3 spec (plus the v0.4 argument grammar, CL-I6) and vocabularies for an organization and for the Disremembered game world.
 
 ```
 clear_check.py          the checker (library + CLI), Python 3.10+, PyYAML for .yaml vocabularies

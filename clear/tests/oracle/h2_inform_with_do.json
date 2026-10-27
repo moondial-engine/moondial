@@ -32,6 +32,16 @@
         "modal": "MUST",
         "verb": "set",
         "arguments": "x to y",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "x"
+          },
+          {
+            "kind": "ref",
+            "value": "y"
+          }
+        ],
         "pattern": null,
         "slots": {}
       }

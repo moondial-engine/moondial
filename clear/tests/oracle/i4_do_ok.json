@@ -24,6 +24,12 @@
         "modal": "SHOULD",
         "verb": "close",
         "arguments": "the door",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "door"
+          }
+        ],
         "pattern": null,
         "slots": {}
       }

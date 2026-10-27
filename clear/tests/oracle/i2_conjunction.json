@@ -1,0 +1,109 @@
+{
+  "verdict": "FAIL",
+  "score": 33,
+  "mode": "clear",
+  "errors": 3,
+  "warnings": 0,
+  "findings": [
+    {
+      "rule": "CL-I2",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "DO joins arguments with 'and'. One action, one object list; write a second DO.",
+      "excerpt": "and"
+    },
+    {
+      "rule": "CL-I6",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "'attack' takes at most 1 argument (creature); the DO gives 2.",
+      "excerpt": "the wisp and the other wisp"
+    },
+    {
+      "rule": "CL-I2",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "DO carries a second action ('then rest'). One action per statement.",
+      "excerpt": "then rest"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "lantern-7",
+      "TO": "disremembered",
+      "INTENT": "REQUEST",
+      "REF": "lantern-7-args-1"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 6,
+        "raw": "[DO] lantern-7 MUST attack the wisp and the other wisp.",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST attack the wisp and the other wisp.",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "attack",
+        "arguments": "the wisp and the other wisp",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "wisp and"
+          },
+          {
+            "kind": "ref",
+            "value": "other wisp"
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 2,
+        "line": 7,
+        "raw": "[DO] lantern-7 MUST attack the wisp, then rest.",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST attack the wisp, then rest.",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "attack",
+        "arguments": "the wisp, then rest",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "wisp then rest"
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 3,
+        "line": 8,
+        "raw": "[DO] lantern-7 MUST say \"salt and stone\".",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST say \"salt and stone\".",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "say",
+        "arguments": "\"salt and stone\"",
+        "args": [
+          {
+            "kind": "string",
+            "value": "salt and stone"
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "disremembered"
+}

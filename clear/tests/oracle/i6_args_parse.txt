@@ -1,0 +1,10 @@
+FROM: lantern-7
+TO: disremembered
+INTENT: REQUEST
+REF: lantern-7-args-1
+
+[DO] lantern-7 MUST attack the wisp.
+[DO] lantern-7 MUST shelve chunk-5 into the palace.
+[DO] lantern-7 MUST travel to the east.
+[DO] lantern-7 MUST earn hydra 100 0.5.
+[DO] lantern-7 MUST log 3.

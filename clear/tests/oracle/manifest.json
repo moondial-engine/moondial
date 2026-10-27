@@ -762,6 +762,54 @@
     "expected": "crlf.json"
   },
   {
+    "name": "i6_args_parse",
+    "vocab": "vocab/disremembered.yaml",
+    "text": "i6_args_parse.txt",
+    "expected": "i6_args_parse.json"
+  },
+  {
+    "name": "i6_say_quoted",
+    "vocab": "vocab/disremembered.yaml",
+    "text": "i6_say_quoted.txt",
+    "expected": "i6_say_quoted.json"
+  },
+  {
+    "name": "i6_say_bare",
+    "vocab": "vocab/disremembered.yaml",
+    "text": "i6_say_bare.txt",
+    "expected": "i6_say_bare.json"
+  },
+  {
+    "name": "i6_too_many",
+    "vocab": "vocab/disremembered.yaml",
+    "text": "i6_too_many.txt",
+    "expected": "i6_too_many.json"
+  },
+  {
+    "name": "i6_no_signature",
+    "vocab": "vocab/disremembered.yaml",
+    "text": "i6_no_signature.txt",
+    "expected": "i6_no_signature.json"
+  },
+  {
+    "name": "i2_conjunction",
+    "vocab": "vocab/disremembered.yaml",
+    "text": "i2_conjunction.txt",
+    "expected": "i2_conjunction.json"
+  },
+  {
+    "name": "i6_units_and_numbers",
+    "vocab": "vocab/disremembered.yaml",
+    "text": "i6_units_and_numbers.txt",
+    "expected": "i6_units_and_numbers.json"
+  },
+  {
+    "name": "i6_list_vocab",
+    "vocab": "vocab/base.yaml",
+    "text": "i6_list_vocab.txt",
+    "expected": "i6_list_vocab.json"
+  },
+  {
     "name": "no_blank_after_header",
     "vocab": "vocab/base.yaml",
     "text": "no_blank_after_header.txt",

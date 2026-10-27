@@ -1,0 +1,8 @@
+FROM: lantern-7
+TO: disremembered
+INTENT: REQUEST
+REF: lantern-7-args-1
+
+[DO] lantern-7 MUST look around the room.
+[DO] lantern-7 MUST shelve.
+[DO] lantern-7 MUST log many.

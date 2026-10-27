@@ -1,0 +1,7 @@
+FROM: lantern-7
+TO: disremembered
+INTENT: REQUEST
+REF: lantern-7-args-1
+
+[DO] lantern-7 MUST coat blade-01 with resin-01.
+[DO] lantern-7 MUST move north 3 tiles.

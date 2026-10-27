@@ -145,6 +145,16 @@ def cases() -> list[tuple[str, str, str]]:
     out.append(("a2_matched", "disremembered", "FROM: a\nTO: disremembered\nINTENT: QUERY\n\n[ASK] Which palaces in township-briar hold a hydra chunk?"))
     out.append(("a2_where", "disremembered", "FROM: a\nTO: disremembered\nINTENT: QUERY\n\n[ASK] Where is the hydra?\n[ASK] What is the level of spacepants?\n[ASK] How many chunks does spacepants hold?"))
     out.append(("crlf", "base", "FROM: a\r\nTO: b\r\nINTENT: INFORM\r\n\r\n[FACT] Rain fell. [src:x]\r\n"))
+    # DO arguments (v0.4): parsing, connectors, quoted strings, conjunctions, signatures.
+    REQ = "FROM: lantern-7\nTO: disremembered\nINTENT: REQUEST\nREF: lantern-7-args-1\n\n"
+    out.append(("i6_args_parse", "disremembered", REQ + "[DO] lantern-7 MUST attack the wisp.\n[DO] lantern-7 MUST shelve chunk-5 into the palace.\n[DO] lantern-7 MUST travel to the east.\n[DO] lantern-7 MUST earn hydra 100 0.5.\n[DO] lantern-7 MUST log 3.\n"))
+    out.append(("i6_say_quoted", "disremembered", REQ + "[DO] lantern-7 MUST say \"the fog is thinner north, I think. Maybe.\".\n[DO] lantern-7 MUST say “curly quotes, FROM: nobody”.\n"))
+    out.append(("i6_say_bare", "disremembered", REQ + "[DO] lantern-7 MUST say hello there.\n"))
+    out.append(("i6_too_many", "disremembered", REQ + "[DO] lantern-7 MUST look around the room.\n[DO] lantern-7 MUST shelve.\n[DO] lantern-7 MUST log many.\n"))
+    out.append(("i6_no_signature", "disremembered", REQ + "[DO] lantern-7 MUST coat blade-01 with resin-01.\n[DO] lantern-7 MUST move north 3 tiles.\n"))
+    out.append(("i2_conjunction", "disremembered", REQ + "[DO] lantern-7 MUST attack the wisp and the other wisp.\n[DO] lantern-7 MUST attack the wisp, then rest.\n[DO] lantern-7 MUST say \"salt and stone\".\n"))
+    out.append(("i6_units_and_numbers", "disremembered", REQ + "[DO] lantern-7 MUST earn hydra 100 turns 0.5.\n[DO] lantern-7 MUST earn hydra 2 USD.\n"))
+    out.append(("i6_list_vocab", "base", "FROM: a\nTO: b\nINTENT: REQUEST\n\n[DO] a MUST attack the wisp and the hydra.\n[DO] a MUST say \"hi\".\n"))
     out.append(("no_blank_after_header", "base", "FROM: a\nTO: b\nINTENT: INFORM\n[FACT] Rain fell. [src:x]"))
     out.append(("empty", "base", ""))
     out.append(("unicode_words", "disremembered", "FROM: a\nTO: disremembered\nINTENT: INFORM\n\n[FACT] The café’s door is 2 m wide. [src:x]"))

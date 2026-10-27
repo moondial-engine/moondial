@@ -33,8 +33,10 @@ pub enum ActorKind {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum ParamType {
-    /// Any string.
+    /// Any string: a name, a word, a key.
     String,
+    /// Free text: what someone says, a description. In CLEAR, a quoted string.
+    Text,
     /// A number.
     Number,
     /// An integer.
@@ -396,6 +398,7 @@ impl<W> Registry<W> {
 fn describe(ty: &ParamType) -> String {
     match ty {
         ParamType::String => "a string".into(),
+        ParamType::Text => "text, quoted".into(),
         ParamType::Number => "a number".into(),
         ParamType::Integer => "an integer".into(),
         ParamType::Boolean => "true or false".into(),
@@ -411,6 +414,10 @@ fn coerce(ty: &ParamType, v: Value) -> Option<Value> {
         ParamType::String | ParamType::Entity => match v {
             Value::String(_) => Some(v),
             Value::Number(n) => Some(Value::String(n.to_string())),
+            _ => None,
+        },
+        ParamType::Text => match v {
+            Value::String(_) => Some(v),
             _ => None,
         },
         ParamType::Number => match v {

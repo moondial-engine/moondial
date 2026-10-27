@@ -1,0 +1,73 @@
+{
+  "verdict": "FAIL",
+  "score": 50,
+  "mode": "clear",
+  "errors": 1,
+  "warnings": 0,
+  "findings": [
+    {
+      "rule": "CL-I2",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "DO joins arguments with 'and'. One action, one object list; write a second DO.",
+      "excerpt": "and"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "REQUEST"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[DO] a MUST attack the wisp and the hydra.",
+        "type": "DO",
+        "confidence": null,
+        "body": "a MUST attack the wisp and the hydra.",
+        "sources": [],
+        "actor": "a",
+        "modal": "MUST",
+        "verb": "attack",
+        "arguments": "the wisp and the hydra",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "wisp and"
+          },
+          {
+            "kind": "ref",
+            "value": "hydra"
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 2,
+        "line": 6,
+        "raw": "[DO] a MUST say \"hi\".",
+        "type": "DO",
+        "confidence": null,
+        "body": "a MUST say \"hi\".",
+        "sources": [],
+        "actor": "a",
+        "modal": "MUST",
+        "verb": "say",
+        "arguments": "\"hi\"",
+        "args": [
+          {
+            "kind": "string",
+            "value": "hi"
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

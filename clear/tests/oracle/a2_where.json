@@ -32,6 +32,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": "^where is (?P<entity>[a-z0-9 _-]+)\\?$",
         "slots": {
           "entity": "the hydra"
@@ -49,6 +50,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": "^what is the (?P<prop>[a-z ]+?) of (?P<entity>[a-z0-9 _-]+)\\?$",
         "slots": {
           "prop": "level",
@@ -67,6 +69,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": "^how many (?P<noun>[a-z ]+?) (?P<rest>.+)\\?$",
         "slots": {
           "noun": "chunks",

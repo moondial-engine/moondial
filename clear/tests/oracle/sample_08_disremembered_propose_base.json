@@ -42,21 +42,28 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
       {
         "index": 2,
         "line": 7,
-        "raw": "[DO] lantern-7 MUST reminisce chunk-5521 for encounter enc-301.",
+        "raw": "[DO] lantern-7 MUST reminisce chunk-5521.",
         "type": "DO",
         "confidence": null,
-        "body": "lantern-7 MUST reminisce chunk-5521 for encounter enc-301.",
+        "body": "lantern-7 MUST reminisce chunk-5521.",
         "sources": [],
         "actor": "lantern-7",
         "modal": "MUST",
         "verb": "reminisce",
-        "arguments": "chunk-5521 for encounter enc-301",
+        "arguments": "chunk-5521",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "chunk-5521"
+          }
+        ],
         "pattern": null,
         "slots": {}
       },
@@ -72,6 +79,28 @@
         "modal": "MUST",
         "verb": "give",
         "arguments": "500 gold to lantern-7 after encounter enc-301",
+        "args": [
+          {
+            "kind": "number",
+            "value": 500
+          },
+          {
+            "kind": "ref",
+            "value": "gold"
+          },
+          {
+            "kind": "ref",
+            "value": "lantern-7"
+          },
+          {
+            "kind": "ref",
+            "value": "after encounter"
+          },
+          {
+            "kind": "ref",
+            "value": "enc-301"
+          }
+        ],
         "pattern": null,
         "slots": {}
       },
@@ -87,6 +116,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       }

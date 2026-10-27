@@ -41,6 +41,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       }

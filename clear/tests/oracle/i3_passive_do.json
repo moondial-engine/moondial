@@ -32,6 +32,16 @@
         "modal": "MUST",
         "verb": "be",
         "arguments": "given the key",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "given"
+          },
+          {
+            "kind": "ref",
+            "value": "key"
+          }
+        ],
         "pattern": null,
         "slots": {}
       }

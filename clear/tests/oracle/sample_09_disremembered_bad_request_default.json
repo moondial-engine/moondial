@@ -1,8 +1,8 @@
 {
   "verdict": "FAIL",
-  "score": 40,
+  "score": 20,
   "mode": "clear",
-  "errors": 4,
+  "errors": 5,
   "warnings": 2,
   "findings": [
     {
@@ -11,6 +11,13 @@
       "where": "statement 1",
       "message": "Vague pronoun 'it' starts a clause. Name the thing it refers to.",
       "excerpt": "it"
+    },
+    {
+      "rule": "CL-I2",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "DO joins arguments with 'and'. One action, one object list; write a second DO.",
+      "excerpt": "and"
     },
     {
       "rule": "CL-I1",
@@ -67,6 +74,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -82,6 +90,12 @@
         "modal": "MUST",
         "verb": "swap",
         "arguments": "in the lich chunk and attack the hydra next turn",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "in the lich chunk and attack the hydra next turn"
+          }
+        ],
         "pattern": null,
         "slots": {}
       },
@@ -97,6 +111,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -112,6 +127,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -127,6 +143,16 @@
         "modal": "MUST",
         "verb": "nuke",
         "arguments": "the mob with 3",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "the mob with"
+          },
+          {
+            "kind": "number",
+            "value": 3
+          }
+        ],
         "pattern": null,
         "slots": {}
       }

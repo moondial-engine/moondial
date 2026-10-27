@@ -707,12 +707,30 @@
   };
   const ASK_HINT = "where is X? / what is the level|hit points|attack|room of X? / how many creatures|chunks|citizens ...?";
   function rowDefaults(type) {
-    return { type, actor: actor || "you", modal: "MUST", verb: "", args: "", text: "", src: "", conf: "HIGH" };
+    return { type, actor: actor || "you", modal: "MUST", verb: "", args: "", params: {}, text: "", src: "", conf: "HIGH" };
+  }
+  // The verb's signature from the vocabulary (v0.4): its parameters in order, or null.
+  function signature(verb) {
+    const verbs = C.vocab && C.vocab.approved_verbs;
+    if (!verbs || Array.isArray(verbs)) return null;
+    const sig = verbs[(verb || "").trim().toLowerCase()];
+    return sig && Array.isArray(sig.params) ? sig.params : null;
+  }
+  function renderArgs(r) {
+    const sig = signature(r.verb);
+    if (!sig) return r.args.trim().replace(/[.\s]+$/, "");
+    const out = [];
+    for (const p of sig) {
+      const v = (r.params[p.name] || "").trim();
+      if (!v) { if (p.required) out.push(""); continue; }
+      out.push(p.type === "text" ? '"' + v.replace(/"/g, "\u201d") + '"' : v);
+    }
+    return out.join(" ").trim();
   }
   function renderRow(r) {
     const t = r.type;
     if (t === "DO") {
-      const args = r.args.trim().replace(/[.\s]+$/, "");
+      const args = renderArgs(r);
       return "[DO] " + (r.actor || "you") + " " + r.modal + " " + r.verb.trim() + (args ? " " + args : "") + ".";
     }
     if (t === "ASK") { const q = r.text.trim().replace(/\?+$/, ""); return "[ASK] " + q + "?"; }
@@ -736,8 +754,26 @@
       if (r.type === "DO") {
         top.append(field(r, "actor", Object.assign(mk("input", { type: "text", placeholder: "actor", title: "Who acts. Your own name asks the world to run it for you." }), { value: r.actor })));
         const m = sel(C.vocab ? C.vocab.modals : ["MUST", "SHOULD", "MAY", "MUST NOT", "SHOULD NOT"], r.modal); m.addEventListener("input", () => { r.modal = m.value; composeChanged(); }); top.append(m);
-        top.append(field(r, "verb", Object.assign(mk("input", { type: "text", list: "verbs", placeholder: "verb", title: "An approved verb: the world's command names." }), { value: r.verb })));
-        top.append(field(r, "args", Object.assign(mk("input", { type: "text", placeholder: "arguments (the wisp, east, chunk-5)" }), { value: r.args })));
+        const vi = Object.assign(mk("input", { type: "text", list: "verbs", placeholder: "verb", title: "An approved verb: the world's command names.", style: "flex:0 1 12ch" }), { value: r.verb });
+        vi.addEventListener("input", () => { r.verb = vi.value; composeChanged(); });
+        vi.addEventListener("change", () => { drawRows(); composeChanged(); });
+        top.append(vi);
+        const sig = signature(r.verb);
+        if (!sig) {
+          top.append(field(r, "args", Object.assign(mk("input", { type: "text", placeholder: "arguments (the wisp, east, chunk-5)" }), { value: r.args })));
+        } else if (!sig.length) {
+          top.append(mk("i", { style: "color:var(--dim);font-size:12px" }, "takes no arguments"));
+        } else for (const p of sig) {
+          // One field per parameter, typed as the registry declares it; text is quoted.
+          let el;
+          if (p.type === "enum") { el = sel(p.values || [], r.params[p.name] || ""); el.prepend(mk("option", { value: "" }, p.name)); el.value = r.params[p.name] || ""; }
+          else if (p.type === "boolean") { el = sel(["", "true", "false"], r.params[p.name] || ""); }
+          else el = mk("input", { type: p.type === "number" || p.type === "integer" ? "number" : "text", placeholder: p.name + (p.required ? "" : " (optional)") + (p.type === "text" ? ", quoted for you" : ""), title: p.description || p.type, style: p.type === "text" ? "flex:3 1 16ch" : "" });
+          if (el.tagName === "INPUT") el.value = r.params[p.name] || "";
+          if (p.type === "integer") el.step = "1";
+          el.addEventListener("input", () => { r.params[p.name] = el.value; composeChanged(); });
+          top.append(el);
+        }
       } else if (r.type === "ASK") {
         top.append(field(r, "text", Object.assign(mk("input", { type: "text", list: "asks", placeholder: "a question the patterns know", title: ASK_HINT }), { value: r.text })));
       } else if (r.type === "INFER") {
@@ -834,7 +870,8 @@
     if (!r.body || !r.body.vocabulary) return;
     C.vocab = r.body.vocabulary; C.name = r.body.name;
     $("c-to").value = C.name;
-    const vl = $("verbs"); vl.replaceChildren(); for (const v of C.vocab.approved_verbs || []) vl.append(mk("option", { value: v }));
+    const verbs = C.vocab.approved_verbs || [];
+    const vl = $("verbs"); vl.replaceChildren(); for (const v of (Array.isArray(verbs) ? verbs : Object.keys(verbs))) vl.append(mk("option", { value: v }));
     const it = $("c-intent"); it.replaceChildren(); for (const i of C.vocab.intents || []) it.append(mk("option", { value: i }, i)); it.value = C.intent;
     buildChecker();
     composeChanged();

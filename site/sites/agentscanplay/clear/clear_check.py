@@ -35,7 +35,7 @@ import unicodedata
 from dataclasses import dataclass, field, asdict
 from typing import Any
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 ERROR = "error"
 WARNING = "warning"
@@ -81,6 +81,7 @@ DEFAULT_VOCAB = {
     "adjectival_participles": [],
     "common_verbs": [],
     "approved_verbs": [],
+    "connectors": [],
     "ask_patterns": [],
     "glossary": {},
 }
@@ -160,7 +161,8 @@ class Statement:
     actor: str | None = None        # DO
     modal: str | None = None        # DO
     verb: str | None = None         # DO
-    arguments: str | None = None    # DO
+    arguments: str | None = None    # DO: the text after the verb, as written
+    args: list[dict] = field(default_factory=list)  # DO: the arguments, parsed (v0.4)
     pattern: str | None = None      # ASK: the matched question pattern
     slots: dict[str, str] = field(default_factory=dict)  # ASK: named groups
 
@@ -231,6 +233,14 @@ CONTROL_CHARS = {
 SENTENCE_SPLIT_RE = re.compile(r"(?<=[.?!])\s+(?=[A-Z\[\"'(])")
 WORD_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9'’.,:/_-]*")
 RUNNING_ASOF_RE = re.compile(r"\bas of \d{4}-\d{2}-\d{2}\b", re.IGNORECASE)
+# DO arguments (v0.4): a quoted string, a number with an optional unit, an identifier
+# (it carries a digit or a separator: chunk-5, lantern-7, ev-12, a.b), or a plain word.
+# Plain words run together into one phrase; connectors (the, to, into...) separate.
+QUOTED_RE = re.compile(r"\"([^\"]*)\"|“([^”]*)”")
+ARG_TOKEN_RE = re.compile(r"\"[^\"]*\"|“[^”]*”|\S+")
+NUMBER_TOKEN_RE = re.compile(r"^[+-]?\d+(?:\.\d+)?$")
+IDENT_TOKEN_RE = re.compile(r"^[A-Za-z0-9]*[0-9:_./-][A-Za-z0-9_.:/-]*$")
+CONJUNCTION_RE = re.compile(r"(?<![A-Za-z-])(?:and then|and|then|or)(?![A-Za-z-])", re.IGNORECASE)
 IMPERATIVE_OBJECTS = {"the", "a", "an", "all", "every", "each", "your", "my", "our", "their", "its",
                       "it", "this", "that", "these", "those", "them", "me", "us", "him", "her",
                       "now", "immediately", "any", "everything", "nothing"}
@@ -320,6 +330,58 @@ def _parse_statement(idx: int, lineno: int, raw: str) -> Statement:
     return st
 
 
+def _strip_quotes(text: str) -> str:
+    """The text with every quoted string replaced by a bare placeholder, so the rules that
+    judge the author's own words do not judge carried text."""
+    return QUOTED_RE.sub('"..."', text)
+
+
+def parse_arguments(rest: str, connectors: set[str], units: list[str]) -> list[dict]:
+    """Split a DO's arguments (v0.4). Each is {"kind": "string"|"number"|"ref", "value": ...}
+    and a number may carry a "unit". Trailing punctuation on a word is not part of it."""
+    args: list[dict] = []
+    phrase: list[str] = []
+
+    def flush() -> None:
+        if phrase:
+            args.append({"kind": "ref", "value": " ".join(phrase)})
+            phrase.clear()
+
+    tokens = ARG_TOKEN_RE.findall(rest)
+    i = 0
+    while i < len(tokens):
+        tok = tokens[i]
+        i += 1
+        if tok[0] in "\"“":
+            flush()
+            args.append({"kind": "string", "value": tok[1:-1]})
+            continue
+        word = tok.strip(",;.")
+        if not word:
+            continue
+        if NUMBER_TOKEN_RE.match(word):
+            flush()
+            value = float(word) if "." in word else int(word)
+            arg: dict = {"kind": "number", "value": value}
+            if i < len(tokens):
+                nxt = tokens[i].strip(",;.")
+                if nxt in units or (nxt.lower() in (u.lower() for u in units) and not nxt.isupper()):
+                    arg["unit"] = nxt
+                    i += 1
+            args.append(arg)
+            continue
+        if word.lower() in connectors:
+            flush()
+            continue
+        if IDENT_TOKEN_RE.match(word):
+            flush()
+            args.append({"kind": "ref", "value": word})
+            continue
+        phrase.append(word)
+    flush()
+    return args
+
+
 # --------------------------------------------------------------------------------------
 # Checker
 # --------------------------------------------------------------------------------------
@@ -360,7 +422,19 @@ class Checker:
         self.irregular = set(w.lower() for w in vocab.get("irregular_participles", []))
         self.adjectival = set(w.lower() for w in vocab.get("adjectival_participles", []))
         self.common_verbs = set(w.lower() for w in vocab.get("common_verbs", []))
-        self.approved_verbs = set(w.lower() for w in vocab.get("approved_verbs", []))
+        self.connectors = set(w.lower() for w in vocab.get("connectors", []) or [])
+        # approved_verbs is a list of verbs, or (v0.4) a map from verb to its signature:
+        # {params: [{name, type, required}]} as the registry declares it, or null when the
+        # world lists the verb without one. A signature turns on CL-I6 for that verb.
+        av = vocab.get("approved_verbs") or []
+        self.signatures: dict[str, list[dict]] = {}
+        if isinstance(av, dict):
+            self.approved_verbs = set(k.lower() for k in av)
+            for verb, sig in av.items():
+                if isinstance(sig, dict) and isinstance(sig.get("params"), list):
+                    self.signatures[verb.lower()] = sig["params"]
+        else:
+            self.approved_verbs = set(w.lower() for w in av)
         self.ask_patterns = [re.compile(p, re.IGNORECASE) for p in vocab.get("ask_patterns", [])]
         self.glossary = vocab.get("glossary") or {}
         self.aliases: list[tuple[re.Pattern, str, str]] = []
@@ -499,6 +573,8 @@ class Checker:
         if st.type == "QUOTE":
             self.check_quote(st)
             return
+        if st.type == "DO" and st.arguments is not None:
+            st.args = parse_arguments(st.arguments, self.connectors, self.units)
         self.check_structure_rules(st)
         self.check_content_rules(st, msg, prose=False)
         if st.type == "DO":
@@ -520,12 +596,14 @@ class Checker:
 
     def check_structure_rules(self, st: Statement) -> None:
         w = self.where(st)
+        # In a DO, a quoted string is carried text: one argument, not the author's sentence.
+        body = _strip_quotes(st.body) if st.type == "DO" else st.body
         # CL-S2 one sentence
-        parts = [p for p in SENTENCE_SPLIT_RE.split(st.body) if p.strip()]
+        parts = [p for p in SENTENCE_SPLIT_RE.split(body) if p.strip()]
         if len(parts) > 1:
-            self.add("CL-S2", ERROR, w, f"Statement holds {len(parts)} sentences; one sentence per statement.", st.body[:60])
+            self.add("CL-S2", ERROR, w, f"Statement holds {len(parts)} sentences; one sentence per statement.", body[:60])
         # CL-S3 length
-        n = _count_words(st.body)
+        n = _count_words(body)
         limit = self.max_do_words if st.type == "DO" else self.max_words
         if n > limit:
             self.add("CL-S3", ERROR, w, f"Statement has {n} words; the limit is {limit}.")
@@ -544,7 +622,7 @@ class Checker:
     def check_content_rules(self, st: Statement, msg: Message, prose: bool) -> None:
         """Rules that apply to the words of a FACT, INFER, DO or ASK (and prose sentences)."""
         w = self.where(st)
-        body = st.body
+        body = _strip_quotes(st.body) if st.type == "DO" else st.body
         stype = st.type
         self.check_sources(st)
         # CL-C3 FACT cites a source
@@ -631,15 +709,19 @@ class Checker:
         if st.actor is None:
             self.add("CL-I1", ERROR, w, "DO must read '<actor> MUST|MUST NOT|SHOULD|SHOULD NOT|MAY <verb> ...'.", st.body[:60])
             return
-        rest = st.arguments or ""
-        # CL-I2 one action
+        rest = _strip_quotes(st.arguments or "")
+        # CL-I2 one action: a second verb, a second clause, or a conjunction between
+        # arguments (v0.4: 'and' joins actions or objects; either way the DO is two).
         m = re.search(r"\b(?:and then|then|and)\s+(?:(?:not|also|immediately)\s+)?([a-z][a-z'-]*)\b", rest, re.IGNORECASE)
         if m and (m.group(1).lower() in self.common_verbs or m.group(1).lower() in self.approved_verbs):
             self.add("CL-I2", ERROR, w, f"DO carries a second action ('{m.group(0)}'). One action per statement.", m.group(0))
+        elif CONJUNCTION_RE.search(rest):
+            cm = CONJUNCTION_RE.search(rest)
+            self.add("CL-I2", ERROR, w, f"DO joins arguments with '{cm.group(0)}'. One action, one object list; write a second DO.", cm.group(0))
         if re.search(r";\s*[a-z]", rest):
             self.add("CL-I2", ERROR, w, "DO carries a second clause after ';'. One action per statement.")
         # CL-I3 active voice is an error in DO
-        pm = self.passive_re.search(st.body)
+        pm = self.passive_re.search(_strip_quotes(st.body))
         if pm and pm.group("part").lower() not in self.adjectival:
             self.add("CL-I3", ERROR, w, f"DO in passive voice ('{pm.group(0)}'). Name who acts.", pm.group(0))
         # CL-I5 approved verb
@@ -649,6 +731,51 @@ class Checker:
             sev = ERROR if self_actor else WARNING
             self.add("CL-I5", sev, w, f"Verb '{st.verb}' is not an approved action verb"
                      + (" for the sender; the driver cannot compile it." if self_actor else "."), st.verb)
+        # CL-I6 (v0.4): the arguments fit the verb's signature, when the world gives one.
+        sig = self.signatures.get(st.verb or "")
+        if sig is not None:
+            self.check_signature(st, sig)
+        # A quoted string in a DO is carried text under the quote limit.
+        for q in QUOTED_RE.findall(st.arguments or ""):
+            text = q[0] or q[1]
+            n = _count_words(text)
+            if n > self.max_quote_words:
+                self.add("CL-Q2", WARNING, w, f"Quoted text has {n} words; the limit is {self.max_quote_words}.")
+            if HEADER_SMUGGLE_RE.search(text):
+                self.add("CL-X2", ERROR, w, "Quoted text contains header-like text (FROM:, TO:, INTENT:, REF:). Header fields may not appear inside statements.")
+
+    def check_signature(self, st: Statement, params: list[dict]) -> None:
+        w = self.where(st)
+        verb = st.verb
+        required = [p for p in params if p.get("required")]
+        names = ", ".join(p.get("name", "?") for p in params)
+        n = len(st.args)
+        if n < len(required):
+            need = ", ".join(p.get("name", "?") for p in required)
+            self.add("CL-I6", ERROR, w, f"'{verb}' needs {len(required)} argument{'s' if len(required) != 1 else ''} ({need}); the DO gives {n}.", st.arguments or "")
+            return
+        if n > len(params):
+            self.add("CL-I6", ERROR, w, f"'{verb}' takes at most {len(params)} argument{'s' if len(params) != 1 else ''} ({names or 'none'}); the DO gives {n}.", st.arguments or "")
+            return
+        for arg, p in zip(st.args, params):
+            t = (p.get("type") or "string").lower()
+            k = arg["kind"]
+            ok = True
+            if t == "text":
+                ok = k == "string"
+            elif t in ("number", "integer"):
+                ok = k == "number" and (t == "number" or isinstance(arg["value"], int))
+            elif t == "boolean":
+                ok = k == "ref" and str(arg["value"]).lower() in ("true", "false", "yes", "no", "on", "off")
+            elif t == "enum":
+                ok = k in ("ref", "string") and str(arg["value"]) in (p.get("values") or [])
+            else:  # string, entity: a name or a quoted string
+                ok = k in ("ref", "string")
+            if not ok:
+                want = {"text": "quoted text", "number": "a number", "integer": "an integer", "boolean": "true or false",
+                        "enum": "one of " + ", ".join(p.get("values") or []), "entity": "a name or id", "string": "a word or quoted text"}[t if t in ("text", "number", "integer", "boolean", "enum", "entity") else "string"]
+                self.add("CL-I6", ERROR, w, f"'{verb}' takes {want} for {p.get('name', '?')}; the DO gives '{arg['value']}'.", str(arg["value"]))
+                return
 
     def check_ask(self, st: Statement) -> None:
         w = self.where(st)

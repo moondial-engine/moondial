@@ -1,0 +1,71 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "mode": "clear",
+  "errors": 0,
+  "warnings": 0,
+  "findings": [],
+  "message": {
+    "header": {
+      "FROM": "lantern-7",
+      "TO": "disremembered",
+      "INTENT": "REQUEST",
+      "REF": "lantern-7-args-1"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 6,
+        "raw": "[DO] lantern-7 MUST coat blade-01 with resin-01.",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST coat blade-01 with resin-01.",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "coat",
+        "arguments": "blade-01 with resin-01",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "blade-01"
+          },
+          {
+            "kind": "ref",
+            "value": "resin-01"
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 2,
+        "line": 7,
+        "raw": "[DO] lantern-7 MUST move north 3 tiles.",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST move north 3 tiles.",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "move",
+        "arguments": "north 3 tiles",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "north"
+          },
+          {
+            "kind": "number",
+            "value": 3,
+            "unit": "tiles"
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "disremembered"
+}

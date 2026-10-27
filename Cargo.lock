@@ -559,7 +559,7 @@ dependencies = [
 
 [[package]]
 name = "moondial-clear"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "fancy-regex",
  "serde",
@@ -570,7 +570,7 @@ dependencies = [
 
 [[package]]
 name = "moondial-clear-wasm"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "moondial-clear",
  "serde_json",

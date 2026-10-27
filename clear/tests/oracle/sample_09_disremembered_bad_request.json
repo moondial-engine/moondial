@@ -130,6 +130,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -145,6 +146,16 @@
         "modal": "MUST",
         "verb": "swap",
         "arguments": "in the lich chunk and attack the hydra next turn",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "lich chunk and attack"
+          },
+          {
+            "kind": "ref",
+            "value": "hydra next turn"
+          }
+        ],
         "pattern": null,
         "slots": {}
       },
@@ -160,6 +171,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -175,6 +187,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -190,6 +203,16 @@
         "modal": "MUST",
         "verb": "nuke",
         "arguments": "the mob with 3",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "mob"
+          },
+          {
+            "kind": "number",
+            "value": 3
+          }
+        ],
         "pattern": null,
         "slots": {}
       }

@@ -12,6 +12,7 @@ mod combat;
 mod identity;
 mod memory;
 pub mod rooms;
+pub mod speech;
 mod system;
 
 use crate::world::World;
@@ -522,6 +523,7 @@ pub fn register(world: &mut World, curves: Curves) {
     rooms::register(world);
     combat::register(world, curves.clone());
     memory::register(world, curves);
+    speech::register(world);
     system::register(world);
 }
 

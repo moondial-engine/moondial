@@ -8,4 +8,4 @@ REF: lantern-7-acid-cave-2026-10-26
 [INFER:HIGH] The cave hazard is acid.
 [DO] lantern-7 MUST coat blade-01 with resin-01.
 [DO] lantern-7 MUST move north 3 tiles.
-[DO] lantern-7 SHOULD reminisce chunk-5521 before turn 1.
+[DO] lantern-7 SHOULD reminisce chunk-5521.

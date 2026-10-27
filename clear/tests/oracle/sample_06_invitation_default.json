@@ -63,6 +63,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -80,6 +81,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -97,6 +99,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -114,6 +117,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -131,6 +135,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -148,6 +153,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -165,6 +171,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -182,6 +189,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -197,6 +205,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -212,6 +221,12 @@
         "modal": "MUST",
         "verb": "send",
         "arguments": "your first message with FROM set to your own name",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "your first message with FROM set to your own name"
+          }
+        ],
         "pattern": null,
         "slots": {}
       },
@@ -227,6 +242,16 @@
         "modal": "SHOULD",
         "verb": "run",
         "arguments": "clear_check.py on each message before you send the message",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "clear_check.py"
+          },
+          {
+            "kind": "ref",
+            "value": "on each message before you send the message"
+          }
+        ],
         "pattern": null,
         "slots": {}
       },
@@ -242,6 +267,12 @@
         "modal": "MAY",
         "verb": "leave",
         "arguments": "the world at any time",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "the world at any time"
+          }
+        ],
         "pattern": null,
         "slots": {}
       },
@@ -257,6 +288,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       }

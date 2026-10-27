@@ -73,6 +73,9 @@ pub struct Statement {
     pub verb: Option<String>,
     /// DO: everything after the verb, trimmed, without a trailing period.
     pub arguments: Option<String>,
+    /// DO: the arguments, parsed (v0.4): `{"kind": "ref"|"number"|"string", "value": ...}`
+    /// and a number may carry a `unit`.
+    pub args: Vec<Value>,
     /// ASK: the question pattern it matched.
     pub pattern: Option<String>,
     /// ASK: the pattern's named groups.
@@ -139,7 +142,7 @@ impl CheckResult {
                     "index": s.index, "line": s.line, "raw": s.raw, "type": s.r#type,
                     "confidence": s.confidence, "body": s.body, "sources": s.sources,
                     "actor": s.actor, "modal": s.modal, "verb": s.verb, "arguments": s.arguments,
-                    "pattern": s.pattern, "slots": s.slots,
+                    "args": s.args, "pattern": s.pattern, "slots": s.slots,
                 })
             })
             .collect();
@@ -209,6 +212,11 @@ struct Patterns {
     imperative: Regex,
     second_action: Regex,
     semicolon_clause: Regex,
+    quoted: Regex,
+    arg_token: Regex,
+    number_token: Regex,
+    ident_token: Regex,
+    conjunction: Regex,
 }
 
 fn patterns() -> &'static Patterns {
@@ -240,6 +248,11 @@ fn patterns() -> &'static Patterns {
         imperative: re(r"^([A-Za-z]+)\s+([A-Za-z]+)"),
         second_action: re(r"(?i)\b(?:and then|then|and)\s+(?:(?:not|also|immediately)\s+)?([a-z][a-z'-]*)\b"),
         semicolon_clause: re(r";\s*[a-z]"),
+        quoted: re("\"([^\"]*)\"|“([^”]*)”"),
+        arg_token: re("\"[^\"]*\"|“[^”]*”|\\S+"),
+        number_token: re(r"^[+-]?\d+(?:\.\d+)?$"),
+        ident_token: re(r"^[A-Za-z0-9]*[0-9:_./-][A-Za-z0-9_.:/-]*$"),
+        conjunction: re(r"(?i)(?<![A-Za-z-])(?:and then|and|then|or)(?![A-Za-z-])"),
     })
 }
 
@@ -423,6 +436,21 @@ fn split_sentences(r: &Regex, text: &str) -> Vec<String> {
     out
 }
 
+/// The text with every quoted string replaced by a bare placeholder, so the rules that
+/// judge the author's own words do not judge carried text.
+fn strip_quotes(text: &str) -> String {
+    patterns().quoted.replace_all(text, "\"...\"").into_owned()
+}
+
+/// Every match of `re` in `text`, with its groups.
+fn captures_all<'t>(re: &Regex, text: &'t str) -> Vec<fancy_regex::Captures<'t>> {
+    re.captures_iter(text).filter_map(Result::ok).collect()
+}
+
+fn value_str_of(v: &Value) -> String {
+    value_str(v)
+}
+
 fn count_words(text: &str) -> usize {
     patterns().word.find_iter(text).count()
 }
@@ -536,6 +564,7 @@ fn parse_statement(idx: usize, lineno: usize, raw: &str) -> Statement {
         modal: None,
         verb: None,
         arguments: None,
+        args: Vec::new(),
         pattern: None,
         slots: BTreeMap::new(),
     };
@@ -584,6 +613,9 @@ pub struct Checker {
     adjectival: BTreeSet<String>,
     common_verbs: BTreeSet<String>,
     approved_verbs: BTreeSet<String>,
+    connectors: BTreeSet<String>,
+    /// Verb signatures (v0.4): the parameters a verb takes, when the vocabulary gives them.
+    signatures: BTreeMap<String, Vec<Value>>,
     ask_patterns: Vec<(Regex, String)>,
     aliases: Vec<(Regex, String, String)>,
     structural_upper: BTreeSet<String>,
@@ -765,10 +797,28 @@ impl Checker {
                 .into_iter()
                 .map(|w| w.to_lowercase())
                 .collect(),
-            approved_verbs: str_list(vocab, "approved_verbs")
+            approved_verbs: match vocab.get("approved_verbs") {
+                Some(Value::Object(m)) => m.keys().map(|k| k.to_lowercase()).collect(),
+                _ => str_list(vocab, "approved_verbs")
+                    .into_iter()
+                    .map(|w| w.to_lowercase())
+                    .collect(),
+            },
+            connectors: str_list(vocab, "connectors")
                 .into_iter()
                 .map(|w| w.to_lowercase())
                 .collect(),
+            signatures: match vocab.get("approved_verbs") {
+                Some(Value::Object(m)) => m
+                    .iter()
+                    .filter_map(|(verb, sig)| {
+                        sig.get("params")
+                            .and_then(Value::as_array)
+                            .map(|params| (verb.to_lowercase(), params.clone()))
+                    })
+                    .collect(),
+                _ => BTreeMap::new(),
+            },
             ask_patterns: str_list(vocab, "ask_patterns")
                 .into_iter()
                 .filter_map(|p| Regex::new(&format!("(?i){p}")).ok().map(|r| (r, p)))
@@ -778,6 +828,12 @@ impl Checker {
             unit_upper,
             passive,
         }
+    }
+
+    /// The signature the vocabulary gives `verb` (v0.4): its parameters in order, each
+    /// `{name, type, required}`; `None` when the verb has no signature.
+    pub fn signature(&self, verb: &str) -> Option<&[Value]> {
+        self.signatures.get(&verb.to_lowercase()).map(Vec::as_slice)
     }
 
     /// The first CLEAR reserved word or glossary alias that `name` contains, if any.
@@ -1114,6 +1170,11 @@ impl Checker {
             self.check_quote(st, findings);
             return;
         }
+        if stype == "DO" {
+            if let Some(rest) = st.arguments.clone() {
+                st.args = self.parse_arguments(&rest);
+            }
+        }
         self.check_structure_rules(st, findings);
         self.check_content_rules(st, Some(&stype), false, findings);
         if stype == "DO" {
@@ -1160,7 +1221,13 @@ impl Checker {
     fn check_structure_rules(&self, st: &Statement, findings: &mut Vec<Finding>) {
         let p = patterns();
         let w = where_of(st);
-        let parts = split_sentences(&p.sentence_split, &st.body)
+        // In a DO, a quoted string is carried text: one argument, not the author's sentence.
+        let body = if st.r#type.as_deref() == Some("DO") {
+            strip_quotes(&st.body)
+        } else {
+            st.body.clone()
+        };
+        let parts = split_sentences(&p.sentence_split, &body)
             .into_iter()
             .filter(|s| !s.trim().is_empty())
             .count();
@@ -1171,10 +1238,10 @@ impl Checker {
                 ERROR,
                 &w,
                 &format!("Statement holds {parts} sentences; one sentence per statement."),
-                &first_chars(&st.body, 60),
+                &first_chars(&body, 60),
             );
         }
-        let n = count_words(&st.body);
+        let n = count_words(&body);
         let limit = if st.r#type.as_deref() == Some("DO") {
             self.max_do_words
         } else {
@@ -1229,7 +1296,13 @@ impl Checker {
     ) {
         let p = patterns();
         let w = where_of(st);
-        let body = st.body.as_str();
+        let masked;
+        let body = if st.r#type.as_deref() == Some("DO") {
+            masked = strip_quotes(&st.body);
+            masked.as_str()
+        } else {
+            st.body.as_str()
+        };
         self.check_sources(st, findings);
         if stype == Some("FACT") && st.sources.is_empty() {
             add(
@@ -1447,7 +1520,9 @@ impl Checker {
             );
             return;
         };
-        let rest = st.arguments.as_deref().unwrap_or("");
+        let rest_owned = strip_quotes(st.arguments.as_deref().unwrap_or(""));
+        let rest = rest_owned.as_str();
+        let mut second = false;
         if let Some(m) = search(&p.second_action, rest) {
             let verb = m
                 .get(1)
@@ -1463,6 +1538,20 @@ impl Checker {
                     &format!("DO carries a second action ('{whole}'). One action per statement."),
                     whole,
                 );
+                second = true;
+            }
+        }
+        if !second {
+            if let Some(cm) = search(&p.conjunction, rest) {
+                let whole = cm.get(0).map(|g| g.as_str()).unwrap_or("");
+                add(
+                    findings,
+                    "CL-I2",
+                    ERROR,
+                    &w,
+                    &format!("DO joins arguments with '{whole}'. One action, one object list; write a second DO."),
+                    whole,
+                );
             }
         }
         if is_match(&p.semicolon_clause, rest) {
@@ -1475,7 +1564,8 @@ impl Checker {
                 "",
             );
         }
-        if let Some(pm) = search(&self.passive, &st.body) {
+        let body_masked = strip_quotes(&st.body);
+        if let Some(pm) = search(&self.passive, &body_masked) {
             let part = pm.name("part").map(|g| g.as_str()).unwrap_or("");
             if !self.adjectival.contains(&part.to_lowercase()) {
                 let whole = pm.get(0).map(|g| g.as_str()).unwrap_or("");
@@ -1514,6 +1604,216 @@ impl Checker {
                 );
             }
         }
+        // CL-I6 (v0.4): the arguments fit the verb's signature, when the world gives one.
+        if let Some(sig) = self.signatures.get(st.verb.as_deref().unwrap_or("")) {
+            self.check_signature(st, sig, findings);
+        }
+        // A quoted string in a DO is carried text under the quote limit.
+        for q in captures_all(&p.quoted, st.arguments.as_deref().unwrap_or("")) {
+            let text = q
+                .get(1)
+                .or_else(|| q.get(2))
+                .map(|g| g.as_str())
+                .unwrap_or("");
+            let n = count_words(text);
+            if n > self.max_quote_words {
+                add(
+                    findings,
+                    "CL-Q2",
+                    WARNING,
+                    &w,
+                    &format!(
+                        "Quoted text has {n} words; the limit is {}.",
+                        self.max_quote_words
+                    ),
+                    "",
+                );
+            }
+            if is_match(&p.header_smuggle, text) {
+                add(findings, "CL-X2", ERROR, &w, "Quoted text contains header-like text (FROM:, TO:, INTENT:, REF:). Header fields may not appear inside statements.", "");
+            }
+        }
+    }
+
+    fn check_signature(&self, st: &Statement, params: &[Value], findings: &mut Vec<Finding>) {
+        let w = where_of(st);
+        let verb = st.verb.as_deref().unwrap_or("");
+        let name_of = |p: &Value| {
+            p.get("name")
+                .and_then(Value::as_str)
+                .unwrap_or("?")
+                .to_string()
+        };
+        let required: Vec<&Value> = params
+            .iter()
+            .filter(|p| p.get("required").and_then(Value::as_bool).unwrap_or(false))
+            .collect();
+        let names: Vec<String> = params.iter().map(name_of).collect();
+        let n = st.args.len();
+        let plural = |k: usize| if k != 1 { "s" } else { "" };
+        let arguments = st.arguments.clone().unwrap_or_default();
+        if n < required.len() {
+            let need: Vec<String> = required.iter().map(|p| name_of(p)).collect();
+            add(
+                findings,
+                "CL-I6",
+                ERROR,
+                &w,
+                &format!(
+                    "'{verb}' needs {} argument{} ({}); the DO gives {n}.",
+                    required.len(),
+                    plural(required.len()),
+                    need.join(", ")
+                ),
+                &arguments,
+            );
+            return;
+        }
+        if n > params.len() {
+            let list = if names.is_empty() {
+                "none".to_string()
+            } else {
+                names.join(", ")
+            };
+            add(
+                findings,
+                "CL-I6",
+                ERROR,
+                &w,
+                &format!(
+                    "'{verb}' takes at most {} argument{} ({list}); the DO gives {n}.",
+                    params.len(),
+                    plural(params.len())
+                ),
+                &arguments,
+            );
+            return;
+        }
+        for (arg, p) in st.args.iter().zip(params.iter()) {
+            let t = p
+                .get("type")
+                .and_then(Value::as_str)
+                .unwrap_or("string")
+                .to_lowercase();
+            let kind = arg.get("kind").and_then(Value::as_str).unwrap_or("");
+            let value = arg.get("value").cloned().unwrap_or(Value::Null);
+            let value_str = match &value {
+                Value::String(s) => s.clone(),
+                Value::Number(nn) => nn.to_string(),
+                other => other.to_string(),
+            };
+            let enum_values: Vec<String> = p
+                .get("values")
+                .and_then(Value::as_array)
+                .map(|a| a.iter().map(value_str_of).collect())
+                .unwrap_or_default();
+            let ok = match t.as_str() {
+                "text" => kind == "string",
+                "number" => kind == "number",
+                "integer" => kind == "number" && value.is_i64(),
+                "boolean" => {
+                    kind == "ref"
+                        && matches!(
+                            value_str.to_lowercase().as_str(),
+                            "true" | "false" | "yes" | "no" | "on" | "off"
+                        )
+                }
+                "enum" => (kind == "ref" || kind == "string") && enum_values.contains(&value_str),
+                _ => kind == "ref" || kind == "string",
+            };
+            if !ok {
+                let want = match t.as_str() {
+                    "text" => "quoted text".to_string(),
+                    "number" => "a number".to_string(),
+                    "integer" => "an integer".to_string(),
+                    "boolean" => "true or false".to_string(),
+                    "enum" => format!("one of {}", enum_values.join(", ")),
+                    "entity" => "a name or id".to_string(),
+                    _ => "a word or quoted text".to_string(),
+                };
+                add(
+                    findings,
+                    "CL-I6",
+                    ERROR,
+                    &w,
+                    &format!(
+                        "'{verb}' takes {want} for {}; the DO gives '{value_str}'.",
+                        name_of(p)
+                    ),
+                    &value_str,
+                );
+                return;
+            }
+        }
+    }
+
+    /// Split a DO's arguments (v0.4), as `clear_check.py` does.
+    fn parse_arguments(&self, rest: &str) -> Vec<Value> {
+        let p = patterns();
+        let mut args: Vec<Value> = Vec::new();
+        let mut phrase: Vec<String> = Vec::new();
+        fn flush(phrase: &mut Vec<String>, args: &mut Vec<Value>) {
+            if !phrase.is_empty() {
+                args.push(serde_json::json!({"kind": "ref", "value": phrase.join(" ")}));
+                phrase.clear();
+            }
+        }
+        let tokens: Vec<String> = captures_all(&p.arg_token, rest)
+            .into_iter()
+            .filter_map(|m| m.get(0).map(|g| g.as_str().to_string()))
+            .collect();
+        let lower_units: Vec<String> = self.units.iter().map(|u| u.to_lowercase()).collect();
+        let mut i = 0;
+        while i < tokens.len() {
+            let tok = &tokens[i];
+            i += 1;
+            if tok.starts_with('"') || tok.starts_with('“') {
+                flush(&mut phrase, &mut args);
+                let inner: String = tok
+                    .chars()
+                    .skip(1)
+                    .take(tok.chars().count().saturating_sub(2))
+                    .collect();
+                args.push(serde_json::json!({"kind": "string", "value": inner}));
+                continue;
+            }
+            let word = tok.trim_matches(|c| c == ',' || c == ';' || c == '.');
+            if word.is_empty() {
+                continue;
+            }
+            if is_match(&p.number_token, word) {
+                flush(&mut phrase, &mut args);
+                let value = if word.contains('.') {
+                    word.parse::<f64>().map(Value::from).unwrap_or(Value::Null)
+                } else {
+                    word.parse::<i64>().map(Value::from).unwrap_or(Value::Null)
+                };
+                let mut arg = serde_json::json!({"kind": "number", "value": value});
+                if i < tokens.len() {
+                    let nxt = tokens[i].trim_matches(|c| c == ',' || c == ';' || c == '.');
+                    if self.units.iter().any(|u| u == nxt)
+                        || (lower_units.contains(&nxt.to_lowercase()) && !py_isupper(nxt))
+                    {
+                        arg["unit"] = Value::String(nxt.to_string());
+                        i += 1;
+                    }
+                }
+                args.push(arg);
+                continue;
+            }
+            if self.connectors.contains(&word.to_lowercase()) {
+                flush(&mut phrase, &mut args);
+                continue;
+            }
+            if is_match(&p.ident_token, word) {
+                flush(&mut phrase, &mut args);
+                args.push(serde_json::json!({"kind": "ref", "value": word}));
+                continue;
+            }
+            phrase.push(word.to_string());
+        }
+        flush(&mut phrase, &mut args);
+        args
     }
 
     fn check_ask(&self, st: &mut Statement, findings: &mut Vec<Finding>) {

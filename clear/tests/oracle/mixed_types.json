@@ -41,6 +41,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -56,6 +57,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -71,6 +73,12 @@
         "modal": "MAY",
         "verb": "close",
         "arguments": "the window",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "window"
+          }
+        ],
         "pattern": null,
         "slots": {}
       },
@@ -86,6 +94,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": "^where is (?P<entity>[a-z0-9 _-]+)\\?$",
         "slots": {
           "entity": "b"
@@ -105,6 +114,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       }

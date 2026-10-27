@@ -758,3 +758,52 @@ fn a_log_from_other_modules_is_refused_with_directions() {
     assert!(err.contains("entropic.room"), "{err}");
     assert!(err.contains("MOONDIAL_WORLD"), "{err}");
 }
+
+/// The vocabulary's verb signatures are the registry's: every registered command is an
+/// approved verb whose parameters (name, type, required, in order) the vocabulary
+/// states exactly, so the checker in the browser refuses what the registry would.
+#[test]
+fn the_vocabulary_s_signatures_are_the_registry_s() {
+    let w = open(tempfile::tempdir().unwrap().path(), Timestamp(0));
+    let vocab = crate::gate::disremembered_vocabulary();
+    let verbs = vocab["approved_verbs"]
+        .as_object()
+        .expect("approved_verbs is a map of verb to signature");
+    for spec in w.registry.specs() {
+        let verb = spec.verb();
+        let sig = verbs
+            .get(verb)
+            .unwrap_or_else(|| panic!("{verb} is registered but not an approved verb"));
+        let params = sig["params"].as_array().unwrap_or_else(|| {
+            panic!("{verb} is registered but the vocabulary gives it no signature")
+        });
+        let expected: Vec<Value> = spec
+            .params
+            .iter()
+            .map(|p| {
+                let mut v = json!({"name": p.name, "required": p.required});
+                let ty = serde_json::to_value(&p.ty).unwrap();
+                v["type"] = ty["type"].clone();
+                if let Some(values) = ty.get("values") {
+                    v["values"] = values.clone();
+                }
+                v
+            })
+            .collect();
+        let got: Vec<Value> = params
+            .iter()
+            .map(|p| {
+                let mut v =
+                    json!({"name": p["name"], "required": p["required"], "type": p["type"]});
+                if let Some(values) = p.get("values") {
+                    v["values"] = values.clone();
+                }
+                v
+            })
+            .collect();
+        assert_eq!(
+            got, expected,
+            "signature of {verb} in clear/vocab/disremembered.yaml"
+        );
+    }
+}

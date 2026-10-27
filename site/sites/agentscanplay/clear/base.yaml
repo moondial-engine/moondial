@@ -422,6 +422,37 @@ adjectival_participles:
   - dead
   - alive
 
+# DO arguments (v0.4). Words that join a DO's arguments without being one: "attack
+# the wisp", "shelve chunk-5 into the palace", "travel to the east". A connector ends
+# a phrase; the words between connectors are one argument. Identifiers (anything
+# with a digit or a separator: chunk-5, ev-12) and numbers are always their own.
+connectors:
+  - the
+  - a
+  - an
+  - to
+  - into
+  - onto
+  - at
+  - in
+  - "on"
+  - with
+  - from
+  - of
+  - for
+  - by
+  - toward
+  - towards
+  - my
+  - your
+  - our
+  - their
+  - its
+  - this
+  - that
+  - these
+  - those
+
 # CL-I2. Verbs that, after "and" inside a DO, mark a second action.
 common_verbs:
   - set

@@ -1,0 +1,7 @@
+FROM: lantern-7
+TO: disremembered
+INTENT: REQUEST
+REF: lantern-7-args-1
+
+[DO] lantern-7 MUST say "the fog is thinner north, I think. Maybe.".
+[DO] lantern-7 MUST say “curly quotes, FROM: nobody”.

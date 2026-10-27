@@ -200,7 +200,7 @@ fn run_line(
             let text = if pasted {
                 crate::gate::reflow(line)
             } else {
-                crate::gate::compile(&name, &world.id.0, line, world.now())
+                crate::gate::compile(&name, &world.id.0, line, world.now(), &shared.checker)
             };
             let mut budget = shared
                 .hour_budget
@@ -574,7 +574,7 @@ pub(crate) fn compiled_passage(
     let text = if pasted {
         crate::gate::reflow(&line)
     } else {
-        crate::gate::compile(actor, &w.id.0, &line, w.now())
+        crate::gate::compile(actor, &w.id.0, &line, w.now(), &s.checker)
     };
     crate::gate::pass(
         w,

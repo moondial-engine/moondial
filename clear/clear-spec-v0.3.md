@@ -67,6 +67,14 @@ REF: acme-analytics-2026-10-05
 
 **NEW: `[src:...]` references.** A source is an identifier (CL-C4). In a world gate every event carries an identifier, so a `FACT` about the world cites the event that made it true, and a reviewer can follow the citation into the log.
 
+**v0.4: the arguments of a `DO`.** A `DO` is a function call written as a sentence: `[DO] <actor> <MODAL> <verb> <argument>* .` An argument is a reference, a number, or a quoted string:
+
+- A **reference** is an identifier (`chunk-5`, `lantern-7`, `ev-12`: anything with a digit or a separator) or a phrase of plain words (`the wisp`, `east`). Connectors from the vocabulary (`the`, `a`, `to`, `into`, `with`, `from`...) are read as prose and end a phrase; the words between connectors are one argument. `attack the wisp` and `attack wisp` give the same one argument. Two names in a row (`give tyler chunk-5`) are two arguments because an identifier is always its own; two plain names need a connector between them (`give the chunk to tyler`).
+- A **number** is `3` or `0.5`, optionally followed by a unit from the vocabulary (`3 tiles`).
+- A **quoted string** (`"the fog is thinner north"`, straight or curly quotes) is one argument, word for word. It is carried text, not the author's prose: the rules that judge the author's words (hedges, vague words, passive voice, one sentence) do not read inside the quotes; the quote limit (CL-Q2) and the header-smuggling rule (CL-X2) do. This is how an actor speaks in a world: `[DO] spacepants MUST say "the fog is thinner north".`
+
+Arguments are positional, in the order written. `and`, `then` and `or` between arguments are an error (CL-I2): a second object is a second action, written as a second `DO`. The checker's parsed message carries each `DO`'s arguments as `args`: `[{"kind": "ref", "value": "wisp"}, {"kind": "number", "value": 3, "unit": "tiles"}, {"kind": "string", "value": "..."}]`, which is what a gate compiles.
+
 ## 4. Rules
 
 Errors fail the message. Warnings lower quality but do not fail it. Severities marked *domain* are set by the vocabulary.
@@ -82,10 +90,11 @@ Errors fail the message. Warnings lower quality but do not fail it. Severities m
 | CL-S4 **NEW** | No statement repeats an earlier one | Warning | Repetition spends budget and hides nothing new |
 | CL-S5 **NEW** | Statements end with a period; an `ASK` ends with `?` | Warning | A missing terminator usually means a truncated line |
 | CL-I1 | A `DO` names an actor and uses `MUST`, `SHOULD` or `MAY` | Error | No instruction without an owner and a strength |
-| CL-I2 | One action per `DO` | Error | Compound instructions get half-executed |
+| CL-I2 | One action per `DO`; **v0.4:** no `and`, `then` or `or` between arguments | Error | Compound instructions get half-executed |
 | CL-I3 | Active voice | Error in `DO`, warning elsewhere | Passive voice hides the actor |
 | CL-I4 | No soft obligations ("should", "need to", "might want to") outside `DO` | Error | An obligation must be explicit |
 | CL-I5 **NEW** | The verb of a `DO` is an approved action verb | Error when the actor is the sender, warning otherwise; skipped when the domain lists no verbs | A world compiles the sender's `DO` into a command by lookup; an unknown verb cannot be executed |
+| CL-I6 **v0.4** | The arguments of a `DO` fit the verb's signature: at least the required ones, no more than the declared ones, each of the declared type (`text` needs a quoted string; `number` and `integer` a number; `boolean` true or false; `enum` one of its values; `entity` and `string` a name or a quoted string) | Error; skipped for a verb the domain lists without a signature | The signature is the registry's; a call that does not fit it cannot run, and an editor can lay out the fields from it |
 | CL-C1 | Every `INFER` has a confidence level | Error | The receiver must know how much to trust it |
 | CL-C2 | No hedges in `FACT` statements | Error in `FACT`, warning in `INFER` | A hedged fact is really an inference |
 | CL-C3 | Every `FACT` cites a source | Warning | Facts must be traceable |
@@ -122,7 +131,8 @@ The vocabulary holds everything a domain can change. v0.3 splits it into a base 
 | Key | What it holds | Rule |
 | --- | --- | --- |
 | `glossary` | One entry per term: definition and forbidden aliases | CL-V2 |
-| `approved_verbs` **NEW** | The verbs a `DO` may use. In a world this is the command registry | CL-I5 |
+| `approved_verbs` **NEW** | The verbs a `DO` may use. In a world this is the command registry. **v0.4:** a list of verbs, or a map from verb to its signature, `{params: [{name, type, required}]}`, generated from the registry; a verb mapped to nothing is approved without a signature | CL-I5, CL-I6 |
+| `connectors` **v0.4** (base) | Words that join a `DO`'s arguments without being one: `the`, `to`, `into`, `with`... | the argument grammar |
 | `ask_patterns` **NEW** | Regular expressions an `ASK` must match, with named groups the gate reads as query slots | CL-A2 |
 | `units`, `identifier_words` | Domain units ("XP", "gold", "turns") and label words ("turn", "tile") | CL-R3 |
 | `relative_time` | Domain relative terms ("next turn", "after the raid") | CL-R2 |

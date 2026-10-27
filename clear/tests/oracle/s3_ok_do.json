@@ -24,6 +24,12 @@
         "modal": "MUST",
         "verb": "set",
         "arguments": "word word word word word word word word word word word word word word word word",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "word word word word word word word word word word word word word word word word"
+          }
+        ],
         "pattern": null,
         "slots": {}
       }

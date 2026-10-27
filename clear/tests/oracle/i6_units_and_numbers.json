@@ -1,0 +1,84 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "mode": "clear",
+  "errors": 0,
+  "warnings": 1,
+  "findings": [
+    {
+      "rule": "CL-R3",
+      "severity": "warning",
+      "where": "statement 1",
+      "message": "'0.5' has no unit.",
+      "excerpt": "0.5"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "lantern-7",
+      "TO": "disremembered",
+      "INTENT": "REQUEST",
+      "REF": "lantern-7-args-1"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 6,
+        "raw": "[DO] lantern-7 MUST earn hydra 100 turns 0.5.",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST earn hydra 100 turns 0.5.",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "earn",
+        "arguments": "hydra 100 turns 0.5",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "hydra"
+          },
+          {
+            "kind": "number",
+            "value": 100,
+            "unit": "turns"
+          },
+          {
+            "kind": "number",
+            "value": 0.5
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 2,
+        "line": 7,
+        "raw": "[DO] lantern-7 MUST earn hydra 2 USD.",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST earn hydra 2 USD.",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "earn",
+        "arguments": "hydra 2 USD",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "hydra"
+          },
+          {
+            "kind": "number",
+            "value": 2,
+            "unit": "USD"
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "disremembered"
+}

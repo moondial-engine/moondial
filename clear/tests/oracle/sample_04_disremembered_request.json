@@ -27,6 +27,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -44,6 +45,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -59,6 +61,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -74,6 +77,16 @@
         "modal": "MUST",
         "verb": "coat",
         "arguments": "blade-01 with resin-01",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "blade-01"
+          },
+          {
+            "kind": "ref",
+            "value": "resin-01"
+          }
+        ],
         "pattern": null,
         "slots": {}
       },
@@ -89,21 +102,38 @@
         "modal": "MUST",
         "verb": "move",
         "arguments": "north 3 tiles",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "north"
+          },
+          {
+            "kind": "number",
+            "value": 3,
+            "unit": "tiles"
+          }
+        ],
         "pattern": null,
         "slots": {}
       },
       {
         "index": 6,
         "line": 11,
-        "raw": "[DO] lantern-7 SHOULD reminisce chunk-5521 before turn 1.",
+        "raw": "[DO] lantern-7 SHOULD reminisce chunk-5521.",
         "type": "DO",
         "confidence": null,
-        "body": "lantern-7 SHOULD reminisce chunk-5521 before turn 1.",
+        "body": "lantern-7 SHOULD reminisce chunk-5521.",
         "sources": [],
         "actor": "lantern-7",
         "modal": "SHOULD",
         "verb": "reminisce",
-        "arguments": "chunk-5521 before turn 1",
+        "arguments": "chunk-5521",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "chunk-5521"
+          }
+        ],
         "pattern": null,
         "slots": {}
       }

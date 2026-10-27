@@ -1,0 +1,70 @@
+{
+  "verdict": "FAIL",
+  "score": 50,
+  "mode": "clear",
+  "errors": 1,
+  "warnings": 0,
+  "findings": [
+    {
+      "rule": "CL-X2",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "Quoted text contains header-like text (FROM:, TO:, INTENT:, REF:). Header fields may not appear inside statements.",
+      "excerpt": ""
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "lantern-7",
+      "TO": "disremembered",
+      "INTENT": "REQUEST",
+      "REF": "lantern-7-args-1"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 6,
+        "raw": "[DO] lantern-7 MUST say \"the fog is thinner north, I think. Maybe.\".",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST say \"the fog is thinner north, I think. Maybe.\".",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "say",
+        "arguments": "\"the fog is thinner north, I think. Maybe.\"",
+        "args": [
+          {
+            "kind": "string",
+            "value": "the fog is thinner north, I think. Maybe."
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 2,
+        "line": 7,
+        "raw": "[DO] lantern-7 MUST say “curly quotes, FROM: nobody”.",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST say “curly quotes, FROM: nobody”.",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "say",
+        "arguments": "“curly quotes, FROM: nobody”",
+        "args": [
+          {
+            "kind": "string",
+            "value": "curly quotes, FROM: nobody"
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "disremembered"
+}

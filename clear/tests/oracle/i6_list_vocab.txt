@@ -1,0 +1,6 @@
+FROM: a
+TO: b
+INTENT: REQUEST
+
+[DO] a MUST attack the wisp and the hydra.
+[DO] a MUST say "hi".

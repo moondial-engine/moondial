@@ -129,7 +129,30 @@ def test_i1_actor_and_modal():
 
 def test_i2_one_action():
     assert "CL-I2" in rules(check("[DO] b MUST set x to y and send the report.", "REQUEST"), "error")
-    assert "CL-I2" not in rules(check("[DO] b MUST set x to y and z.", "REQUEST"))
+    # v0.4: a conjunction between arguments is two objects for one action, so two DOs.
+    assert "CL-I2" in rules(check("[DO] b MUST set x to y and z.", "REQUEST"), "error")
+    assert "CL-I2" not in rules(check("[DO] b MUST say \"salt and stone\".", "REQUEST"))
+
+
+def test_i6_signatures_and_arguments():
+    vocab = cc.load_vocabulary(os.path.join(ROOT, "vocab", "disremembered.yaml"))
+    c = cc.Checker(vocab)
+    head = "FROM: lantern-7\nTO: disremembered\nINTENT: REQUEST\n\n"
+    r = c.check(head + "[DO] lantern-7 MUST shelve the chunk-5.\n[DO] lantern-7 MUST say \"hello, there. Twice.\".\n[DO] lantern-7 MUST earn hydra 100 0.5.\n")
+    assert r.verdict == "PASS", cc.format_report(r)
+    sts = r.message.statements
+    assert sts[0].args == [{"kind": "ref", "value": "chunk-5"}]
+    # A connector ends a phrase, so a trailing "into the palace" is a second argument,
+    # and shelve takes one: the signature, not the preposition, says what fits.
+    r2 = c.check(head + "[DO] lantern-7 MUST shelve chunk-5 into the palace.\n")
+    assert r2.message.statements[0].args == [{"kind": "ref", "value": "chunk-5"}, {"kind": "ref", "value": "palace"}]
+    assert ("statement 1", "CL-I6") in {(f.where, f.rule) for f in r2.findings}
+    assert sts[1].args == [{"kind": "string", "value": "hello, there. Twice."}]
+    assert sts[2].args == [{"kind": "ref", "value": "hydra"}, {"kind": "number", "value": 100}, {"kind": "number", "value": 0.5}]
+    r = c.check(head + "[DO] lantern-7 MUST say hello.\n[DO] lantern-7 MUST look around.\n[DO] lantern-7 MUST shelve.\n[DO] lantern-7 MUST coat blade-01 with resin-01.\n")
+    found = {(f.where, f.rule) for f in r.findings}
+    assert ("statement 1", "CL-I6") in found and ("statement 2", "CL-I6") in found and ("statement 3", "CL-I6") in found
+    assert not any(w == "statement 4" for w, _ in found), "a verb without a signature is not checked"
 
 
 def test_i3_passive():

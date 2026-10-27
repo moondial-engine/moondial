@@ -1,10 +1,18 @@
 {
-  "verdict": "PASS",
-  "score": 100,
+  "verdict": "FAIL",
+  "score": 0,
   "mode": "clear",
-  "errors": 0,
+  "errors": 1,
   "warnings": 0,
-  "findings": [],
+  "findings": [
+    {
+      "rule": "CL-I2",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "DO joins arguments with 'and'. One action, one object list; write a second DO.",
+      "excerpt": "and"
+    }
+  ],
   "message": {
     "header": {
       "FROM": "a",
@@ -24,6 +32,16 @@
         "modal": "MUST",
         "verb": "set",
         "arguments": "x to y and z",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "x"
+          },
+          {
+            "kind": "ref",
+            "value": "y and z"
+          }
+        ],
         "pattern": null,
         "slots": {}
       }

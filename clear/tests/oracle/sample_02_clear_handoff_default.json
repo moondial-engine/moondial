@@ -49,6 +49,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -64,6 +65,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       },
@@ -79,6 +81,16 @@
         "modal": "MUST",
         "verb": "set",
         "arguments": "the Acme Analytics opportunity stage to \"Committed\"",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "the Acme Analytics opportunity stage to"
+          },
+          {
+            "kind": "string",
+            "value": "Committed"
+          }
+        ],
         "pattern": null,
         "slots": {}
       },
@@ -94,6 +106,7 @@
         "modal": null,
         "verb": null,
         "arguments": null,
+        "args": [],
         "pattern": null,
         "slots": {}
       }

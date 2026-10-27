@@ -1,7 +1,7 @@
 [package]
 name = "moondial-clear-wasm"
-version = "0.3.0"
-description = "The CLEAR v0.3 checker for the browser: the same moondial-clear, compiled to WebAssembly, so an editor checks every keystroke with the rules the Gate applies."
+version = "0.4.0"
+description = "The CLEAR v0.4 checker for the browser: the same moondial-clear, compiled to WebAssembly, so an editor checks every keystroke with the rules the Gate applies."
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
