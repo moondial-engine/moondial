@@ -9,3 +9,4 @@
 *.md text eol=lf
 *.html text eol=lf
 *.json text eol=lf
+clear/tests/oracle/*.txt -text
