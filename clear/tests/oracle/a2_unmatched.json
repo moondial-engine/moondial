@@ -1,0 +1,42 @@
+{
+  "verdict": "FAIL",
+  "score": 0,
+  "mode": "clear",
+  "errors": 1,
+  "warnings": 0,
+  "findings": [
+    {
+      "rule": "CL-A2",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "ASK matches none of the domain's question patterns, so the gate cannot compile it.",
+      "excerpt": "Could you maybe tell me about hydras?"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "QUERY"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[ASK] Could you maybe tell me about hydras?",
+        "type": "ASK",
+        "confidence": null,
+        "body": "Could you maybe tell me about hydras?",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "entropic"
+}

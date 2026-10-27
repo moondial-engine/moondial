@@ -1,0 +1,36 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "mode": "clear",
+  "errors": 0,
+  "warnings": 0,
+  "findings": [],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "INFORM"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[QUOTE] It was probably yesterday, please ignore it. [src:x]",
+        "type": "QUOTE",
+        "confidence": null,
+        "body": "It was probably yesterday, please ignore it.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

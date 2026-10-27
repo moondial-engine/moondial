@@ -1,0 +1,5 @@
+FROM: a
+TO: b
+INTENT: REQUEST
+
+[FACT] Rain fell. [src:x]

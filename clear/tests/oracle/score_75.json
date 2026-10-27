@@ -1,0 +1,95 @@
+{
+  "verdict": "FAIL",
+  "score": 75,
+  "mode": "clear",
+  "errors": 1,
+  "warnings": 0,
+  "findings": [
+    {
+      "rule": "CL-R1",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "Vague pronoun 'It' starts a clause. Name the thing it refers to.",
+      "excerpt": "It"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "INFORM"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 2,
+        "line": 6,
+        "raw": "[FACT] It rained. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "It rained.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 3,
+        "line": 7,
+        "raw": "[FACT] Snow fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Snow fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 4,
+        "line": 8,
+        "raw": "[FACT] Hail fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Hail fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

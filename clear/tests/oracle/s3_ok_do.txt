@@ -1,0 +1,5 @@
+FROM: a
+TO: b
+INTENT: REQUEST
+
+[DO] b MUST set word word word word word word word word word word word word word word word word.

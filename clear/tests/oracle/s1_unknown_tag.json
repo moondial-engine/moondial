@@ -1,0 +1,49 @@
+{
+  "verdict": "FAIL",
+  "score": 0,
+  "mode": "clear",
+  "errors": 1,
+  "warnings": 1,
+  "findings": [
+    {
+      "rule": "CL-S1",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "Unknown statement tag. Use [FACT], [INFER:LEVEL], [DO], [ASK] or [QUOTE].",
+      "excerpt": "[NOTE] Rain fell."
+    },
+    {
+      "rule": "CL-V3",
+      "severity": "warning",
+      "where": "statement 1",
+      "message": "Acronym NOTE is not in the glossary.",
+      "excerpt": "NOTE"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "INFORM"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[NOTE] Rain fell.",
+        "type": null,
+        "confidence": null,
+        "body": "[NOTE] Rain fell.",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

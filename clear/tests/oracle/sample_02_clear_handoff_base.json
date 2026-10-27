@@ -1,0 +1,90 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "mode": "clear",
+  "errors": 0,
+  "warnings": 1,
+  "findings": [
+    {
+      "rule": "CL-V3",
+      "severity": "warning",
+      "where": "statement 1",
+      "message": "Acronym ARR is not in the glossary.",
+      "excerpt": "ARR"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "research-agent",
+      "TO": "crm-agent",
+      "INTENT": "REQUEST",
+      "REF": "acme-analytics-2026-10-05"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 6,
+        "raw": "[FACT] The Acme Analytics opportunity has an estimated ARR of 250,000 USD. [src:crm-0091]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "The Acme Analytics opportunity has an estimated ARR of 250,000 USD.",
+        "sources": [
+          "crm-0091"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 2,
+        "line": 7,
+        "raw": "[INFER:MEDIUM] Acme Analytics will sign before 2026-10-16.",
+        "type": "INFER",
+        "confidence": "MEDIUM",
+        "body": "Acme Analytics will sign before 2026-10-16.",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 3,
+        "line": 8,
+        "raw": "[DO] crm-agent MUST set the Acme Analytics opportunity stage to \"Committed\".",
+        "type": "DO",
+        "confidence": null,
+        "body": "crm-agent MUST set the Acme Analytics opportunity stage to \"Committed\".",
+        "sources": [],
+        "actor": "crm-agent",
+        "modal": "MUST",
+        "verb": "set",
+        "arguments": "the Acme Analytics opportunity stage to \"Committed\"",
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 4,
+        "line": 9,
+        "raw": "[ASK] Does the Iceberg connector have a confirmed release date?",
+        "type": "ASK",
+        "confidence": null,
+        "body": "Does the Iceberg connector have a confirmed release date?",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

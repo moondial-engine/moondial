@@ -1,0 +1,8 @@
+FROM: a
+TO: b
+INTENT: INFORM
+
+[FACT] Rain fell. [src:x]
+[FACT] It rained. [src:x]
+[FACT] Snow fell. [src:x]
+[FACT] Hail fell. [src:x]

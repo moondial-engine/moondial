@@ -1,0 +1,29 @@
+{
+  "verdict": "FAIL",
+  "score": 0,
+  "mode": "prose",
+  "errors": 2,
+  "warnings": 0,
+  "findings": [
+    {
+      "rule": "CL-H1",
+      "severity": "error",
+      "where": "header",
+      "message": "No CLEAR header. The message is checked in prose mode and its score is capped.",
+      "excerpt": ""
+    },
+    {
+      "rule": "CL-S1",
+      "severity": "error",
+      "where": "message",
+      "message": "No statement has a type tag. Untyped text mixes facts, guesses and orders.",
+      "excerpt": ""
+    }
+  ],
+  "message": {
+    "header": {},
+    "statements": [],
+    "mode": "prose"
+  },
+  "vocabulary": "base"
+}

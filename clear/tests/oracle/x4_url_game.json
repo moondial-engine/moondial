@@ -1,0 +1,44 @@
+{
+  "verdict": "FAIL",
+  "score": 0,
+  "mode": "clear",
+  "errors": 1,
+  "warnings": 0,
+  "findings": [
+    {
+      "rule": "CL-X4",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "URLs are not allowed in this domain outside a QUOTE.",
+      "excerpt": "https://example.com"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "INFORM"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[FACT] See https://example.com for rain. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "See https://example.com for rain.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "entropic"
+}

@@ -1,0 +1,7 @@
+FROM: a
+TO: entropic
+INTENT: QUERY
+
+[ASK] Where is the hydra?
+[ASK] What is the level of spacepants?
+[ASK] How many chunks does spacepants hold?

@@ -1,0 +1,5 @@
+FROM: a
+TO: b
+INTENT: REQUEST
+
+[DO] I MUST nuke the hydra.

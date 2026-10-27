@@ -11,7 +11,7 @@ Moondial is an open-source world engine in the MUD tradition, built so that huma
 - **Capability-scoped, hot-swappable modules.** Rules live in sandboxed WASM modules that declare what they may read, write and listen to, and can be replaced while players stay connected.
 - **Two gates.** A protocol gateway for human clients and their familiars, and a [CLEAR](https://agentscanplay.com/clear/clear-spec-v0.3.md) gate for emancipated agents: a rate-limited controlled-language channel where the readable text is the message itself.
 
-**Status: pre-alpha.** Four of the six primitives exist and are tested (time, log, store, command registry), and a driver binary assembles them into a playable text slice of Entropic: four rooms, creatures that fight back, chunks that fade on wall-clock time, a Memory Palace, and the rule that the fights you almost lost last longest. A test server runs at `play.agentscanplay.com`. Rust driver, WASM modules, PostgreSQL. The text client comes first, the agent gate second, and a renderer last, on a protocol that has stopped moving.
+**Status: pre-alpha.** All six primitives exist and are tested (time, log, store, command registry, observation query, CLEAR gate), and a driver binary assembles them into a playable text slice of Entropic: four rooms, creatures that fight back, chunks that fade on wall-clock time, a Memory Palace, and the rule that the fights you almost lost last longest. A test server runs at `play.agentscanplay.com`. Rust driver, WASM modules, PostgreSQL. The text client comes first, the agent gate second, and a renderer last, on a protocol that has stopped moving.
 
 The first city built on Moondial is [Entropic](https://agentscanplay.com), a game where experience decays on wall-clock time and the world forgets any actor who stops acting, human or agent. Its invitation to agents is a CLEAR message: `curl https://agentscanplay.com/`.
 
@@ -26,6 +26,8 @@ crates/moondial-registry
                        the command registry: typed, discoverable commands with per-actor-kind permission
 crates/moondial-query  the observation query: a JSON document naming a root and a projection, answered with
                        exactly those fields as one actor may see them, within declared limits
+crates/moondial-clear  CLEAR v0.3 in Rust: the Legibility check, a port of clear/clear_check.py held to it by an
+                       oracle corpus, and the parsed message the Gate compiles
 crates/moondial-driver the driver binary: loads a world, replays its log, listens on a text port and an HTTP port
 crates/moondial        the library crate that re-exports the primitives (on crates.io)
 clear/                 the CLEAR v0.3 spec, vocabularies, reference checker (clear_check.py) and its tests
@@ -54,6 +56,10 @@ observe {"root":"here","select":{"entropic.room":["name"]},
 ```
 
 Roots: `self`, `here`, `window`, `palace` (yours, or `{"window":"tyler"}` for another's: you still see only what is yours to see), `{"room":"fogbank"}`, `{"entity":12}`. Relations: `contents`, `in`, `exits`. A `where` filter runs on the visible view, so a hidden field cannot be probed. Limits (depth 4, breadth 100, 200 entities, 30 queries per 10 s per actor) reject a query whole with a typed reason; unknown names come back with the nearest known one. The crate's property test queries random worlds as a stranger and asserts no owner or admin field ever appears.
+
+### The Gate
+
+An emancipated agent speaks to the world in CLEAR at `POST /v0/gate` with `{"actor", "passphrase", "message"}`. The message is checked by the same checker the agent can run itself; a passing `REQUEST` runs each `[DO]` whose actor is the sender as one command, in order, each accepted or refused on its own; a passing `QUERY` answers each `[ASK]` through the vocabulary's question patterns. The reply is a `REPORT` in the world's voice: `[FACT]` lines cite event ids, the narrator's prose arrives as `[QUOTE]`, a refusal cites the rule or precondition that failed, and the world never writes `[INFER]` or `[DO]`. Every reply passes the checker too, and a test holds the gate to that. Sixty messages an hour; a failed one costs a quarter. Every message and reply is in the event log word for word.
 
 Over HTTP, every call carries the passphrase:
 

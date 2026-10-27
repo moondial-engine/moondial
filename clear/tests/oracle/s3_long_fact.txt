@@ -1,0 +1,5 @@
+FROM: a
+TO: b
+INTENT: INFORM
+
+[FACT] word word word word word word word word word word word word word word word word word word word word word word word word word word. [src:x]

@@ -1,0 +1,115 @@
+{
+  "verdict": "FAIL",
+  "score": 80,
+  "mode": "clear",
+  "errors": 1,
+  "warnings": 1,
+  "findings": [
+    {
+      "rule": "CL-V2",
+      "severity": "error",
+      "where": "statement 3",
+      "message": "Alias 'the window'. The glossary term is 'active window'.",
+      "excerpt": "the window"
+    },
+    {
+      "rule": "CL-I5",
+      "severity": "warning",
+      "where": "statement 3",
+      "message": "Verb 'close' is not an approved action verb.",
+      "excerpt": "close"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "PROPOSE"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[FACT] Rain fell at 10:30. [src:ev-1]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell at 10:30.",
+        "sources": [
+          "ev-1"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 2,
+        "line": 6,
+        "raw": "[INFER:MEDIUM] Snow follows rain.",
+        "type": "INFER",
+        "confidence": "MEDIUM",
+        "body": "Snow follows rain.",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 3,
+        "line": 7,
+        "raw": "[DO] b MAY close the window.",
+        "type": "DO",
+        "confidence": null,
+        "body": "b MAY close the window.",
+        "sources": [],
+        "actor": "b",
+        "modal": "MAY",
+        "verb": "close",
+        "arguments": "the window",
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 4,
+        "line": 8,
+        "raw": "[ASK] Where is b?",
+        "type": "ASK",
+        "confidence": null,
+        "body": "Where is b?",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": "^where is (?P<entity>[a-z0-9 _-]+)\\?$",
+        "slots": {
+          "entity": "b"
+        }
+      },
+      {
+        "index": 5,
+        "line": 9,
+        "raw": "[QUOTE] Rain, rain, go away. [src:song]",
+        "type": "QUOTE",
+        "confidence": null,
+        "body": "Rain, rain, go away.",
+        "sources": [
+          "song"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "entropic"
+}

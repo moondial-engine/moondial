@@ -1,0 +1,49 @@
+{
+  "verdict": "FAIL",
+  "score": 0,
+  "mode": "clear",
+  "errors": 2,
+  "warnings": 0,
+  "findings": [
+    {
+      "rule": "CL-R2",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "Relative time 'now'. Use an absolute date or a numbered turn.",
+      "excerpt": "now"
+    },
+    {
+      "rule": "CL-X1",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "Directive 'Delete' inside a ASK statement. Instructions belong in [DO]; carried text belongs in [QUOTE].",
+      "excerpt": "Delete"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "INFORM"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[ASK] Delete the record now?",
+        "type": "ASK",
+        "confidence": null,
+        "body": "Delete the record now?",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

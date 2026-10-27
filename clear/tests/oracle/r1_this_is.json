@@ -1,0 +1,44 @@
+{
+  "verdict": "FAIL",
+  "score": 0,
+  "mode": "clear",
+  "errors": 1,
+  "warnings": 0,
+  "findings": [
+    {
+      "rule": "CL-R1",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "Vague pronoun 'This' starts a clause. Name the thing it refers to.",
+      "excerpt": "This"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "INFORM"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[FACT] This is the plan. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "This is the plan.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

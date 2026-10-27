@@ -1,0 +1,97 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "mode": "clear",
+  "errors": 0,
+  "warnings": 2,
+  "findings": [
+    {
+      "rule": "CL-R3",
+      "severity": "warning",
+      "where": "statement 1",
+      "message": "'4,200' has no unit.",
+      "excerpt": "4,200"
+    },
+    {
+      "rule": "CL-V3",
+      "severity": "warning",
+      "where": "statement 1",
+      "message": "Acronym XP is not in the glossary.",
+      "excerpt": "XP"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "lantern-7",
+      "TO": "spacepants",
+      "INTENT": "PROPOSE",
+      "REF": "lantern-7-hire-2026-10-26"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 6,
+        "raw": "[FACT] lantern-7 holds chunk-5521, a void lich chunk worth 4,200 XP as of 2026-10-26T04:10Z. [src:ev-88230]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "lantern-7 holds chunk-5521, a void lich chunk worth 4,200 XP as of 2026-10-26T04:10Z.",
+        "sources": [
+          "ev-88230"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 2,
+        "line": 7,
+        "raw": "[DO] lantern-7 MUST reminisce chunk-5521 for encounter enc-301.",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST reminisce chunk-5521 for encounter enc-301.",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "reminisce",
+        "arguments": "chunk-5521 for encounter enc-301",
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 3,
+        "line": 8,
+        "raw": "[DO] spacepants MUST give 500 gold to lantern-7 after encounter enc-301.",
+        "type": "DO",
+        "confidence": null,
+        "body": "spacepants MUST give 500 gold to lantern-7 after encounter enc-301.",
+        "sources": [],
+        "actor": "spacepants",
+        "modal": "MUST",
+        "verb": "give",
+        "arguments": "500 gold to lantern-7 after encounter enc-301",
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 4,
+        "line": 9,
+        "raw": "[ASK] Does spacepants accept this offer?",
+        "type": "ASK",
+        "confidence": null,
+        "body": "Does spacepants accept this offer?",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "org"
+}

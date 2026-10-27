@@ -1,0 +1,61 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "mode": "clear",
+  "errors": 0,
+  "warnings": 1,
+  "findings": [
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 2",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "INFORM"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 2,
+        "line": 6,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

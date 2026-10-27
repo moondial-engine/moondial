@@ -7,6 +7,7 @@
 //! The rule the slice is built around: your level is the sum of what has not faded, your
 //! attack follows your level, and the fights you almost lost last longest.
 
+pub mod ask;
 mod combat;
 mod identity;
 mod memory;

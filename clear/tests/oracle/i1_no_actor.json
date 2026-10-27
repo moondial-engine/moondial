@@ -1,0 +1,42 @@
+{
+  "verdict": "FAIL",
+  "score": 0,
+  "mode": "clear",
+  "errors": 1,
+  "warnings": 0,
+  "findings": [
+    {
+      "rule": "CL-I1",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "DO must read '<actor> MUST|MUST NOT|SHOULD|SHOULD NOT|MAY <verb> ...'.",
+      "excerpt": "set x to y."
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "REQUEST"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[DO] set x to y.",
+        "type": "DO",
+        "confidence": null,
+        "body": "set x to y.",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

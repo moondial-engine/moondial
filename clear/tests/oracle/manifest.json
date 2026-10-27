@@ -1,0 +1,782 @@
+[
+  {
+    "name": "sample_01_prose_handoff",
+    "vocab": "vocab/org-example.yaml",
+    "text": "sample_01_prose_handoff.txt",
+    "expected": "sample_01_prose_handoff.json"
+  },
+  {
+    "name": "sample_01_prose_handoff_base",
+    "vocab": "vocab/base.yaml",
+    "text": "sample_01_prose_handoff_base.txt",
+    "expected": "sample_01_prose_handoff_base.json"
+  },
+  {
+    "name": "sample_01_prose_handoff_default",
+    "vocab": null,
+    "text": "sample_01_prose_handoff_default.txt",
+    "expected": "sample_01_prose_handoff_default.json"
+  },
+  {
+    "name": "sample_02_clear_handoff",
+    "vocab": "vocab/org-example.yaml",
+    "text": "sample_02_clear_handoff.txt",
+    "expected": "sample_02_clear_handoff.json"
+  },
+  {
+    "name": "sample_02_clear_handoff_base",
+    "vocab": "vocab/base.yaml",
+    "text": "sample_02_clear_handoff_base.txt",
+    "expected": "sample_02_clear_handoff_base.json"
+  },
+  {
+    "name": "sample_02_clear_handoff_default",
+    "vocab": null,
+    "text": "sample_02_clear_handoff_default.txt",
+    "expected": "sample_02_clear_handoff_default.json"
+  },
+  {
+    "name": "sample_03_clear_injection",
+    "vocab": "vocab/org-example.yaml",
+    "text": "sample_03_clear_injection.txt",
+    "expected": "sample_03_clear_injection.json"
+  },
+  {
+    "name": "sample_03_clear_injection_base",
+    "vocab": "vocab/base.yaml",
+    "text": "sample_03_clear_injection_base.txt",
+    "expected": "sample_03_clear_injection_base.json"
+  },
+  {
+    "name": "sample_03_clear_injection_default",
+    "vocab": null,
+    "text": "sample_03_clear_injection_default.txt",
+    "expected": "sample_03_clear_injection_default.json"
+  },
+  {
+    "name": "sample_04_entropic_request",
+    "vocab": "vocab/entropic.yaml",
+    "text": "sample_04_entropic_request.txt",
+    "expected": "sample_04_entropic_request.json"
+  },
+  {
+    "name": "sample_04_entropic_request_base",
+    "vocab": "vocab/base.yaml",
+    "text": "sample_04_entropic_request_base.txt",
+    "expected": "sample_04_entropic_request_base.json"
+  },
+  {
+    "name": "sample_04_entropic_request_default",
+    "vocab": null,
+    "text": "sample_04_entropic_request_default.txt",
+    "expected": "sample_04_entropic_request_default.json"
+  },
+  {
+    "name": "sample_05_driver_report",
+    "vocab": "vocab/entropic.yaml",
+    "text": "sample_05_driver_report.txt",
+    "expected": "sample_05_driver_report.json"
+  },
+  {
+    "name": "sample_05_driver_report_base",
+    "vocab": "vocab/base.yaml",
+    "text": "sample_05_driver_report_base.txt",
+    "expected": "sample_05_driver_report_base.json"
+  },
+  {
+    "name": "sample_05_driver_report_default",
+    "vocab": null,
+    "text": "sample_05_driver_report_default.txt",
+    "expected": "sample_05_driver_report_default.json"
+  },
+  {
+    "name": "sample_06_invitation",
+    "vocab": "vocab/entropic.yaml",
+    "text": "sample_06_invitation.txt",
+    "expected": "sample_06_invitation.json"
+  },
+  {
+    "name": "sample_06_invitation_base",
+    "vocab": "vocab/base.yaml",
+    "text": "sample_06_invitation_base.txt",
+    "expected": "sample_06_invitation_base.json"
+  },
+  {
+    "name": "sample_06_invitation_default",
+    "vocab": null,
+    "text": "sample_06_invitation_default.txt",
+    "expected": "sample_06_invitation_default.json"
+  },
+  {
+    "name": "sample_07_entropic_query",
+    "vocab": "vocab/entropic.yaml",
+    "text": "sample_07_entropic_query.txt",
+    "expected": "sample_07_entropic_query.json"
+  },
+  {
+    "name": "sample_07_entropic_query_base",
+    "vocab": "vocab/base.yaml",
+    "text": "sample_07_entropic_query_base.txt",
+    "expected": "sample_07_entropic_query_base.json"
+  },
+  {
+    "name": "sample_07_entropic_query_default",
+    "vocab": null,
+    "text": "sample_07_entropic_query_default.txt",
+    "expected": "sample_07_entropic_query_default.json"
+  },
+  {
+    "name": "sample_08_entropic_propose",
+    "vocab": "vocab/entropic.yaml",
+    "text": "sample_08_entropic_propose.txt",
+    "expected": "sample_08_entropic_propose.json"
+  },
+  {
+    "name": "sample_08_entropic_propose_base",
+    "vocab": "vocab/base.yaml",
+    "text": "sample_08_entropic_propose_base.txt",
+    "expected": "sample_08_entropic_propose_base.json"
+  },
+  {
+    "name": "sample_08_entropic_propose_default",
+    "vocab": null,
+    "text": "sample_08_entropic_propose_default.txt",
+    "expected": "sample_08_entropic_propose_default.json"
+  },
+  {
+    "name": "sample_09_entropic_bad_request",
+    "vocab": "vocab/entropic.yaml",
+    "text": "sample_09_entropic_bad_request.txt",
+    "expected": "sample_09_entropic_bad_request.json"
+  },
+  {
+    "name": "sample_09_entropic_bad_request_base",
+    "vocab": "vocab/base.yaml",
+    "text": "sample_09_entropic_bad_request_base.txt",
+    "expected": "sample_09_entropic_bad_request_base.json"
+  },
+  {
+    "name": "sample_09_entropic_bad_request_default",
+    "vocab": null,
+    "text": "sample_09_entropic_bad_request_default.txt",
+    "expected": "sample_09_entropic_bad_request_default.json"
+  },
+  {
+    "name": "site_invitation",
+    "vocab": "vocab/entropic.yaml",
+    "text": "site_invitation.txt",
+    "expected": "site_invitation.json"
+  },
+  {
+    "name": "prose",
+    "vocab": "vocab/entropic.yaml",
+    "text": "prose.txt",
+    "expected": "prose.json"
+  },
+  {
+    "name": "h2_request_no_do",
+    "vocab": "vocab/base.yaml",
+    "text": "h2_request_no_do.txt",
+    "expected": "h2_request_no_do.json"
+  },
+  {
+    "name": "h2_inform_with_do",
+    "vocab": "vocab/base.yaml",
+    "text": "h2_inform_with_do.txt",
+    "expected": "h2_inform_with_do.json"
+  },
+  {
+    "name": "s1_untyped",
+    "vocab": "vocab/base.yaml",
+    "text": "s1_untyped.txt",
+    "expected": "s1_untyped.json"
+  },
+  {
+    "name": "s1_unknown_tag",
+    "vocab": "vocab/base.yaml",
+    "text": "s1_unknown_tag.txt",
+    "expected": "s1_unknown_tag.json"
+  },
+  {
+    "name": "s1_qualifier_on_fact",
+    "vocab": "vocab/base.yaml",
+    "text": "s1_qualifier_on_fact.txt",
+    "expected": "s1_qualifier_on_fact.json"
+  },
+  {
+    "name": "s2_two_sentences",
+    "vocab": "vocab/base.yaml",
+    "text": "s2_two_sentences.txt",
+    "expected": "s2_two_sentences.json"
+  },
+  {
+    "name": "s2_time_and_date",
+    "vocab": "vocab/base.yaml",
+    "text": "s2_time_and_date.txt",
+    "expected": "s2_time_and_date.json"
+  },
+  {
+    "name": "s3_long_fact",
+    "vocab": "vocab/base.yaml",
+    "text": "s3_long_fact.txt",
+    "expected": "s3_long_fact.json"
+  },
+  {
+    "name": "s3_long_do",
+    "vocab": "vocab/base.yaml",
+    "text": "s3_long_do.txt",
+    "expected": "s3_long_do.json"
+  },
+  {
+    "name": "s3_ok_do",
+    "vocab": "vocab/base.yaml",
+    "text": "s3_ok_do.txt",
+    "expected": "s3_ok_do.json"
+  },
+  {
+    "name": "s4_duplicate",
+    "vocab": "vocab/base.yaml",
+    "text": "s4_duplicate.txt",
+    "expected": "s4_duplicate.json"
+  },
+  {
+    "name": "s5_no_period",
+    "vocab": "vocab/base.yaml",
+    "text": "s5_no_period.txt",
+    "expected": "s5_no_period.json"
+  },
+  {
+    "name": "i1_no_actor",
+    "vocab": "vocab/base.yaml",
+    "text": "i1_no_actor.txt",
+    "expected": "i1_no_actor.json"
+  },
+  {
+    "name": "i1_lowercase_modal",
+    "vocab": "vocab/base.yaml",
+    "text": "i1_lowercase_modal.txt",
+    "expected": "i1_lowercase_modal.json"
+  },
+  {
+    "name": "i1_ok",
+    "vocab": "vocab/base.yaml",
+    "text": "i1_ok.txt",
+    "expected": "i1_ok.json"
+  },
+  {
+    "name": "i2_second_action",
+    "vocab": "vocab/base.yaml",
+    "text": "i2_second_action.txt",
+    "expected": "i2_second_action.json"
+  },
+  {
+    "name": "i2_and_z",
+    "vocab": "vocab/base.yaml",
+    "text": "i2_and_z.txt",
+    "expected": "i2_and_z.json"
+  },
+  {
+    "name": "i2_semicolon",
+    "vocab": "vocab/base.yaml",
+    "text": "i2_semicolon.txt",
+    "expected": "i2_semicolon.json"
+  },
+  {
+    "name": "i3_passive_do",
+    "vocab": "vocab/base.yaml",
+    "text": "i3_passive_do.txt",
+    "expected": "i3_passive_do.json"
+  },
+  {
+    "name": "i3_passive_fact",
+    "vocab": "vocab/base.yaml",
+    "text": "i3_passive_fact.txt",
+    "expected": "i3_passive_fact.json"
+  },
+  {
+    "name": "i3_adjectival",
+    "vocab": "vocab/base.yaml",
+    "text": "i3_adjectival.txt",
+    "expected": "i3_adjectival.json"
+  },
+  {
+    "name": "i4_should_fact",
+    "vocab": "vocab/base.yaml",
+    "text": "i4_should_fact.txt",
+    "expected": "i4_should_fact.json"
+  },
+  {
+    "name": "i4_needs_to",
+    "vocab": "vocab/base.yaml",
+    "text": "i4_needs_to.txt",
+    "expected": "i4_needs_to.json"
+  },
+  {
+    "name": "i4_do_ok",
+    "vocab": "vocab/base.yaml",
+    "text": "i4_do_ok.txt",
+    "expected": "i4_do_ok.json"
+  },
+  {
+    "name": "c1_no_conf",
+    "vocab": "vocab/base.yaml",
+    "text": "c1_no_conf.txt",
+    "expected": "c1_no_conf.json"
+  },
+  {
+    "name": "c1_bad_conf",
+    "vocab": "vocab/base.yaml",
+    "text": "c1_bad_conf.txt",
+    "expected": "c1_bad_conf.json"
+  },
+  {
+    "name": "c1_ok",
+    "vocab": "vocab/base.yaml",
+    "text": "c1_ok.txt",
+    "expected": "c1_ok.json"
+  },
+  {
+    "name": "c2_hedge_fact",
+    "vocab": "vocab/base.yaml",
+    "text": "c2_hedge_fact.txt",
+    "expected": "c2_hedge_fact.json"
+  },
+  {
+    "name": "c2_hedge_infer",
+    "vocab": "vocab/base.yaml",
+    "text": "c2_hedge_infer.txt",
+    "expected": "c2_hedge_infer.json"
+  },
+  {
+    "name": "c2_about_page",
+    "vocab": "vocab/base.yaml",
+    "text": "c2_about_page.txt",
+    "expected": "c2_about_page.json"
+  },
+  {
+    "name": "c2_about_number",
+    "vocab": "vocab/base.yaml",
+    "text": "c2_about_number.txt",
+    "expected": "c2_about_number.json"
+  },
+  {
+    "name": "c3_no_src",
+    "vocab": "vocab/base.yaml",
+    "text": "c3_no_src.txt",
+    "expected": "c3_no_src.json"
+  },
+  {
+    "name": "c4_bad_src",
+    "vocab": "vocab/base.yaml",
+    "text": "c4_bad_src.txt",
+    "expected": "c4_bad_src.json"
+  },
+  {
+    "name": "c4_two_src",
+    "vocab": "vocab/base.yaml",
+    "text": "c4_two_src.txt",
+    "expected": "c4_two_src.json"
+  },
+  {
+    "name": "r1_it",
+    "vocab": "vocab/base.yaml",
+    "text": "r1_it.txt",
+    "expected": "r1_it.json"
+  },
+  {
+    "name": "r1_they",
+    "vocab": "vocab/base.yaml",
+    "text": "r1_they.txt",
+    "expected": "r1_they.json"
+  },
+  {
+    "name": "r1_this_is",
+    "vocab": "vocab/base.yaml",
+    "text": "r1_this_is.txt",
+    "expected": "r1_this_is.json"
+  },
+  {
+    "name": "r1_this_plan",
+    "vocab": "vocab/base.yaml",
+    "text": "r1_this_plan.txt",
+    "expected": "r1_this_plan.json"
+  },
+  {
+    "name": "r1_that_it",
+    "vocab": "vocab/base.yaml",
+    "text": "r1_that_it.txt",
+    "expected": "r1_that_it.json"
+  },
+  {
+    "name": "r2_yesterday",
+    "vocab": "vocab/base.yaml",
+    "text": "r2_yesterday.txt",
+    "expected": "r2_yesterday.json"
+  },
+  {
+    "name": "r2_ytd",
+    "vocab": "vocab/base.yaml",
+    "text": "r2_ytd.txt",
+    "expected": "r2_ytd.json"
+  },
+  {
+    "name": "r2_ytd_asof",
+    "vocab": "vocab/base.yaml",
+    "text": "r2_ytd_asof.txt",
+    "expected": "r2_ytd_asof.json"
+  },
+  {
+    "name": "r2_next_turn",
+    "vocab": "vocab/entropic.yaml",
+    "text": "r2_next_turn.txt",
+    "expected": "r2_next_turn.json"
+  },
+  {
+    "name": "r3_bare",
+    "vocab": "vocab/base.yaml",
+    "text": "r3_bare.txt",
+    "expected": "r3_bare.json"
+  },
+  {
+    "name": "r3_bare_and",
+    "vocab": "vocab/base.yaml",
+    "text": "r3_bare_and.txt",
+    "expected": "r3_bare_and.json"
+  },
+  {
+    "name": "r3_ok_0",
+    "vocab": "vocab/base.yaml",
+    "text": "r3_ok_0.txt",
+    "expected": "r3_ok_0.json"
+  },
+  {
+    "name": "r3_ok_1",
+    "vocab": "vocab/base.yaml",
+    "text": "r3_ok_1.txt",
+    "expected": "r3_ok_1.json"
+  },
+  {
+    "name": "r3_ok_2",
+    "vocab": "vocab/base.yaml",
+    "text": "r3_ok_2.txt",
+    "expected": "r3_ok_2.json"
+  },
+  {
+    "name": "r3_ok_3",
+    "vocab": "vocab/base.yaml",
+    "text": "r3_ok_3.txt",
+    "expected": "r3_ok_3.json"
+  },
+  {
+    "name": "r3_ok_4",
+    "vocab": "vocab/base.yaml",
+    "text": "r3_ok_4.txt",
+    "expected": "r3_ok_4.json"
+  },
+  {
+    "name": "r3_ok_5",
+    "vocab": "vocab/base.yaml",
+    "text": "r3_ok_5.txt",
+    "expected": "r3_ok_5.json"
+  },
+  {
+    "name": "r3_ok_6",
+    "vocab": "vocab/base.yaml",
+    "text": "r3_ok_6.txt",
+    "expected": "r3_ok_6.json"
+  },
+  {
+    "name": "r3_ok_7",
+    "vocab": "vocab/base.yaml",
+    "text": "r3_ok_7.txt",
+    "expected": "r3_ok_7.json"
+  },
+  {
+    "name": "r3_ok_8",
+    "vocab": "vocab/base.yaml",
+    "text": "r3_ok_8.txt",
+    "expected": "r3_ok_8.json"
+  },
+  {
+    "name": "v1_leverage",
+    "vocab": "vocab/base.yaml",
+    "text": "v1_leverage.txt",
+    "expected": "v1_leverage.json"
+  },
+  {
+    "name": "v2_deal",
+    "vocab": "vocab/org-example.yaml",
+    "text": "v2_deal.txt",
+    "expected": "v2_deal.json"
+  },
+  {
+    "name": "v2_opportunity",
+    "vocab": "vocab/org-example.yaml",
+    "text": "v2_opportunity.txt",
+    "expected": "v2_opportunity.json"
+  },
+  {
+    "name": "v3_xyz",
+    "vocab": "vocab/base.yaml",
+    "text": "v3_xyz.txt",
+    "expected": "v3_xyz.json"
+  },
+  {
+    "name": "v3_usd",
+    "vocab": "vocab/base.yaml",
+    "text": "v3_usd.txt",
+    "expected": "v3_usd.json"
+  },
+  {
+    "name": "v6_po",
+    "vocab": "vocab/base.yaml",
+    "text": "v6_po.txt",
+    "expected": "v6_po.json"
+  },
+  {
+    "name": "v3_quote_word",
+    "vocab": "vocab/base.yaml",
+    "text": "v3_quote_word.txt",
+    "expected": "v3_quote_word.json"
+  },
+  {
+    "name": "v4_very",
+    "vocab": "vocab/base.yaml",
+    "text": "v4_very.txt",
+    "expected": "v4_very.json"
+  },
+  {
+    "name": "v5_drives",
+    "vocab": "vocab/base.yaml",
+    "text": "v5_drives.txt",
+    "expected": "v5_drives.json"
+  },
+  {
+    "name": "x1_ignore",
+    "vocab": "vocab/base.yaml",
+    "text": "x1_ignore.txt",
+    "expected": "x1_ignore.json"
+  },
+  {
+    "name": "x1_please",
+    "vocab": "vocab/base.yaml",
+    "text": "x1_please.txt",
+    "expected": "x1_please.json"
+  },
+  {
+    "name": "x1_must",
+    "vocab": "vocab/base.yaml",
+    "text": "x1_must.txt",
+    "expected": "x1_must.json"
+  },
+  {
+    "name": "x1_ask_delete",
+    "vocab": "vocab/base.yaml",
+    "text": "x1_ask_delete.txt",
+    "expected": "x1_ask_delete.json"
+  },
+  {
+    "name": "x1_quote_ok",
+    "vocab": "vocab/base.yaml",
+    "text": "x1_quote_ok.txt",
+    "expected": "x1_quote_ok.json"
+  },
+  {
+    "name": "x1_attack_damage",
+    "vocab": "vocab/entropic.yaml",
+    "text": "x1_attack_damage.txt",
+    "expected": "x1_attack_damage.json"
+  },
+  {
+    "name": "x1_attack_now",
+    "vocab": "vocab/entropic.yaml",
+    "text": "x1_attack_now.txt",
+    "expected": "x1_attack_now.json"
+  },
+  {
+    "name": "x2_header",
+    "vocab": "vocab/base.yaml",
+    "text": "x2_header.txt",
+    "expected": "x2_header.json"
+  },
+  {
+    "name": "x3_zwsp",
+    "vocab": "vocab/base.yaml",
+    "text": "x3_zwsp.txt",
+    "expected": "x3_zwsp.json"
+  },
+  {
+    "name": "x3_bidi",
+    "vocab": "vocab/base.yaml",
+    "text": "x3_bidi.txt",
+    "expected": "x3_bidi.json"
+  },
+  {
+    "name": "x4_url_base",
+    "vocab": "vocab/base.yaml",
+    "text": "x4_url_base.txt",
+    "expected": "x4_url_base.json"
+  },
+  {
+    "name": "x4_url_game",
+    "vocab": "vocab/entropic.yaml",
+    "text": "x4_url_game.txt",
+    "expected": "x4_url_game.json"
+  },
+  {
+    "name": "a1_two_questions",
+    "vocab": "vocab/base.yaml",
+    "text": "a1_two_questions.txt",
+    "expected": "a1_two_questions.json"
+  },
+  {
+    "name": "a1_no_question",
+    "vocab": "vocab/base.yaml",
+    "text": "a1_no_question.txt",
+    "expected": "a1_no_question.json"
+  },
+  {
+    "name": "a2_unmatched",
+    "vocab": "vocab/entropic.yaml",
+    "text": "a2_unmatched.txt",
+    "expected": "a2_unmatched.json"
+  },
+  {
+    "name": "q1_no_src",
+    "vocab": "vocab/base.yaml",
+    "text": "q1_no_src.txt",
+    "expected": "q1_no_src.json"
+  },
+  {
+    "name": "q1_no_src_game",
+    "vocab": "vocab/entropic.yaml",
+    "text": "q1_no_src_game.txt",
+    "expected": "q1_no_src_game.json"
+  },
+  {
+    "name": "q2_long",
+    "vocab": "vocab/base.yaml",
+    "text": "q2_long.txt",
+    "expected": "q2_long.json"
+  },
+  {
+    "name": "q_carried",
+    "vocab": "vocab/base.yaml",
+    "text": "q_carried.txt",
+    "expected": "q_carried.json"
+  },
+  {
+    "name": "q_header_smuggle",
+    "vocab": "vocab/base.yaml",
+    "text": "q_header_smuggle.txt",
+    "expected": "q_header_smuggle.json"
+  },
+  {
+    "name": "m1_too_many",
+    "vocab": "vocab/base.yaml",
+    "text": "m1_too_many.txt",
+    "expected": "m1_too_many.json"
+  },
+  {
+    "name": "score_75",
+    "vocab": "vocab/base.yaml",
+    "text": "score_75.txt",
+    "expected": "score_75.json"
+  },
+  {
+    "name": "header_only",
+    "vocab": "vocab/base.yaml",
+    "text": "header_only.txt",
+    "expected": "header_only.json"
+  },
+  {
+    "name": "mixed_types",
+    "vocab": "vocab/entropic.yaml",
+    "text": "mixed_types.txt",
+    "expected": "mixed_types.json"
+  },
+  {
+    "name": "do_i_actor",
+    "vocab": "vocab/entropic.yaml",
+    "text": "do_i_actor.txt",
+    "expected": "do_i_actor.json"
+  },
+  {
+    "name": "acronym_unit",
+    "vocab": "vocab/entropic.yaml",
+    "text": "acronym_unit.txt",
+    "expected": "acronym_unit.json"
+  },
+  {
+    "name": "h1_missing_to_bad_intent",
+    "vocab": "vocab/base.yaml",
+    "text": "h1_missing_to_bad_intent.txt",
+    "expected": "h1_missing_to_bad_intent.json"
+  },
+  {
+    "name": "h3_bad_from",
+    "vocab": "vocab/base.yaml",
+    "text": "h3_bad_from.txt",
+    "expected": "h3_bad_from.json"
+  },
+  {
+    "name": "h3_same_actor",
+    "vocab": "vocab/base.yaml",
+    "text": "h3_same_actor.txt",
+    "expected": "h3_same_actor.json"
+  },
+  {
+    "name": "i5_self_nuke",
+    "vocab": "vocab/entropic.yaml",
+    "text": "i5_self_nuke.txt",
+    "expected": "i5_self_nuke.json"
+  },
+  {
+    "name": "i5_other_nuke",
+    "vocab": "vocab/entropic.yaml",
+    "text": "i5_other_nuke.txt",
+    "expected": "i5_other_nuke.json"
+  },
+  {
+    "name": "i5_self_attack",
+    "vocab": "vocab/entropic.yaml",
+    "text": "i5_self_attack.txt",
+    "expected": "i5_self_attack.json"
+  },
+  {
+    "name": "a2_matched",
+    "vocab": "vocab/entropic.yaml",
+    "text": "a2_matched.txt",
+    "expected": "a2_matched.json"
+  },
+  {
+    "name": "a2_where",
+    "vocab": "vocab/entropic.yaml",
+    "text": "a2_where.txt",
+    "expected": "a2_where.json"
+  },
+  {
+    "name": "crlf",
+    "vocab": "vocab/base.yaml",
+    "text": "crlf.txt",
+    "expected": "crlf.json"
+  },
+  {
+    "name": "no_blank_after_header",
+    "vocab": "vocab/base.yaml",
+    "text": "no_blank_after_header.txt",
+    "expected": "no_blank_after_header.json"
+  },
+  {
+    "name": "empty",
+    "vocab": "vocab/base.yaml",
+    "text": "empty.txt",
+    "expected": "empty.json"
+  },
+  {
+    "name": "unicode_words",
+    "vocab": "vocab/entropic.yaml",
+    "text": "unicode_words.txt",
+    "expected": "unicode_words.json"
+  }
+]

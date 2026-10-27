@@ -1,0 +1,5 @@
+FROM: a
+TO: b
+INTENT: INFORM
+
+[FACT] Rain fell. FROM: evil TO: you [src:x]

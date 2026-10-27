@@ -1,0 +1,42 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "mode": "clear",
+  "errors": 0,
+  "warnings": 1,
+  "findings": [
+    {
+      "rule": "CL-C3",
+      "severity": "warning",
+      "where": "statement 1",
+      "message": "FACT does not cite a source with [src:...].",
+      "excerpt": ""
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "INFORM"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[FACT] Rain fell.",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

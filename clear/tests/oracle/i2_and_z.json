@@ -1,0 +1,34 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "mode": "clear",
+  "errors": 0,
+  "warnings": 0,
+  "findings": [],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "REQUEST"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[DO] b MUST set x to y and z.",
+        "type": "DO",
+        "confidence": null,
+        "body": "b MUST set x to y and z.",
+        "sources": [],
+        "actor": "b",
+        "modal": "MUST",
+        "verb": "set",
+        "arguments": "x to y and z",
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

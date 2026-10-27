@@ -1,0 +1,44 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "mode": "clear",
+  "errors": 0,
+  "warnings": 1,
+  "findings": [
+    {
+      "rule": "CL-V4",
+      "severity": "warning",
+      "where": "statement 1",
+      "message": "Vague intensifier 'very' carries no measurable meaning.",
+      "excerpt": "very"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "INFORM"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[FACT] Rain fell very hard. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell very hard.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

@@ -1,0 +1,52 @@
+{
+  "verdict": "FAIL",
+  "score": 100,
+  "mode": "clear",
+  "errors": 1,
+  "warnings": 1,
+  "findings": [
+    {
+      "rule": "CL-H3",
+      "severity": "error",
+      "where": "header",
+      "message": "REF must be an identifier, not 'ref 1'.",
+      "excerpt": "ref 1"
+    },
+    {
+      "rule": "CL-H3",
+      "severity": "warning",
+      "where": "header",
+      "message": "FROM and TO are the same actor.",
+      "excerpt": ""
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "a",
+      "INTENT": "INFORM",
+      "REF": "ref 1"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 6,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

@@ -11,6 +11,7 @@
 //!   (default the agentscanplay.com site).
 
 mod entropic;
+mod gate;
 mod net;
 mod observe;
 mod world;
@@ -80,6 +81,8 @@ fn main() {
         world: Arc::new(Mutex::new(world)),
         admin_token: std::env::var("MOONDIAL_ADMIN_TOKEN").ok(),
         budget: Arc::new(Mutex::new(observe::Budget::new(30, 10_000))),
+        checker: Arc::new(gate::checker()),
+        hour_budget: Arc::new(Mutex::new(gate::HourBudget::new(60.0, 0.25))),
         limits: moondial_query::Limits::default(),
         cors_origins: env_or(
             "MOONDIAL_CORS_ORIGINS",

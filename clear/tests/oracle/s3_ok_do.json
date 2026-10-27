@@ -1,0 +1,34 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "mode": "clear",
+  "errors": 0,
+  "warnings": 0,
+  "findings": [],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "REQUEST"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[DO] b MUST set word word word word word word word word word word word word word word word word.",
+        "type": "DO",
+        "confidence": null,
+        "body": "b MUST set word word word word word word word word word word word word word word word word.",
+        "sources": [],
+        "actor": "b",
+        "modal": "MUST",
+        "verb": "set",
+        "arguments": "word word word word word word word word word word word word word word word word",
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

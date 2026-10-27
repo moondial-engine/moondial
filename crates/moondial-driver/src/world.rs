@@ -95,6 +95,24 @@ impl World {
             .record(self.log.as_mut(), &self.id, at, actor, event)
     }
 
+    /// Append an event that is not a store event: a message through the Gate, say. The
+    /// store ignores it on replay; it is in the log for the record, which is the point.
+    pub fn note(&mut self, actor: Actor, kind: &str, payload: Value) -> Result<Event, String> {
+        let at = self.now();
+        self.log
+            .append(
+                &self.id,
+                moondial_log::NewEvent {
+                    at,
+                    kind: kind.to_string(),
+                    actor,
+                    cause: None,
+                    payload,
+                },
+            )
+            .map_err(|e| e.to_string())
+    }
+
     /// The last `n` events, oldest first.
     pub fn recent_events(&self, n: usize) -> Vec<Event> {
         let head = self

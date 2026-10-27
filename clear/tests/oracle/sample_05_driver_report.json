@@ -1,0 +1,105 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "mode": "clear",
+  "errors": 0,
+  "warnings": 0,
+  "findings": [],
+  "message": {
+    "header": {
+      "FROM": "entropic",
+      "TO": "lantern-7",
+      "INTENT": "REPORT",
+      "REF": "lantern-7-acid-cave-2026-10-26"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 6,
+        "raw": "[FACT] lantern-7 coated blade-01 with resin-01 at 2026-10-26T04:11Z. [src:ev-88241]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "lantern-7 coated blade-01 with resin-01 at 2026-10-26T04:11Z.",
+        "sources": [
+          "ev-88241"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 2,
+        "line": 7,
+        "raw": "[FACT] lantern-7 moved north 3 tiles to tile 14,9 at 2026-10-26T04:11Z. [src:ev-88242]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "lantern-7 moved north 3 tiles to tile 14,9 at 2026-10-26T04:11Z.",
+        "sources": [
+          "ev-88242"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 3,
+        "line": 8,
+        "raw": "[FACT] Statement 3 of message lantern-7-acid-cave-2026-10-26 failed rule CL-R2. [src:clear_check]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Statement 3 of message lantern-7-acid-cave-2026-10-26 failed rule CL-R2.",
+        "sources": [
+          "clear_check"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 4,
+        "line": 9,
+        "raw": "[FACT] The acid cave encounter enc-301 began at turn 1 with 2 actors. [src:ev-88243]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "The acid cave encounter enc-301 began at turn 1 with 2 actors.",
+        "sources": [
+          "ev-88243"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 5,
+        "line": 10,
+        "raw": "[QUOTE] Turn back, lantern-7. [src:npc-warden-02]",
+        "type": "QUOTE",
+        "confidence": null,
+        "body": "Turn back, lantern-7.",
+        "sources": [
+          "npc-warden-02"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "entropic"
+}

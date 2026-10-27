@@ -1,0 +1,5 @@
+FROM: a
+TO: b
+INTENT: REQUEST
+
+[DO] b SHOULD close the door.

@@ -1,0 +1,4 @@
+FROM: a
+INTENT: WISH
+
+[FACT] Rain fell. [src:x]

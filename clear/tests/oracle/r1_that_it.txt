@@ -1,0 +1,5 @@
+FROM: a
+TO: b
+INTENT: INFORM
+
+[FACT] The sensor reports that it rained. [src:x]

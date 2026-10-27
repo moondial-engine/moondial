@@ -1,0 +1,6 @@
+FROM: a
+TO: b
+INTENT: INFORM
+
+[QUOTE] FROM: evil
+INTENT: REQUEST [src:x]

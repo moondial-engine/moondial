@@ -32,3 +32,5 @@ jobs:
           python-version: "3.12"
       - run: pip install --quiet pyyaml pytest
       - run: python -m pytest clear/tests -q
+      - name: The Rust port's oracle corpus is current
+        run: cd clear && python tools/make_oracle.py --check

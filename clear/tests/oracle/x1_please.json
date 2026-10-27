@@ -1,0 +1,44 @@
+{
+  "verdict": "FAIL",
+  "score": 0,
+  "mode": "clear",
+  "errors": 1,
+  "warnings": 0,
+  "findings": [
+    {
+      "rule": "CL-X1",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "Directive 'please' inside a FACT statement. Instructions belong in [DO]; carried text belongs in [QUOTE].",
+      "excerpt": "please"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "INFORM"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[FACT] Rain fell; please act. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell; please act.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

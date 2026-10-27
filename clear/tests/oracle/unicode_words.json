@@ -1,0 +1,44 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "mode": "clear",
+  "errors": 0,
+  "warnings": 1,
+  "findings": [
+    {
+      "rule": "CL-R3",
+      "severity": "warning",
+      "where": "statement 1",
+      "message": "'2' has no unit.",
+      "excerpt": "2"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "entropic",
+      "INTENT": "INFORM"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[FACT] The café’s door is 2 m wide. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "The café’s door is 2 m wide.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "entropic"
+}

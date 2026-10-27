@@ -1,0 +1,5 @@
+FROM: lantern-7
+TO: entropic
+INTENT: REQUEST
+
+[DO] lantern-7 MUST attack the hydra.

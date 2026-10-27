@@ -36,6 +36,10 @@ pub struct Shared {
     pub budget: Arc<Mutex<crate::observe::Budget>>,
     /// Limits every observation is checked against.
     pub limits: moondial_query::Limits,
+    /// The world's CLEAR checker, compiled once.
+    pub checker: Arc<moondial_clear::Checker>,
+    /// The Gate's hourly budget per agent.
+    pub hour_budget: Arc<Mutex<crate::gate::HourBudget>>,
     /// Origins the browser client may call from (`MOONDIAL_CORS_ORIGINS`, comma-separated).
     pub cors_origins: Vec<String>,
 }
@@ -389,6 +393,43 @@ async fn observe_http(
     }
 }
 
+#[derive(Deserialize)]
+struct GateBody {
+    actor: String,
+    #[serde(default)]
+    passphrase: String,
+    message: String,
+}
+
+/// `POST /v0/gate {actor, passphrase, message}`: one CLEAR message through the Gate.
+/// The reply is a CLEAR REPORT; the JSON around it carries the verdict, the score, the
+/// findings and the budget left. Everything the world did is in the reply's FACT lines.
+async fn gate_http(State(s): State<Shared>, Json(body): Json<GateBody>) -> Reply {
+    let mut w = lock(&s)?;
+    http_login(&mut w, &body.actor, &body.passphrase)?;
+    let mut budget = s
+        .hour_budget
+        .lock()
+        .map_err(|_| err_json(StatusCode::INTERNAL_SERVER_ERROR, "budget lock poisoned"))?;
+    let passage = crate::gate::pass(
+        &mut w,
+        &s.checker,
+        &mut budget,
+        &crate::entropic::ask::Asks,
+        &body.actor,
+        &body.message,
+    );
+    Ok(Json(json!({
+        "ok": true,
+        "verdict": passage.verdict,
+        "score": passage.score,
+        "acted": passage.acted,
+        "reply": passage.reply,
+        "findings": passage.findings,
+        "budget_remaining": passage.budget_remaining,
+    })))
+}
+
 async fn view(
     State(s): State<Shared>,
     Path(id): Path<u64>,
@@ -451,6 +492,7 @@ pub fn router(shared: Shared) -> Router {
         .route("/v0/login", post(login))
         .route("/v0/command", post(command))
         .route("/v0/observe", post(observe_http))
+        .route("/v0/gate", post(gate_http))
         .route("/v0/view/{id}", get(view))
         .route("/v0/log", get(log))
         .layer(cors)

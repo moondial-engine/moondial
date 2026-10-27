@@ -1,0 +1,80 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "mode": "clear",
+  "errors": 0,
+  "warnings": 1,
+  "findings": [
+    {
+      "rule": "CL-V4",
+      "severity": "warning",
+      "where": "statement 3",
+      "message": "Vague intensifier 'many' carries no measurable meaning.",
+      "excerpt": "many"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "entropic",
+      "INTENT": "QUERY"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[ASK] Where is the hydra?",
+        "type": "ASK",
+        "confidence": null,
+        "body": "Where is the hydra?",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": "^where is (?P<entity>[a-z0-9 _-]+)\\?$",
+        "slots": {
+          "entity": "the hydra"
+        }
+      },
+      {
+        "index": 2,
+        "line": 6,
+        "raw": "[ASK] What is the level of spacepants?",
+        "type": "ASK",
+        "confidence": null,
+        "body": "What is the level of spacepants?",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": "^what is the (?P<prop>[a-z ]+?) of (?P<entity>[a-z0-9 _-]+)\\?$",
+        "slots": {
+          "prop": "level",
+          "entity": "spacepants"
+        }
+      },
+      {
+        "index": 3,
+        "line": 7,
+        "raw": "[ASK] How many chunks does spacepants hold?",
+        "type": "ASK",
+        "confidence": null,
+        "body": "How many chunks does spacepants hold?",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": "^how many (?P<noun>[a-z ]+?) (?P<rest>.+)\\?$",
+        "slots": {
+          "noun": "chunks",
+          "rest": "does spacepants hold"
+        }
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "entropic"
+}

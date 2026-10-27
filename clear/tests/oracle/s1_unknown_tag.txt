@@ -1,0 +1,5 @@
+FROM: a
+TO: b
+INTENT: INFORM
+
+[NOTE] Rain fell.

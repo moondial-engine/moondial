@@ -1,0 +1,5 @@
+FROM: a
+TO: entropic
+INTENT: QUERY
+
+[ASK] Which palaces in township-briar hold a hydra chunk?

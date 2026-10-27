@@ -1,0 +1,66 @@
+{
+  "verdict": "FAIL",
+  "score": 0,
+  "mode": "clear",
+  "errors": 2,
+  "warnings": 0,
+  "findings": [
+    {
+      "rule": "CL-S1",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "Statement has no type tag.",
+      "excerpt": "The hydra sleeps at tile 3,4. [src:ev-1]"
+    },
+    {
+      "rule": "CL-S1",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "Statement has no type tag.",
+      "excerpt": "The warden guards the gate."
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "INFORM"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "The hydra sleeps at tile 3,4. [src:ev-1]",
+        "type": null,
+        "confidence": null,
+        "body": "The hydra sleeps at tile 3,4.",
+        "sources": [
+          "ev-1"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 2,
+        "line": 6,
+        "raw": "The warden guards the gate.",
+        "type": null,
+        "confidence": null,
+        "body": "The warden guards the gate.",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "entropic"
+}

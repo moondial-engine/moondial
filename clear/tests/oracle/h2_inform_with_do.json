@@ -1,0 +1,42 @@
+{
+  "verdict": "FAIL",
+  "score": 100,
+  "mode": "clear",
+  "errors": 1,
+  "warnings": 0,
+  "findings": [
+    {
+      "rule": "CL-H2",
+      "severity": "error",
+      "where": "header",
+      "message": "INTENT INFORM must not carry [DO] statements. Use REQUEST or PROPOSE for instructions.",
+      "excerpt": ""
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "INFORM"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[DO] b MUST set x to y.",
+        "type": "DO",
+        "confidence": null,
+        "body": "b MUST set x to y.",
+        "sources": [],
+        "actor": "b",
+        "modal": "MUST",
+        "verb": "set",
+        "arguments": "x to y",
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

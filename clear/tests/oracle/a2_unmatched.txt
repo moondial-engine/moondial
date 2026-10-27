@@ -1,0 +1,5 @@
+FROM: a
+TO: b
+INTENT: QUERY
+
+[ASK] Could you maybe tell me about hydras?

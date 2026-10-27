@@ -1,0 +1,5 @@
+FROM: a
+TO: b
+INTENT: INFORM
+
+[FACT] Attack damage is 5 HP. [src:x]

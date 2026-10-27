@@ -1,0 +1,1004 @@
+{
+  "verdict": "FAIL",
+  "score": 100,
+  "mode": "clear",
+  "errors": 1,
+  "warnings": 40,
+  "findings": [
+    {
+      "rule": "CL-M1",
+      "severity": "error",
+      "where": "message",
+      "message": "41 statements exceed the limit of 40.",
+      "excerpt": ""
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 2",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 3",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 4",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 5",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 6",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 7",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 8",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 9",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 10",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 11",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 12",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 13",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 14",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 15",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 16",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 17",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 18",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 19",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 20",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 21",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 22",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 23",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 24",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 25",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 26",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 27",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 28",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 29",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 30",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 31",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 32",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 33",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 34",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 35",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 36",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 37",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 38",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 39",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 40",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    },
+    {
+      "rule": "CL-S4",
+      "severity": "warning",
+      "where": "statement 41",
+      "message": "Statement repeats statement 1.",
+      "excerpt": "Rain fell."
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "INFORM"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 2,
+        "line": 6,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 3,
+        "line": 7,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 4,
+        "line": 8,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 5,
+        "line": 9,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 6,
+        "line": 10,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 7,
+        "line": 11,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 8,
+        "line": 12,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 9,
+        "line": 13,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 10,
+        "line": 14,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 11,
+        "line": 15,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 12,
+        "line": 16,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 13,
+        "line": 17,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 14,
+        "line": 18,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 15,
+        "line": 19,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 16,
+        "line": 20,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 17,
+        "line": 21,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 18,
+        "line": 22,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 19,
+        "line": 23,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 20,
+        "line": 24,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 21,
+        "line": 25,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 22,
+        "line": 26,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 23,
+        "line": 27,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 24,
+        "line": 28,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 25,
+        "line": 29,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 26,
+        "line": 30,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 27,
+        "line": 31,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 28,
+        "line": 32,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 29,
+        "line": 33,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 30,
+        "line": 34,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 31,
+        "line": 35,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 32,
+        "line": 36,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 33,
+        "line": 37,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 34,
+        "line": 38,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 35,
+        "line": 39,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 36,
+        "line": 40,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 37,
+        "line": 41,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 38,
+        "line": 42,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 39,
+        "line": 43,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 40,
+        "line": 44,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 41,
+        "line": 45,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

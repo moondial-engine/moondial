@@ -1,0 +1,16 @@
+[package]
+name = "moondial-clear"
+version = "0.3.0"
+description = "CLEAR v0.3 in Rust: the layer-1 Legibility check (a port of clear_check.py, verified against it) and the parsed message a world gate compiles."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = "0.9"
+fancy-regex = "0.14"
+thiserror = { workspace = true }

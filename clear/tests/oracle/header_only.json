@@ -1,0 +1,26 @@
+{
+  "verdict": "FAIL",
+  "score": 0,
+  "mode": "clear",
+  "errors": 1,
+  "warnings": 0,
+  "findings": [
+    {
+      "rule": "CL-S1",
+      "severity": "error",
+      "where": "message",
+      "message": "The message has a header but no statements.",
+      "excerpt": ""
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "INFORM"
+    },
+    "statements": [],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

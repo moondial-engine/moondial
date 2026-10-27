@@ -1,0 +1,34 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "mode": "clear",
+  "errors": 0,
+  "warnings": 0,
+  "findings": [],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "REQUEST"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[DO] b SHOULD close the door.",
+        "type": "DO",
+        "confidence": null,
+        "body": "b SHOULD close the door.",
+        "sources": [],
+        "actor": "b",
+        "modal": "SHOULD",
+        "verb": "close",
+        "arguments": "the door",
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

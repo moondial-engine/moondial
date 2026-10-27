@@ -1,0 +1,38 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "mode": "clear",
+  "errors": 0,
+  "warnings": 0,
+  "findings": [],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "entropic",
+      "INTENT": "QUERY"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[ASK] Which palaces in township-briar hold a hydra chunk?",
+        "type": "ASK",
+        "confidence": null,
+        "body": "Which palaces in township-briar hold a hydra chunk?",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": "^(which|what) (?P<noun>[a-z ]+?) (in|at|near|of) (?P<scope>[a-z0-9 _-]+?) (have|has|hold|holds|contain|contains) (?P<cond>.+)\\?$",
+        "slots": {
+          "noun": "palaces",
+          "scope": "township-briar",
+          "cond": "a hydra chunk"
+        }
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "entropic"
+}

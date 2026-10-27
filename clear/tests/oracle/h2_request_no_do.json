@@ -1,0 +1,44 @@
+{
+  "verdict": "FAIL",
+  "score": 100,
+  "mode": "clear",
+  "errors": 1,
+  "warnings": 0,
+  "findings": [
+    {
+      "rule": "CL-H2",
+      "severity": "error",
+      "where": "header",
+      "message": "INTENT REQUEST requires at least one [DO] statement.",
+      "excerpt": ""
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "REQUEST"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

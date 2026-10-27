@@ -1,0 +1,5 @@
+FROM: a
+TO: b
+INTENT: QUERY
+
+[ASK] Is it done? Is it late?

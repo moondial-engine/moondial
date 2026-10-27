@@ -1,0 +1,5 @@
+FROM: a
+TO: b
+INTENT: QUERY
+
+[ASK] Tell me the date.

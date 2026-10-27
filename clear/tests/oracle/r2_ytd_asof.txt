@@ -1,0 +1,5 @@
+FROM: a
+TO: b
+INTENT: INFORM
+
+[FACT] Revenue YTD as of 2026-09-30 is 5 USD. [src:x]

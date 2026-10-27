@@ -1,0 +1,50 @@
+{
+  "verdict": "FAIL",
+  "score": 100,
+  "mode": "clear",
+  "errors": 2,
+  "warnings": 0,
+  "findings": [
+    {
+      "rule": "CL-H1",
+      "severity": "error",
+      "where": "header",
+      "message": "Header is missing TO.",
+      "excerpt": ""
+    },
+    {
+      "rule": "CL-H1",
+      "severity": "error",
+      "where": "header",
+      "message": "INTENT 'WISH' is not approved. Use one of: INFORM, PROPOSE, QUERY, REPORT, REQUEST.",
+      "excerpt": "WISH"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "INTENT": "WISH"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 4,
+        "raw": "[FACT] Rain fell. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Rain fell.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

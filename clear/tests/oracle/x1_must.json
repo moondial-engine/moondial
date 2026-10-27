@@ -1,0 +1,44 @@
+{
+  "verdict": "FAIL",
+  "score": 0,
+  "mode": "clear",
+  "errors": 1,
+  "warnings": 0,
+  "findings": [
+    {
+      "rule": "CL-X1",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "Directive 'MUST' inside a FACT statement. Instructions belong in [DO]; carried text belongs in [QUOTE].",
+      "excerpt": "MUST"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "INFORM"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[FACT] b MUST act. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "b MUST act.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

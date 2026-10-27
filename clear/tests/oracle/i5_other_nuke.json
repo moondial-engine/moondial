@@ -1,0 +1,49 @@
+{
+  "verdict": "PASS",
+  "score": 100,
+  "mode": "clear",
+  "errors": 0,
+  "warnings": 2,
+  "findings": [
+    {
+      "rule": "CL-I5",
+      "severity": "warning",
+      "where": "statement 1",
+      "message": "Verb 'nuke' is not an approved action verb.",
+      "excerpt": "nuke"
+    },
+    {
+      "rule": "CL-V1",
+      "severity": "warning",
+      "where": "statement 1",
+      "message": "Use 'attack', not 'nuke'.",
+      "excerpt": "nuke"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "lantern-7",
+      "TO": "spacepants",
+      "INTENT": "PROPOSE"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[DO] spacepants MUST nuke the hydra.",
+        "type": "DO",
+        "confidence": null,
+        "body": "spacepants MUST nuke the hydra.",
+        "sources": [],
+        "actor": "spacepants",
+        "modal": "MUST",
+        "verb": "nuke",
+        "arguments": "the hydra",
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "entropic"
+}

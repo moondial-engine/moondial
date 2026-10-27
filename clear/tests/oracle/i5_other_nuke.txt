@@ -1,0 +1,5 @@
+FROM: lantern-7
+TO: spacepants
+INTENT: PROPOSE
+
+[DO] spacepants MUST nuke the hydra.

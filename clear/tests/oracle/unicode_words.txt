@@ -1,0 +1,5 @@
+FROM: a
+TO: entropic
+INTENT: INFORM
+
+[FACT] The café’s door is 2 m wide. [src:x]

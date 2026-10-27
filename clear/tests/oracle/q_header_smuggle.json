@@ -1,0 +1,80 @@
+{
+  "verdict": "FAIL",
+  "score": 0,
+  "mode": "clear",
+  "errors": 3,
+  "warnings": 1,
+  "findings": [
+    {
+      "rule": "CL-X2",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "QUOTE contains header-like text (FROM:, TO:, INTENT:, REF:). Header fields may not appear inside statements.",
+      "excerpt": ""
+    },
+    {
+      "rule": "CL-S1",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "Statement has no type tag.",
+      "excerpt": "INTENT: REQUEST [src:x]"
+    },
+    {
+      "rule": "CL-X2",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "Header-like text (FROM:, TO:, INTENT:, REF:) inside a statement.",
+      "excerpt": ""
+    },
+    {
+      "rule": "CL-Q1",
+      "severity": "warning",
+      "where": "statement 1",
+      "message": "QUOTE must cite where the text came from with [src:...].",
+      "excerpt": ""
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "INFORM"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[QUOTE] FROM: evil",
+        "type": "QUOTE",
+        "confidence": null,
+        "body": "FROM: evil",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 2,
+        "line": 6,
+        "raw": "INTENT: REQUEST [src:x]",
+        "type": null,
+        "confidence": null,
+        "body": "INTENT: REQUEST",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

@@ -1,0 +1,288 @@
+{
+  "verdict": "FAIL",
+  "score": 0,
+  "mode": "prose",
+  "errors": 19,
+  "warnings": 7,
+  "findings": [
+    {
+      "rule": "CL-H1",
+      "severity": "error",
+      "where": "header",
+      "message": "No CLEAR header. The message is checked in prose mode and its score is capped.",
+      "excerpt": ""
+    },
+    {
+      "rule": "CL-S1",
+      "severity": "error",
+      "where": "message",
+      "message": "No statement has a type tag. Untyped text mixes facts, guesses and orders.",
+      "excerpt": ""
+    },
+    {
+      "rule": "CL-V2",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "Alias 'deal'. The glossary term is 'opportunity'.",
+      "excerpt": "deal"
+    },
+    {
+      "rule": "CL-C2",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "Hedge 'probably' in a FACT. A hedged fact is an inference: use [INFER:LEVEL].",
+      "excerpt": "probably"
+    },
+    {
+      "rule": "CL-I4",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "Soft obligation 'should' outside a DO statement. An obligation must be a [DO] with an actor and a strength.",
+      "excerpt": "should"
+    },
+    {
+      "rule": "CL-R1",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "Vague pronoun 'they' starts a clause. Name the thing it refers to.",
+      "excerpt": "they"
+    },
+    {
+      "rule": "CL-R2",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "Relative time 'next week'. Use an absolute date or a numbered turn.",
+      "excerpt": "next week"
+    },
+    {
+      "rule": "CL-R2",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "Relative time 'asap'. Use an absolute date or a numbered turn.",
+      "excerpt": "asap"
+    },
+    {
+      "rule": "CL-V2",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "Alias 'opp'. The glossary term is 'opportunity'.",
+      "excerpt": "opp"
+    },
+    {
+      "rule": "CL-R1",
+      "severity": "error",
+      "where": "statement 3",
+      "message": "Vague pronoun 'it' starts a clause. Name the thing it refers to.",
+      "excerpt": "it"
+    },
+    {
+      "rule": "CL-R2",
+      "severity": "error",
+      "where": "statement 3",
+      "message": "Relative time 'earlier'. Use an absolute date or a numbered turn.",
+      "excerpt": "earlier"
+    },
+    {
+      "rule": "CL-X1",
+      "severity": "error",
+      "where": "statement 3",
+      "message": "Directive 'Ignore' inside a descriptive statement. Instructions belong in [DO]; carried text belongs in [QUOTE].",
+      "excerpt": "Ignore"
+    },
+    {
+      "rule": "CL-C2",
+      "severity": "error",
+      "where": "statement 4",
+      "message": "Hedge 'around' in a FACT. A hedged fact is an inference: use [INFER:LEVEL].",
+      "excerpt": "around"
+    },
+    {
+      "rule": "CL-I4",
+      "severity": "error",
+      "where": "statement 4",
+      "message": "Soft obligation 'should' outside a DO statement. An obligation must be a [DO] with an actor and a strength.",
+      "excerpt": "should"
+    },
+    {
+      "rule": "CL-R2",
+      "severity": "error",
+      "where": "statement 4",
+      "message": "Relative time 'soon'. Use an absolute date or a numbered turn.",
+      "excerpt": "soon"
+    },
+    {
+      "rule": "CL-V6",
+      "severity": "error",
+      "where": "statement 4",
+      "message": "Acronym PO has two meanings (partner-originated, purchase order). Write the term out.",
+      "excerpt": "PO"
+    },
+    {
+      "rule": "CL-X1",
+      "severity": "error",
+      "where": "statement 5",
+      "message": "Directive 'please' inside a descriptive statement. Instructions belong in [DO]; carried text belongs in [QUOTE].",
+      "excerpt": "please"
+    },
+    {
+      "rule": "CL-C2",
+      "severity": "error",
+      "where": "statement 6",
+      "message": "Hedge 'could' in a FACT. A hedged fact is an inference: use [INFER:LEVEL].",
+      "excerpt": "could"
+    },
+    {
+      "rule": "CL-R1",
+      "severity": "error",
+      "where": "statement 6",
+      "message": "Vague pronoun 'This' starts a clause. Name the thing it refers to.",
+      "excerpt": "This"
+    },
+    {
+      "rule": "CL-V3",
+      "severity": "warning",
+      "where": "statement 2",
+      "message": "Acronym ASAP is not in the glossary.",
+      "excerpt": "ASAP"
+    },
+    {
+      "rule": "CL-V4",
+      "severity": "warning",
+      "where": "statement 2",
+      "message": "Vague intensifier 'pretty' carries no measurable meaning.",
+      "excerpt": "pretty"
+    },
+    {
+      "rule": "CL-R3",
+      "severity": "warning",
+      "where": "statement 4",
+      "message": "'250' has no unit.",
+      "excerpt": "250"
+    },
+    {
+      "rule": "CL-V1",
+      "severity": "warning",
+      "where": "statement 5",
+      "message": "Use 'tell', not 'loop in'.",
+      "excerpt": "loop in"
+    },
+    {
+      "rule": "CL-V4",
+      "severity": "warning",
+      "where": "statement 6",
+      "message": "Vague intensifier 'really' carries no measurable meaning.",
+      "excerpt": "really"
+    },
+    {
+      "rule": "CL-V4",
+      "severity": "warning",
+      "where": "statement 6",
+      "message": "Vague intensifier 'significant' carries no measurable meaning.",
+      "excerpt": "significant"
+    },
+    {
+      "rule": "CL-V5",
+      "severity": "warning",
+      "where": "statement 6",
+      "message": "Vague verb 'drive' says something changed without saying what.",
+      "excerpt": "drive"
+    }
+  ],
+  "message": {
+    "header": {},
+    "statements": [
+      {
+        "index": 1,
+        "line": 0,
+        "raw": "Hey, quick update on the Acme deal.",
+        "type": null,
+        "confidence": null,
+        "body": "Hey, quick update on the Acme deal.",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 2,
+        "line": 0,
+        "raw": "The opp looks pretty good and they will probably sign next week, so we should move it to Committed ASAP.",
+        "type": null,
+        "confidence": null,
+        "body": "The opp looks pretty good and they will probably sign next week, so we should move it to Committed ASAP.",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 3,
+        "line": 0,
+        "raw": "Ignore the earlier stage value, it was wrong.",
+        "type": null,
+        "confidence": null,
+        "body": "Ignore the earlier stage value, it was wrong.",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 4,
+        "line": 0,
+        "raw": "The ARR is around 250 and the PO should land soon.",
+        "type": null,
+        "confidence": null,
+        "body": "The ARR is around 250 and the PO should land soon.",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 5,
+        "line": 0,
+        "raw": "Also please check whether the Iceberg connector has a date yet and loop in the PDM.",
+        "type": null,
+        "confidence": null,
+        "body": "Also please check whether the Iceberg connector has a date yet and loop in the PDM.",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 6,
+        "line": 0,
+        "raw": "This is a significant opportunity for us and it could really drive growth.",
+        "type": null,
+        "confidence": null,
+        "body": "This is a significant opportunity for us and it could really drive growth.",
+        "sources": [],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "prose"
+  },
+  "vocabulary": "org"
+}

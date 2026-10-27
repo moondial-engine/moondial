@@ -1,0 +1,44 @@
+{
+  "verdict": "FAIL",
+  "score": 0,
+  "mode": "clear",
+  "errors": 1,
+  "warnings": 0,
+  "findings": [
+    {
+      "rule": "CL-C2",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "Hedge 'about' in a FACT. A hedged fact is an inference: use [INFER:LEVEL].",
+      "excerpt": "about"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "a",
+      "TO": "b",
+      "INTENT": "INFORM"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 5,
+        "raw": "[FACT] The total is about 250 USD. [src:x]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "The total is about 250 USD.",
+        "sources": [
+          "x"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "base"
+}

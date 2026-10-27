@@ -1,0 +1,9 @@
+FROM: a
+TO: b
+INTENT: PROPOSE
+
+[FACT] Rain fell at 10:30. [src:ev-1]
+[INFER:MEDIUM] Snow follows rain.
+[DO] b MAY close the window.
+[ASK] Where is b?
+[QUOTE] Rain, rain, go away. [src:song]

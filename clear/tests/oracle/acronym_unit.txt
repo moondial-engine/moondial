@@ -1,0 +1,5 @@
+FROM: a
+TO: b
+INTENT: INFORM
+
+[FACT] The chunk is worth 15 XP. [src:ev-1]
