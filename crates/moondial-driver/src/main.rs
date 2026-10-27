@@ -7,6 +7,8 @@
 //! - `MOONDIAL_HTTP`: HTTP listener (default `127.0.0.1:7777`).
 //! - `MOONDIAL_ADMIN_TOKEN`: enables `admin <token>` and the `X-Moondial-Admin` header.
 //! - `MOONDIAL_ACTIVE_HALF_LIFE_SECONDS`: the active window's half-life (default 3600).
+//! - `MOONDIAL_CORS_ORIGINS`: browser origins allowed to call the HTTP port, comma-separated
+//!   (default the agentscanplay.com site).
 
 mod entropic;
 mod net;
@@ -76,6 +78,13 @@ fn main() {
     let shared = net::Shared {
         world: Arc::new(Mutex::new(world)),
         admin_token: std::env::var("MOONDIAL_ADMIN_TOKEN").ok(),
+        cors_origins: env_or(
+            "MOONDIAL_CORS_ORIGINS",
+            "https://agentscanplay.com,https://www.agentscanplay.com",
+        )
+        .split(',')
+        .map(str::to_string)
+        .collect(),
     };
     let tcp = env_or("MOONDIAL_TCP", "127.0.0.1:7778");
     let http = env_or("MOONDIAL_HTTP", "127.0.0.1:7777");

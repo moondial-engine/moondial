@@ -14,7 +14,7 @@
 use crate::entropic;
 use crate::world::World;
 use axum::extract::{Path, Query, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::{HeaderMap, HeaderName, StatusCode};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use moondial_log::Cursor;
@@ -32,6 +32,8 @@ use tokio::net::{TcpListener, TcpStream};
 pub struct Shared {
     pub world: Arc<Mutex<World>>,
     pub admin_token: Option<String>,
+    /// Origins the browser client may call from (`MOONDIAL_CORS_ORIGINS`, comma-separated).
+    pub cors_origins: Vec<String>,
 }
 
 impl Shared {
@@ -242,6 +244,47 @@ async fn commands(State(s): State<Shared>, Query(q): Query<HashMap<String, Strin
     Ok(Json(json!({"commands": w.commands_for(kind)})))
 }
 
+/// Log a citizen in for one HTTP call, with the status codes a browser client needs.
+fn http_login(
+    w: &mut World,
+    actor: &str,
+    passphrase: &str,
+) -> Result<bool, (StatusCode, Json<Value>)> {
+    valid_name(actor).map_err(|e| err_json(StatusCode::BAD_REQUEST, e))?;
+    let fresh = !w
+        .store
+        .entities()
+        .any(|e| e.kind == "citizen" && e.owner.as_deref() == Some(actor));
+    entropic::login(w, actor, "http", passphrase).map_err(|e| match e {
+        entropic::LoginError::Internal(_) => {
+            err_json(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        }
+        entropic::LoginError::WrongPassphrase { .. } => {
+            err_json(StatusCode::UNAUTHORIZED, e.to_string())
+        }
+        _ => err_json(StatusCode::BAD_REQUEST, e.to_string()),
+    })?;
+    Ok(fresh)
+}
+
+#[derive(Deserialize)]
+struct LoginBody {
+    actor: String,
+    #[serde(default)]
+    passphrase: String,
+}
+
+/// Check a name and passphrase (creating the citizen on first login) without running a
+/// command. The browser client calls this first so a bad passphrase is a clear message
+/// rather than a failed `look`.
+async fn login(State(s): State<Shared>, Json(body): Json<LoginBody>) -> Reply {
+    let mut w = lock(&s)?;
+    let fresh = http_login(&mut w, &body.actor, &body.passphrase)?;
+    Ok(Json(
+        json!({"ok": true, "actor": body.actor, "fresh": fresh}),
+    ))
+}
+
 async fn command(
     State(s): State<Shared>,
     headers: HeaderMap,
@@ -256,16 +299,7 @@ async fn command(
         ActorKind::Citizen
     };
     let mut w = lock(&s)?;
-    valid_name(&body.actor).map_err(|e| err_json(StatusCode::BAD_REQUEST, e))?;
-    entropic::login(&mut w, &body.actor, "http", &body.passphrase).map_err(|e| match e {
-        entropic::LoginError::Internal(_) => {
-            err_json(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-        }
-        entropic::LoginError::WrongPassphrase { .. } => {
-            err_json(StatusCode::UNAUTHORIZED, e.to_string())
-        }
-        _ => err_json(StatusCode::BAD_REQUEST, e.to_string()),
-    })?;
+    http_login(&mut w, &body.actor, &body.passphrase)?;
     let ctx = CallContext {
         actor: body.actor.clone(),
         kind,
@@ -330,12 +364,29 @@ async fn log(State(s): State<Shared>, Query(q): Query<HashMap<String, String>>) 
 }
 
 pub fn router(shared: Shared) -> Router {
+    use axum::http::{header, HeaderValue, Method};
+    use tower_http::cors::CorsLayer;
+    let origins: Vec<HeaderValue> = shared
+        .cors_origins
+        .iter()
+        .filter_map(|o| HeaderValue::from_str(o.trim()).ok())
+        .collect();
+    let cors = CorsLayer::new()
+        .allow_origin(origins)
+        .allow_methods([Method::GET, Method::POST])
+        .allow_headers([
+            header::CONTENT_TYPE,
+            HeaderName::from_static("x-moondial-admin"),
+        ])
+        .max_age(std::time::Duration::from_secs(3600));
     Router::new()
         .route("/health", get(health))
         .route("/v0/commands", get(commands))
+        .route("/v0/login", post(login))
         .route("/v0/command", post(command))
         .route("/v0/view/{id}", get(view))
         .route("/v0/log", get(log))
+        .layer(cors)
         .with_state(shared)
 }
 
