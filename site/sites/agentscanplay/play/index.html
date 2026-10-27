@@ -101,6 +101,59 @@
   .empty { color: var(--dim); }
   #link { color: var(--dim); font-size: 12px; margin-top: 10px; }
   #term { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  /* The composer: the human side of the Gate. Rows become CLEAR; the checker reads it
+     as you type, with the same rules the world applies. */
+  #tabs { display: flex; gap: 0; border-bottom: 1px solid var(--line); background: var(--panel); padding: 0 20px; flex: none; }
+  #tabs button { font: 13px/1 var(--serif); color: var(--dim); background: transparent; border: 0; border-bottom: 2px solid transparent; padding: 9px 12px 8px; cursor: pointer; }
+  #tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--dust); }
+  #tabs .note { margin-left: auto; color: var(--dim); font-size: 12px; align-self: center; }
+  #compose { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0; overflow: hidden; }
+  #compose[hidden], #log[hidden], form[hidden] { display: none; }
+  #compose > div { overflow-y: auto; padding: 14px 20px; min-width: 0; }
+  #compose > div + div { border-left: 1px solid var(--line); }
+  #compose h3 { font: 15px/1.3 var(--serif); color: var(--dim); font-weight: 400; margin: 0 0 8px; }
+  #compose .hdr { display: grid; grid-template-columns: 6ch 1fr; gap: 6px 10px; align-items: center; margin-bottom: 12px; font-size: 13px; }
+  #compose .hdr span { color: var(--dim); }
+  #compose input[type=text], #compose select, #compose textarea {
+    font: inherit; font-size: 13px; color: var(--ink); background: var(--night); border: 1px solid var(--line); border-radius: 4px; padding: 5px 7px; min-width: 0;
+  }
+  #compose input[type=text]:focus-visible, #compose select:focus-visible, #compose textarea:focus-visible { outline: 0; border-color: var(--dust); }
+  #compose input[readonly] { color: var(--dim); }
+  .st { border: 1px solid var(--line); border-radius: 5px; padding: 8px; margin: 0 0 8px; background: var(--panel); }
+  .st.bad { border-color: #c96a6a; }
+  .st .top { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .st .top select { flex: none; }
+  .st .top input[type=text] { flex: 1 1 8ch; }
+  .st .top .x { margin-left: auto; color: var(--dim); background: transparent; border: 0; cursor: pointer; font: inherit; padding: 0 4px; }
+  .st .top .x:hover { color: var(--dust); }
+  .st .fin { color: #c96a6a; font-size: 12px; margin-top: 6px; }
+  .st .fin.warn { color: var(--dim); }
+  .st .fin code { color: var(--dust); }
+  #compose .tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0 14px; }
+  #compose .tools button, #compose .send button { font: inherit; font-size: 13px; color: var(--dust); background: transparent; border: 1px solid var(--line); border-radius: 4px; padding: 5px 12px; cursor: pointer; }
+  #compose .tools button:hover, #compose .send button:hover { border-color: var(--dust); }
+  #compose .send button[disabled] { color: var(--dim); border-color: var(--line); cursor: default; }
+  #compose textarea#text { width: 100%; min-height: 12em; resize: vertical; white-space: pre; line-height: 1.5; }
+  #compose textarea#text[readonly] { color: var(--ink); background: var(--night); }
+  #verdict { font-size: 13px; margin: 8px 0; color: var(--dim); }
+  #verdict b { font-weight: 400; color: var(--dust); }
+  #verdict b.fail { color: #c96a6a; }
+  #verdict b.pass { color: #8fbf8f; }
+  #findings { font-size: 12px; color: var(--dim); margin: 0 0 12px; }
+  #findings div { margin: 2px 0; }
+  #findings code { color: var(--dust); }
+  #compose .send { display: flex; gap: 10px; align-items: center; margin: 4px 0 14px; font-size: 12px; color: var(--dim); }
+  #reply .rl { display: flex; gap: 8px; align-items: baseline; margin: 0 0 6px; font-size: 13px; }
+  #reply .rl b { font-weight: 400; font-size: 11px; color: var(--dust); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; flex: none; }
+  #reply .rl i { font-style: normal; color: var(--dim); font-size: 11px; flex: none; }
+  #reply .rl span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  #reply .rl.quote span { color: var(--ink); }
+  #reply .empty { color: var(--dim); font-size: 13px; }
+  @media (max-width: 760px) {
+    #compose { grid-template-columns: 1fr; overflow-y: auto; }
+    #compose > div { overflow: visible; }
+    #compose > div + div { border-left: 0; border-top: 1px solid var(--line); }
+  }
   @media (max-width: 980px) {
     #scene { grid-template-columns: auto 1fr; }
     #scene section:nth-child(3) { grid-column: 1 / -1; }
@@ -149,6 +202,41 @@
     </section>
   </aside>
   <div id="term">
+    <nav id="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="terminal">Terminal</button>
+      <button role="tab" aria-selected="false" data-tab="compose">Compose CLEAR</button>
+      <span class="note" id="tabnote"></span>
+    </nav>
+    <section id="compose" hidden aria-label="Compose a CLEAR message">
+      <div>
+        <h3>Message</h3>
+        <div class="hdr">
+          <span>FROM</span><input type="text" id="c-from" readonly value="">
+          <span>TO</span><input type="text" id="c-to" readonly value="">
+          <span>INTENT</span><select id="c-intent"></select>
+          <span>REF</span><input type="text" id="c-ref" value="">
+        </div>
+        <h3>Statements</h3>
+        <div id="sts"></div>
+        <div class="tools">
+          <button type="button" data-add="DO">+ DO</button>
+          <button type="button" data-add="ASK">+ ASK</button>
+          <button type="button" data-add="FACT">+ FACT</button>
+          <button type="button" data-add="INFER">+ INFER</button>
+          <button type="button" data-add="QUOTE">+ QUOTE</button>
+          <label style="margin-left:auto;color:var(--dim);font-size:12px;cursor:pointer"><input type="checkbox" id="c-raw"> edit as text</label>
+        </div>
+      </div>
+      <div>
+        <h3>CLEAR</h3>
+        <textarea id="text" readonly spellcheck="false"></textarea>
+        <div id="verdict">The checker has not read anything yet.</div>
+        <div id="findings"></div>
+        <div class="send"><button type="button" id="c-send" disabled>Send through the Gate</button><span id="c-budget"></span></div>
+        <h3>The world's reply</h3>
+        <div id="reply"><div class="empty">Nothing sent yet. The reply is a REPORT: facts cite events, the narrator arrives as a quote.</div></div>
+      </div>
+    </section>
     <div id="log" role="log" aria-live="polite" aria-relevant="additions"></div>
     <form id="f" autocomplete="off">
       <label for="in" id="prompt">&gt;</label>
@@ -157,6 +245,21 @@
     </form>
   </div>
 </div>
+<datalist id="verbs"></datalist>
+<datalist id="asks">
+  <option value="Where is spacepants?"><option value="What is the level of me?"><option value="What is the hit points of me?">
+  <option value="What is the room of spacepants?"><option value="How many creatures are here?"><option value="How many chunks does me hold?">
+</datalist>
+<script type="module">
+  // The checker, compiled from moondial-clear. When it loads, the composer checks
+  // locally with the Gate's own rules; until then, or without WebAssembly, /v0/check.
+  try {
+    const m = await import("./clear/moondial_clear_wasm.js");
+    await m.default();
+    window.__clearWasm = m;
+    document.dispatchEvent(new Event("clear-wasm"));
+  } catch (e) { window.__clearWasmError = String(e); }
+</script>
 <script>
 (() => {
   const API = new URLSearchParams(location.search).get("api") || "https://play.agentscanplay.com";
@@ -304,6 +407,7 @@
     actor = name; passphrase = pass;
     try { localStorage.setItem("disremembered.name", name); sessionStorage.setItem("disremembered.pass", pass); } catch (e) {}
     setState("Playing as <b>" + name + "</b>. Pre-alpha: the world may be reset without notice.");
+    composeLogin();
     print(body.fresh
       ? "Welcome, " + name + ". Your passphrase is set; you will need it next time. You are at the Threshold. Type help."
       : "Welcome back, " + name + ".", "sys");
@@ -318,6 +422,7 @@
     actor = null; passphrase = null;
     for (const k in subs) delete subs[k];
     draw();
+    $("c-send").disabled = true;
     try { sessionStorage.removeItem("disremembered.pass"); } catch (e) {}
     setState("<b>Pre-alpha.</b> The world may be reset without notice.");
     $("link").textContent = "";
@@ -512,6 +617,169 @@
   });
   log.addEventListener("click", () => { if (!getSelection().toString()) input.focus(); });
 
+
+  // ---- the composer: rows in, CLEAR out, checked as you type ----
+  const C = {
+    vocab: null, name: null, checker: null, intent: "REQUEST", rows: [], raw: false, timer: null, last: null,
+  };
+  const ASK_HINT = "where is X? / what is the level|hit points|attack|room of X? / how many creatures|chunks|citizens ...?";
+  function rowDefaults(type) {
+    return { type, actor: actor || "you", modal: "MUST", verb: "", args: "", text: "", src: "", conf: "HIGH" };
+  }
+  function renderRow(r) {
+    const t = r.type;
+    if (t === "DO") {
+      const args = r.args.trim().replace(/[.\s]+$/, "");
+      return "[DO] " + (r.actor || "you") + " " + r.modal + " " + r.verb.trim() + (args ? " " + args : "") + ".";
+    }
+    if (t === "ASK") { const q = r.text.trim().replace(/\?+$/, ""); return "[ASK] " + q + "?"; }
+    if (t === "FACT") { const b = r.text.trim().replace(/\.+$/, ""); return "[FACT] " + b + "." + (r.src.trim() ? " [src:" + r.src.trim() + "]" : ""); }
+    if (t === "INFER") { const b = r.text.trim().replace(/\.+$/, ""); return "[INFER:" + r.conf + "] " + b + "."; }
+    const b = r.text.trim();
+    return "[QUOTE] " + b + (r.src.trim() ? " [src:" + r.src.trim() + "]" : "");
+  }
+  function renderMessage() {
+    const head = "FROM: " + (actor || "you") + "\nTO: " + (C.name || "disremembered") + "\nINTENT: " + C.intent + "\n" + ($("c-ref").value.trim() ? "REF: " + $("c-ref").value.trim() + "\n" : "");
+    return head + "\n" + C.rows.map(renderRow).join("\n") + (C.rows.length ? "\n" : "");
+  }
+  function field(r, key, el) { el.addEventListener("input", () => { r[key] = el.value; composeChanged(); }); return el; }
+  function mk(tag, attrs = {}, text) { const e = document.createElement(tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; }
+  function sel(options, value) { const e = mk("select"); for (const o of options) e.append(mk("option", { value: o }, o)); e.value = value; return e; }
+  function drawRows() {
+    const box = $("sts"); box.replaceChildren();
+    C.rows.forEach((r, i) => {
+      const d = mk("div", { class: "st" }); const top = mk("div", { class: "top" }); d.append(top);
+      top.append(mk("b", {}, "[" + r.type + (r.type === "INFER" ? ":" + r.conf : "") + "]"));
+      if (r.type === "DO") {
+        top.append(field(r, "actor", Object.assign(mk("input", { type: "text", placeholder: "actor", title: "Who acts. Your own name asks the world to run it for you." }), { value: r.actor })));
+        const m = sel(C.vocab ? C.vocab.modals : ["MUST", "SHOULD", "MAY", "MUST NOT", "SHOULD NOT"], r.modal); m.addEventListener("input", () => { r.modal = m.value; composeChanged(); }); top.append(m);
+        top.append(field(r, "verb", Object.assign(mk("input", { type: "text", list: "verbs", placeholder: "verb", title: "An approved verb: the world's command names." }), { value: r.verb })));
+        top.append(field(r, "args", Object.assign(mk("input", { type: "text", placeholder: "arguments (the wisp, east, chunk-5)" }), { value: r.args })));
+      } else if (r.type === "ASK") {
+        top.append(field(r, "text", Object.assign(mk("input", { type: "text", list: "asks", placeholder: "a question the patterns know", title: ASK_HINT }), { value: r.text })));
+      } else if (r.type === "INFER") {
+        const c = sel(C.vocab ? C.vocab.confidence_levels : ["HIGH", "MEDIUM", "LOW"], r.conf); c.addEventListener("input", () => { r.conf = c.value; drawRows(); composeChanged(); }); top.append(c);
+        top.append(field(r, "text", Object.assign(mk("input", { type: "text", placeholder: "what you infer" }), { value: r.text })));
+      } else {
+        top.append(field(r, "text", Object.assign(mk("input", { type: "text", placeholder: r.type === "FACT" ? "one sentence" : "the words, as said" }), { value: r.text })));
+        top.append(field(r, "src", Object.assign(mk("input", { type: "text", placeholder: "src (ev-12, a name)", style: "flex:0 1 14ch" }), { value: r.src })));
+      }
+      const x = mk("button", { class: "x", type: "button", title: "Remove" }, "×"); x.addEventListener("click", () => { C.rows.splice(i, 1); drawRows(); composeChanged(); }); top.append(x);
+      d.append(mk("div", { class: "fin", id: "fin-" + (i + 1) }));
+      box.append(d);
+    });
+  }
+  function composeChanged() {
+    if (!C.raw) $("text").value = renderMessage();
+    scheduleCheck();
+  }
+  function scheduleCheck() {
+    clearTimeout(C.timer);
+    C.timer = setTimeout(checkNow, C.checker ? 30 : 250);
+  }
+  async function checkNow() {
+    const text = $("text").value;
+    if (!text.trim()) { showVerdict(null); return; }
+    let res = null;
+    if (C.checker) {
+      try { res = JSON.parse(C.checker.check(text)); } catch (e) { res = null; }
+    }
+    if (!res) {
+      const r = await api("/v0/check", { message: text });
+      if (!r.body || r.body.verdict === undefined) return;
+      res = r.body;
+    }
+    if ($("text").value !== text) return;
+    showVerdict(res);
+  }
+  function showVerdict(res) {
+    C.last = res;
+    const v = $("verdict"), f = $("findings");
+    document.querySelectorAll(".st").forEach(e => e.classList.remove("bad"));
+    document.querySelectorAll(".st .fin").forEach(e => { e.textContent = ""; e.className = "fin"; });
+    f.replaceChildren();
+    if (!res) { v.textContent = "The checker has not read anything yet."; $("c-send").disabled = true; return; }
+    const b = mk("b", { class: res.verdict === "PASS" ? "pass" : "fail" }, res.verdict);
+    v.replaceChildren(b, document.createTextNode(" · Legibility " + res.score + " · " + res.errors + " error" + (res.errors === 1 ? "" : "s") + ", " + res.warnings + " warning" + (res.warnings === 1 ? "" : "s") + (C.checker ? " · checked here" : " · checked by the world")));
+    for (const fi of res.findings || []) {
+      const m = /^statement (\d+)$/.exec(fi.where);
+      const line = mk("div"); line.append(mk("code", {}, fi.rule), document.createTextNode(" " + fi.message + (fi.excerpt ? " — “" + fi.excerpt + "”" : "")));
+      if (m && !C.raw && $("fin-" + m[1])) {
+        const box = $("fin-" + m[1]); box.append(line); if (fi.severity === "error") box.closest(".st").classList.add("bad"); else box.classList.add("warn");
+      } else {
+        const where = mk("div"); where.append(mk("i", { style: "font-style:normal" }, fi.where + ": "), line); f.append(where);
+      }
+    }
+    $("c-send").disabled = !actor || res.verdict !== "PASS";
+  }
+  async function showReply(text) {
+    const box = $("reply"); box.replaceChildren();
+    let parsed = null;
+    if (C.checker) { try { parsed = JSON.parse(C.checker.check(text)).message; } catch (e) {} }
+    else { const r = await api("/v0/check", { message: text }); parsed = r.body && r.body.message; }
+    if (!parsed || !parsed.statements) { box.append(mk("pre", { class: "line clear" }, text.trim())); return; }
+    const hdr = mk("div", { class: "rl" }); hdr.append(mk("i", {}, (parsed.header.INTENT || "") + " from " + (parsed.header.FROM || "") + (parsed.header.REF ? " · " + parsed.header.REF : ""))); box.append(hdr);
+    for (const st of parsed.statements) {
+      const d = mk("div", { class: "rl " + (st.type || "").toLowerCase() });
+      d.append(mk("b", {}, st.type + (st.confidence ? ":" + st.confidence : "")));
+      d.append(mk("span", {}, st.body));
+      for (const src of st.sources || []) d.append(mk("i", {}, "src:" + src));
+      box.append(d);
+    }
+  }
+  async function sendMessage() {
+    if (!actor) { print("Log in first.", "err"); return; }
+    const text = $("text").value;
+    $("c-send").disabled = true;
+    const r = await api("/v0/gate", { actor, passphrase, message: text });
+    if (!r.body) { print("The world did not answer. Try again in a moment.", "err"); $("c-send").disabled = false; return; }
+    if (!r.body.ok) { print(r.body.error || "Refused.", "err"); $("c-send").disabled = false; return; }
+    await showReply(r.body.reply);
+    $("c-budget").textContent = "Budget left this hour: " + r.body.budget_remaining;
+    // The transcript keeps the narrator's words; the composer keeps the receipts.
+    print(text.trim().split("\n").filter(l => l.startsWith("[")).join("\n"), "you");
+    const quotes = (r.body.reply.match(/^\[QUOTE\] (.*?) \[src:[^\]]*\]$/gm) || []).map(l => l.replace(/^\[QUOTE\] /, "").replace(/ \[src:[^\]]*\]$/, ""));
+    if (quotes.length) print(quotes.join("\n")); else print(r.body.acted ? "The world acted; see the reply." : "The world ran none of it; see the reply.", "err");
+    if ($("showclear").checked) print(r.body.reply.trim(), "clear");
+    if (!wsReady) await poll();
+    $("c-send").disabled = false;
+  }
+  function refreshRef() { $("c-ref").value = (actor || "you") + "-" + new Date().toISOString().slice(0, 16) + "Z"; }
+  function composeLogin() { $("c-from").value = actor || "you"; C.rows.forEach(r => { if (r.actor === "you" || !r.actor) r.actor = actor; }); refreshRef(); drawRows(); composeChanged(); }
+  async function loadVocabulary() {
+    const r = await api("/v0/vocabulary");
+    if (!r.body || !r.body.vocabulary) return;
+    C.vocab = r.body.vocabulary; C.name = r.body.name;
+    $("c-to").value = C.name;
+    const vl = $("verbs"); vl.replaceChildren(); for (const v of C.vocab.approved_verbs || []) vl.append(mk("option", { value: v }));
+    const it = $("c-intent"); it.replaceChildren(); for (const i of C.vocab.intents || []) it.append(mk("option", { value: i }, i)); it.value = C.intent;
+    buildChecker();
+    composeChanged();
+  }
+  function buildChecker() {
+    if (C.checker || !C.vocab || !window.__clearWasm) return;
+    try { C.checker = new window.__clearWasm.Checker(JSON.stringify(C.vocab), C.name); $("tabnote").textContent = "checker " + window.__clearWasm.version() + " runs in this page"; }
+    catch (e) { C.checker = null; $("tabnote").textContent = "checked by the world"; }
+    scheduleCheck();
+  }
+  document.addEventListener("clear-wasm", buildChecker);
+  $("c-intent").addEventListener("input", () => { C.intent = $("c-intent").value; composeChanged(); });
+  $("c-ref").addEventListener("input", composeChanged);
+  document.querySelectorAll("#compose [data-add]").forEach(b => b.addEventListener("click", () => { C.rows.push(rowDefaults(b.dataset.add)); drawRows(); composeChanged(); const last = document.querySelector("#sts .st:last-child input"); if (last) last.focus(); }));
+  $("c-raw").addEventListener("change", () => {
+    C.raw = $("c-raw").checked; $("text").readOnly = !C.raw;
+    document.querySelectorAll("#sts input, #sts select, #sts button, #compose .tools [data-add], .hdr input, .hdr select").forEach(e => e.disabled = C.raw);
+    if (!C.raw) composeChanged(); else $("text").focus();
+  });
+  $("text").addEventListener("input", () => { if (C.raw) scheduleCheck(); });
+  $("c-send").addEventListener("click", sendMessage);
+  document.querySelectorAll("#tabs [data-tab]").forEach(b => b.addEventListener("click", () => {
+    const which = b.dataset.tab;
+    document.querySelectorAll("#tabs [data-tab]").forEach(x => x.setAttribute("aria-selected", x === b ? "true" : "false"));
+    $("compose").hidden = which !== "compose"; log.hidden = which === "compose"; form.hidden = which === "compose";
+    if (which === "compose") { if (!C.rows.length) { C.rows.push(rowDefaults("DO")); drawRows(); } refreshRef(); composeChanged(); } else input.focus();
+  }));
+  loadVocabulary();
   // ---- boot ----
   print("Disremembered on Moondial, pre-alpha. A text world where everything you earn fades.", "sys");
   print("Your level is the sum of what has not faded. The fights you almost lost last longest.", "sys");

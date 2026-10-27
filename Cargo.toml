@@ -7,6 +7,7 @@ members = [
     "crates/moondial-registry",
     "crates/moondial-query",
     "crates/moondial-clear",
+    "crates/moondial-clear-wasm",
     "crates/moondial-driver",
     "crates/moondial",
 ]
@@ -27,3 +28,10 @@ axum = { version = "0.8", features = ["json", "ws"] }
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 tower-http = { version = "0.6", features = ["cors"] }
 serde_json = { version = "1", features = ["float_roundtrip", "preserve_order"] }
+
+# The checker for the browser: small over fast.
+[profile.wasm]
+inherits = "release"
+opt-level = "s"
+lto = true
+codegen-units = 1

@@ -345,6 +345,33 @@ async fn commands(State(s): State<Shared>, Query(q): Query<HashMap<String, Strin
     Ok(Json(json!({"commands": w.commands_for(kind)})))
 }
 
+/// `GET /v0/vocabulary`: the CLEAR vocabulary the Gate checks against, merged (base
+/// and world), as JSON. An editor compiles its own checker from this, so the words it
+/// offers and the words the world accepts are one list.
+async fn vocabulary(State(s): State<Shared>) -> Reply {
+    Ok(Json(json!({"name": s.world.lock().map(|w| w.id.0.clone()).unwrap_or_default(), "vocabulary": crate::gate::disremembered_vocabulary()})))
+}
+
+#[derive(Deserialize)]
+struct CheckBody {
+    message: String,
+}
+
+/// Most bytes `/v0/check` reads; the vocabulary's own message limit is smaller.
+const MAX_CHECK_BYTES: usize = 16 * 1024;
+
+/// `POST /v0/check {message}`: the checker's verdict on a message, without sending it.
+/// What a browser without WebAssembly uses; the same result the editor computes locally.
+async fn check(State(s): State<Shared>, Json(body): Json<CheckBody>) -> Reply {
+    if body.message.len() > MAX_CHECK_BYTES {
+        return Err(err_json(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            format!("a message is at most {MAX_CHECK_BYTES} bytes"),
+        ));
+    }
+    Ok(Json(s.checker.check(&body.message).to_json()))
+}
+
 /// Log a citizen in for a session: `Ok(fresh)` or a message.
 pub(crate) fn login_for_session(
     w: &mut World,
@@ -673,6 +700,8 @@ pub fn router(shared: Shared) -> Router {
         .route("/v0/command", post(command))
         .route("/v0/observe", post(observe_http))
         .route("/v0/gate", post(gate_http))
+        .route("/v0/vocabulary", get(vocabulary))
+        .route("/v0/check", post(check))
         .route("/v0/session", get(crate::session::upgrade))
         .route("/v0/view/{id}", get(view))
         .route("/v0/log", get(log))

@@ -6,6 +6,8 @@ on:
     paths:
       - "site/**"
       - "clear/**"
+      - "crates/moondial-clear/**"
+      - "crates/moondial-clear-wasm/**"
       - ".github/workflows/deploy-site.yml"
   workflow_dispatch:
 
@@ -50,6 +52,25 @@ jobs:
       APP_DIR: /srv/agentscanplay
     steps:
       - uses: actions/checkout@v4
+
+      # The checker the play page runs: moondial-clear compiled to WebAssembly, so the
+      # composer checks a message with the rules the Gate applies, in the browser.
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen@0.2.129
+      - name: Build the checker for the browser
+        working-directory: .
+        run: |
+          cargo build -p moondial-clear-wasm --profile wasm --target wasm32-unknown-unknown
+          wasm-bindgen --target web --no-typescript --out-dir site/sites/agentscanplay/play/clear \
+            target/wasm32-unknown-unknown/wasm/moondial_clear_wasm.wasm
+          ls -la site/sites/agentscanplay/play/clear
 
       - name: Configure SSH
         run: |
