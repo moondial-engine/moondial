@@ -2,7 +2,7 @@
   "verdict": "FAIL",
   "score": 0,
   "mode": "clear",
-  "errors": 2,
+  "errors": 3,
   "warnings": 0,
   "findings": [
     {
@@ -18,6 +18,13 @@
       "where": "statement 2",
       "message": "Statement has no type tag.",
       "excerpt": "The warden guards the gate."
+    },
+    {
+      "rule": "CL-V2",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "Alias 'the gate'. The glossary term is 'CLEAR gate'.",
+      "excerpt": "the gate"
     }
   ],
   "message": {

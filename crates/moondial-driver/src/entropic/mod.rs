@@ -198,7 +198,7 @@ pub fn ensure_world(world: &mut World) -> Result<(), String> {
     rooms::ensure_rooms(world)
 }
 
-/// Log a citizen in, creating them at the Gate on first login. The passphrase is set on
+/// Log a citizen in, creating them at the Threshold on first login. The passphrase is set on
 /// first login and checked after.
 pub fn login(
     world: &mut World,
@@ -244,8 +244,8 @@ pub fn login(
         return Ok(f);
     }
     identity::acceptable(passphrase)?;
-    let gate =
-        rooms::the_gate(world).ok_or_else(|| LoginError::Internal("the Gate is missing".into()))?;
+    let home = rooms::arrival(world)
+        .ok_or_else(|| LoginError::Internal("the Threshold is missing".into()))?;
     let citizen = world.store.allocate_id();
     world
         .record(
@@ -254,7 +254,7 @@ pub fn login(
                 id: citizen,
                 kind: "citizen".into(),
                 owner: Some(actor.into()),
-                parent: Some(gate),
+                parent: Some(home),
                 scopes: vec![account_scope(actor)],
             },
         )

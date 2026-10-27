@@ -1,4 +1,6 @@
-//! The map: four rooms off the Gate, exits between them, and what spawns where.
+//! The map: four rooms off the Threshold, exits between them, and what spawns where.
+//! No room, creature or exit may be named with a CLEAR reserved word or a glossary
+//! alias; a test under `entropic::tests` holds the map to that.
 //! Rooms are entities with `entropic.room`, `entropic.exits` and, where something lives,
 //! `entropic.spawn`. Travel moves the citizen entity from one room to another.
 
@@ -20,24 +22,28 @@ pub struct RoomDef {
     pub exits: &'static [(&'static str, &'static str)],
     /// `(creature key, how many at once, seconds between respawns)`.
     pub spawn: Option<(&'static str, u32, i64)>,
+    /// Keys this room had in older logs; a room found under one is renamed in place.
+    pub former: &'static [&'static str],
 }
 
-pub const GATE: &str = "gate";
+pub const ARRIVAL: &str = "threshold";
 
 pub const ROOMS: &[RoomDef] = &[
     RoomDef {
-        key: GATE,
-        name: "The Gate",
+        key: ARRIVAL,
+        name: "The Threshold",
         description: "A threshold of pale stone under a moon that is always up. Everything you earn here will fade; what you do with it is yours. Nothing hunts here.",
         exits: &[("east", "fogbank")],
         spawn: None,
+        former: &["gate"],
     },
     RoomDef {
         key: "fogbank",
         name: "The Fogbank",
         description: "Fog rolls off the stone and swallows the path a few steps ahead. Things move in it, slowly, and mostly away from you.",
-        exits: &[("west", GATE), ("north", "shallows")],
+        exits: &[("west", ARRIVAL), ("north", "shallows")],
         spawn: Some(("wisp", 2, 60)),
+        former: &[],
     },
     RoomDef {
         key: "shallows",
@@ -45,6 +51,7 @@ pub const ROOMS: &[RoomDef] = &[
         description: "Black water over pale sand, ankle-deep and perfectly still, until something stands up out of it.",
         exits: &[("south", "fogbank"), ("east", "ossuary")],
         spawn: Some(("hollow", 2, 120)),
+        former: &[],
     },
     RoomDef {
         key: "ossuary",
@@ -52,6 +59,7 @@ pub const ROOMS: &[RoomDef] = &[
         description: "Niches cut into the rock, each one empty, each one swept clean. Something keeps them that way.",
         exits: &[("west", "shallows")],
         spawn: Some(("revenant", 1, 300)),
+        former: &[],
     },
 ];
 
@@ -64,9 +72,9 @@ pub fn room_by_key(world: &World, key: &str) -> Option<EntityId> {
         .map(|e| e.id)
 }
 
-/// The Gate.
-pub fn the_gate(world: &World) -> Option<EntityId> {
-    room_by_key(world, GATE)
+/// The arrival room.
+pub fn arrival(world: &World) -> Option<EntityId> {
+    room_by_key(world, ARRIVAL)
 }
 
 /// Build every room the log does not have, and the exits once all rooms exist. A room
@@ -74,17 +82,19 @@ pub fn the_gate(world: &World) -> Option<EntityId> {
 pub fn ensure_rooms(world: &mut World) -> Result<(), String> {
     let mut ids: BTreeMap<&str, EntityId> = BTreeMap::new();
     for def in ROOMS {
-        let existing = room_by_key(world, def.key).or_else(|| {
-            world
-                .store
-                .entities()
-                .find(|e| {
-                    e.kind == "room"
-                        && plain_str(world, e.id, ROOM, "key").is_none()
-                        && plain_str(world, e.id, ROOM, "name") == Some(def.name)
-                })
-                .map(|e| e.id)
-        });
+        let existing = room_by_key(world, def.key)
+            .or_else(|| def.former.iter().find_map(|k| room_by_key(world, k)))
+            .or_else(|| {
+                world
+                    .store
+                    .entities()
+                    .find(|e| {
+                        e.kind == "room"
+                            && plain_str(world, e.id, ROOM, "key").is_none()
+                            && plain_str(world, e.id, ROOM, "name") == Some(def.name)
+                    })
+                    .map(|e| e.id)
+            });
         let id = match existing {
             Some(id) if plain_str(world, id, ROOM, "key") == Some(def.key) => id,
             Some(id) => {

@@ -120,7 +120,7 @@ fn the_map_is_built_once_and_travel_follows_exits() {
     );
     login(&mut w, "dave", "test", PASS).unwrap();
     let look = ok(&mut w, "dave", "look", json!([]));
-    assert_eq!(look.result["room"], json!("The Gate"));
+    assert_eq!(look.result["room"], json!("The Threshold"));
     assert_eq!(look.result["exits"], json!(["east"]));
     assert!(matches!(
         call(&mut w, "dave", ActorKind::Citizen, "travel", json!(["up"])),
@@ -240,8 +240,8 @@ fn death_is_a_concussion_and_a_walk_back() {
     let look = ok(&mut w, "dave", "look", json!([]));
     assert_eq!(
         look.result["room"],
-        json!("The Gate"),
-        "you wake at the Gate"
+        json!("The Threshold"),
+        "you wake at the Threshold"
     );
     let f = login(&mut w, "dave", "test", PASS).unwrap();
     assert_eq!(combat::hp(&w, f.citizen), MAX_HP);
@@ -428,7 +428,7 @@ fn observe_is_the_text_client_s_eyes() {
     let root = &out.result["root"];
     assert_eq!(
         root["components"]["entropic.room"]["name"],
-        json!("The Gate")
+        json!("The Threshold")
     );
     let names: Vec<&str> = root["relations"]["contents"]
         .as_array()
@@ -465,7 +465,7 @@ fn observe_is_the_text_client_s_eyes() {
     assert_eq!(chunk["source"], json!("hydra"));
     assert!(chunk.get("value").is_none() && chunk.get("vividity").is_none());
 
-    // Events since the cursor: dave travels; tyler, still at the Gate, sees dave leave.
+    // Events since the cursor: dave travels; tyler, still at the Threshold, sees dave leave.
     ok(&mut w, "dave", "travel", json!(["east"]));
     let out = ok(
         &mut w,
@@ -503,4 +503,34 @@ fn observe_is_the_text_client_s_eyes() {
     )
     .unwrap_err();
     assert!(err.to_string().contains("not JSON"), "{err}");
+}
+
+#[test]
+fn no_game_name_is_a_clear_reserved_word_or_alias() {
+    let checker = crate::gate::checker();
+    let mut names: Vec<String> = Vec::new();
+    for r in rooms::ROOMS {
+        names.push(r.name.into());
+        names.push(r.key.into());
+        for (exit, _) in r.exits {
+            names.push((*exit).into());
+        }
+    }
+    for c in combat::CREATURES {
+        names.push(c.name.into());
+    }
+    let w = open(tempfile::tempdir().unwrap().path(), Timestamp(0));
+    for spec in w.registry.specs() {
+        names.push(spec.verb().into());
+    }
+    let bad: Vec<String> = names
+        .iter()
+        .filter_map(|n| checker.collision(n).map(|c| format!("{n}: {c}")))
+        .collect();
+    assert!(bad.is_empty(), "game names collide with CLEAR: {bad:?}");
+    assert_eq!(
+        checker.collision("The Gate").as_deref(),
+        Some("the gate (an alias of CLEAR gate)")
+    );
+    assert_eq!(checker.collision("FACT room").as_deref(), Some("FACT"));
 }

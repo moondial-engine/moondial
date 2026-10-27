@@ -4,7 +4,7 @@
 //! Your attack follows your level, so a faded window hits softer. A win at low hit points
 //! earns a chunk with high vividity, and vivid chunks fade slower: the fights you almost
 //! lost last longest. Death is a concussion, a chance to lose one chunk from the window,
-//! and you wake at the Gate.
+//! and you wake at the Threshold.
 
 use super::{internal, me, plain_num, plain_str, Curves, BODY, CHUNK, CREATURE, SPAWN};
 use crate::world::World;
@@ -202,7 +202,7 @@ fn creature_strikes(
     Ok((dmg, after <= 0.0))
 }
 
-/// Death: concussion, then wake at the Gate at full health, disengaged.
+/// Death: concussion, then wake at the Threshold at full health, disengaged.
 fn die(world: &mut World, actor: &str, f: &super::Found) -> Result<Option<String>, CommandError> {
     let mut lost = None;
     if world.roll(100) < CONCUSSION_PERCENT {
@@ -227,14 +227,14 @@ fn die(world: &mut World, actor: &str, f: &super::Found) -> Result<Option<String
             lost = Some(format!("chunk-{} ({source})", id.0));
         }
     }
-    let gate = super::rooms::the_gate(world).ok_or_else(|| internal("the Gate is missing"))?;
+    let home = super::rooms::arrival(world).ok_or_else(|| internal("the Threshold is missing"))?;
     set_engaged(world, actor, f.citizen, None).map_err(internal)?;
     world
         .record(
             Actor::Driver,
             StoreEvent::EntityMoved {
                 id: f.citizen,
-                parent: Some(gate),
+                parent: Some(home),
             },
         )
         .map_err(internal)?;
@@ -300,8 +300,8 @@ pub fn register(world: &mut World, curves: Curves) {
                 let lost = die(w, &ctx.actor, &f)?;
                 lines.push("You go down.".into());
                 lines.push(match &lost {
-                    Some(c) => format!("Concussion: you have lost {c}. You wake at the Gate."),
-                    None => "You wake at the Gate with everything you had, which is luck, not skill.".into(),
+                    Some(c) => format!("Concussion: you have lost {c}. You wake at the Threshold."),
+                    None => "You wake at the Threshold with everything you had, which is luck, not skill.".into(),
                 });
                 return Ok(Outcome::new(lines.join(" "), json!({"creature": cname, "killed": false, "died": true, "lost": lost})));
             }
@@ -324,8 +324,8 @@ pub fn register(world: &mut World, curves: Curves) {
             if dead {
                 let lost = die(w, &ctx.actor, &f)?;
                 let msg = match &lost {
-                    Some(c) => format!("The {cname} catches you as you turn, for {taken:.0}. You go down. Concussion: you have lost {c}. You wake at the Gate."),
-                    None => format!("The {cname} catches you as you turn, for {taken:.0}. You go down, and wake at the Gate with everything you had."),
+                    Some(c) => format!("The {cname} catches you as you turn, for {taken:.0}. You go down. Concussion: you have lost {c}. You wake at the Threshold."),
+                    None => format!("The {cname} catches you as you turn, for {taken:.0}. You go down, and wake at the Threshold with everything you had."),
                 };
                 return Ok(Outcome::new(msg, json!({"died": true, "lost": lost})));
             }

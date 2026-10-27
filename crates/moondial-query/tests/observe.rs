@@ -117,7 +117,7 @@ fn world() -> World {
         gate,
         "w.room",
         vec![
-            ("name", plain(json!("The Gate"))),
+            ("name", plain(json!("The Threshold"))),
             ("secret", plain(json!("spawn table"))),
         ],
     );
@@ -228,7 +228,7 @@ fn a_projection_returns_exactly_the_fields_asked_for() {
     assert_eq!(obs.root["kind"], json!("room"));
     assert_eq!(
         obs.root["components"],
-        json!({"w.room": {"name": "The Gate"}})
+        json!({"w.room": {"name": "The Threshold"}})
     );
     assert!(obs.root.get("relations").is_none());
     assert_eq!(obs.entities, 1);
@@ -245,7 +245,7 @@ fn a_projection_returns_exactly_the_fields_asked_for() {
     .unwrap();
     assert_eq!(
         all.root["components"]["w.room"],
-        json!({"name": "The Gate"})
+        json!({"name": "The Threshold"})
     );
     assert_eq!(
         all.root["components"]["w.exits"]["exits"]["east"],
@@ -330,7 +330,7 @@ fn relations_follow_children_parents_and_fields() {
     .unwrap();
     assert_eq!(
         up.root["relations"]["in"]["components"]["w.room"]["name"],
-        json!("The Gate")
+        json!("The Threshold")
     );
     let top = observe(
         &w.store,

@@ -131,7 +131,7 @@ fn run_line(
             entropic::login(&mut world, name, "terminal", passphrase).map_err(|e| e.to_string())?;
             *actor = Some((name.to_string(), ActorKind::Citizen));
             Ok(if fresh {
-                format!("Welcome, {name}. Your passphrase is set; you will need it next time. You are at the Gate. Type help.")
+                format!("Welcome, {name}. Your passphrase is set; you will need it next time. You are at the Threshold. Type help.")
             } else {
                 format!("Welcome back, {name}. Type look.")
             })

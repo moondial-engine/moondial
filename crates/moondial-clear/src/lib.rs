@@ -780,6 +780,23 @@ impl Checker {
         }
     }
 
+    /// The first CLEAR reserved word or glossary alias that `name` contains, if any.
+    /// A world uses this to keep its own names (rooms, creatures, exits, verbs) out of
+    /// the protocol's way, since a FACT about a thing named `the gate` can never pass.
+    pub fn collision(&self, name: &str) -> Option<String> {
+        for tok in name.split(|c: char| !c.is_alphanumeric() && c != '-') {
+            if self.structural_upper.contains(tok) {
+                return Some(tok.to_string());
+            }
+        }
+        for (pat, alias, term) in &self.aliases {
+            if is_match(pat, name) {
+                return Some(format!("{alias} (an alias of {term})"));
+            }
+        }
+        None
+    }
+
     /// Check a message.
     pub fn check(&self, text: &str) -> CheckResult {
         let mut findings = Vec::new();

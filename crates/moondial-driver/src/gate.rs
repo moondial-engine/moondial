@@ -291,7 +291,7 @@ pub fn pass(
     let to = msg.field("TO").unwrap_or("");
     if passed && from != actor {
         report.fact(
-            format!("The message names {from} as FROM, and the Gate authenticated {actor}"),
+            format!("The message names {from} as FROM, and the world authenticated {actor}"),
             "gate",
         );
         report.fact(
@@ -609,7 +609,7 @@ mod tests {
         let text = msg(
             "lantern-7",
             "REQUEST",
-            "[FACT] lantern-7 stands at the Gate as of 2026-10-27T02:00Z. [src:ev-1]\n[DO] lantern-7 MUST travel to the east.\n[DO] lantern-7 MUST attack the wisp.\n[DO] lantern-7 MUST NOT retreat.\n[DO] spacepants SHOULD rest.\n[DO] lantern-7 MAY shelve chunk-999.",
+            "[FACT] lantern-7 stands at the Threshold as of 2026-10-27T02:00Z. [src:ev-1]\n[DO] lantern-7 MUST travel to the east.\n[DO] lantern-7 MUST attack the wisp.\n[DO] lantern-7 MUST NOT retreat.\n[DO] spacepants SHOULD rest.\n[DO] lantern-7 MAY shelve chunk-999.",
         );
         let p = send(&mut w, &checker, &mut budget, "lantern-7", &text);
         assert_eq!(p.verdict, "PASS", "{:?}", p.findings);
@@ -684,7 +684,7 @@ mod tests {
         assert_eq!(p.verdict, "PASS", "{:?}", p.findings);
         let r = &p.reply;
         assert!(
-            r.contains("[FACT] spacepants is in The Gate as of 2026-10-27T"),
+            r.contains("[FACT] spacepants is in The Threshold as of 2026-10-27T"),
             "{r}"
         );
         assert!(
@@ -766,7 +766,7 @@ mod tests {
         assert!(!p.acted);
         assert!(
             p.reply
-                .contains("names spacepants as FROM, and the Gate authenticated lantern-7"),
+                .contains("names spacepants as FROM, and the world authenticated lantern-7"),
             "{}",
             p.reply
         );

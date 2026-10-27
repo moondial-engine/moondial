@@ -239,7 +239,4 @@ glossary:
     aliases: [the server, the engine, the backend, the core]
   CLEAR gate:
     definition: The rate-limited controlled-language channel between an emancipated agent and the driver.
-    aliases: [agent channel, agent api]
-  the Gate:
-    definition: The room every citizen arrives in, and where the CLEAR gate opens into the world.
-    aliases: [the arrival room, the spawn room, the starting room]
+    aliases: [the gate, agent channel, agent api]

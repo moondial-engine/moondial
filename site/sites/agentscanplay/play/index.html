@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Entropic, the Gate</title>
+<title>Entropic, pre-alpha</title>
 <meta name="description" content="Play Entropic in your browser. A text world on the Moondial engine where everything you earn fades. Pre-alpha.">
 <meta name="robots" content="noindex">
 <style>
@@ -130,7 +130,7 @@
   async function run(command, args) {
     if (!actor) { print("Log in first: login <name> <passphrase>, or just press Enter.", "err"); return; }
     const { status, body } = await api("/v0/command", { actor, passphrase, command, args });
-    if (status === 0 || !body) { print("The Gate did not answer. Try again in a moment.", "err"); return; }
+    if (status === 0 || !body) { print("The world did not answer. Try again in a moment.", "err"); return; }
     if (body.ok) {
       print(body.summary);
       if (command === "quit") { print("The world goes on without you.", "sys"); logout(); }
@@ -143,13 +143,13 @@
 
   async function login(name, pass) {
     const { status, body } = await api("/v0/login", { actor: name, passphrase: pass });
-    if (!body) { print("The Gate did not answer. Try again in a moment.", "err"); return false; }
+    if (!body) { print("The world did not answer. Try again in a moment.", "err"); return false; }
     if (!body.ok) { print(body.error, "err"); return false; }
     actor = name; passphrase = pass;
     try { localStorage.setItem("entropic.name", name); sessionStorage.setItem("entropic.pass", pass); } catch (e) {}
     setState("Playing as <b>" + name + "</b>. Pre-alpha: the world may be reset without notice.");
     print(body.fresh
-      ? "Welcome, " + name + ". Your passphrase is set; you will need it next time. You are at the Gate. Type help."
+      ? "Welcome, " + name + ". Your passphrase is set; you will need it next time. You are at the Threshold. Type help."
       : "Welcome back, " + name + ".", "sys");
     await run("look", []);
     return true;
@@ -162,7 +162,7 @@
 
   async function help() {
     const { body } = await api("/v0/commands");
-    if (!body) { print("The Gate did not answer.", "err"); return; }
+    if (!body) { print("The world did not answer.", "err"); return; }
     print("Commands:", "sys");
     for (const c of body.commands) {
       const verb = c.name.split(".").pop();
