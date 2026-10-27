@@ -198,6 +198,49 @@ pub fn ensure_spawns(world: &mut World) -> Result<(), String> {
                 p["room"] == room.0
             })?;
         }
+        // Creatures from before sprites existed get one; citizens standing here when the
+        // driver comes up are noticed, as if they had just walked in.
+        let unsprited: Vec<EntityId> = creatures_in(world, room)
+            .into_iter()
+            .filter(|(id, _, _, _)| {
+                world
+                    .store
+                    .entity(*id)
+                    .is_some_and(|e| !e.components.contains_key(super::SPRITE))
+            })
+            .map(|c| c.0)
+            .collect();
+        for id in unsprited {
+            if let Some(d) = creature_def(world, id) {
+                world
+                    .record(
+                        Actor::Driver,
+                        StoreEvent::ComponentSet {
+                            id,
+                            component: super::SPRITE.into(),
+                            fields: super::sprite_fields(d.glyph, d.tint),
+                        },
+                    )
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+        notice_everyone(world, room)?;
+    }
+    Ok(())
+}
+
+/// Every citizen in the room who is not already fighting gets noticed by what hunts there.
+pub fn notice_everyone(world: &mut World, room: EntityId) -> Result<(), String> {
+    let citizens: Vec<(String, EntityId)> = world
+        .store
+        .children(room)
+        .filter(|e| e.kind == "citizen")
+        .filter_map(|e| e.owner.clone().map(|o| (o, e.id)))
+        .collect();
+    for (actor, citizen) in citizens {
+        if engaged_with(world, citizen).is_none() {
+            on_arrival(world, &actor, citizen, room)?;
+        }
     }
     Ok(())
 }
@@ -368,7 +411,11 @@ pub fn register(world: &mut World, curves: Curves) {
         JOB_RESPAWN,
         Box::new(|w: &mut World, job| {
             let room = EntityId(job.payload["room"].as_u64().unwrap_or(0));
-            fill(w, room).map(|_| ()).map_err(|e| e.to_string())
+            let spawned = fill(w, room).map_err(|e| e.to_string())?;
+            if spawned > 0 {
+                notice_everyone(w, room)?;
+            }
+            Ok(())
         }),
     );
 

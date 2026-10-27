@@ -636,3 +636,32 @@ fn the_world_moves_on_its_own() {
     let pending_after: Vec<String> = w.jobs.pending().map(|j| j.kind.clone()).collect();
     assert_eq!(pending_before, pending_after);
 }
+
+#[test]
+fn logging_in_where_something_hunts_is_arriving() {
+    let dir = tempfile::tempdir().unwrap();
+    let t0 = Timestamp(5_000_000);
+    let mut w = open(dir.path(), t0);
+    let f = login(&mut w, "dave", "test", PASS).unwrap();
+    ok(&mut w, "dave", "travel", json!(["east"]));
+    ok(&mut w, "dave", "travel", json!(["north"]));
+    // Cancel the arrival ambush by hand, as if the driver had been down.
+    w.cancel(combat::JOB_AMBUSH, |_| true).unwrap();
+    assert!(!w.jobs.has(combat::JOB_AMBUSH, |_| true));
+    login(&mut w, "dave", "test", PASS).unwrap();
+    assert!(
+        w.jobs
+            .has(combat::JOB_AMBUSH, |p| p["citizen"] == f.citizen.0),
+        "login in the Shallows schedules an ambush"
+    );
+    // A restart with dave standing there does the same, and gives old creatures sprites.
+    drop(w);
+    let w = open(dir.path(), t0.plus(Duration::seconds(1)));
+    assert!(w
+        .jobs
+        .has(combat::JOB_AMBUSH, |p| p["citizen"] == f.citizen.0));
+    let shallows = rooms::room_by_key(&w, "shallows").unwrap();
+    for (id, _, _, _) in combat::creatures_in(&w, shallows) {
+        assert!(w.store.entity(id).unwrap().components.contains_key(SPRITE));
+    }
+}

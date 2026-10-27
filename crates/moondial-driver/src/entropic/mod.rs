@@ -265,6 +265,12 @@ pub fn login(
                 )
                 .map_err(internal)?;
         }
+        // Logging in where something hunts is arriving, as far as it is concerned.
+        if combat::engaged_with(world, f.citizen).is_none() {
+            if let Some(room) = world.store.entity(f.citizen).and_then(|e| e.parent) {
+                combat::on_arrival(world, actor, f.citizen, room).map_err(LoginError::Internal)?;
+            }
+        }
         return Ok(f);
     }
     identity::acceptable(passphrase)?;
