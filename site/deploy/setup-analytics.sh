@@ -2,8 +2,9 @@
 # One-time analytics setup on a server. Run as root, after the server setup and one deploy.
 # From Windows PowerShell, in site/:
 #   cmd /c 'ssh root@5.78.104.64 "tr -d \"\r\" | ADMIN_USER=david ADMIN_PASS=... bash -s" < deploy\setup-analytics.sh > setup-analytics.log'
-# On the game server (moondial-1), the same script with its own paths and site:
-#   cmd /c 'ssh root@5.78.210.32 "tr -d \"\r\" | APP_DIR=/srv/moondial SITES=play SERVER_NAME_RE=play.agentscanplay.com ADMIN_USER=david ADMIN_PASS=... bash -s" < deploy\setup-analytics.sh > setup-analytics-play.log'
+# On the game server (moondial-1) the release ships this script, so run it there from a
+# root shell (ssh root@5.78.210.32), which avoids Windows quoting of the variables:
+#   APP_DIR=/srv/moondial SITES=play SERVER_NAME_RE=play.agentscanplay.com ADMIN_USER=david ADMIN_PASS=... bash /srv/moondial/current/deploy/setup-analytics.sh
 #
 # - installs the JSON log format (http context) and makes both public server blocks
 #   include the analytics snippet (access_log + the /_admin/ page)

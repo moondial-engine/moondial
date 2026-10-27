@@ -99,6 +99,7 @@ jobs:
           install -m 755 out/moondial-driver stage/moondial-driver
           cp deploy/server/* stage/deploy/
           cp -r site/deploy/nginx-snippets stage/deploy/
+          cp site/deploy/setup-analytics.sh stage/deploy/
           cp site/analytics/*.py stage/analytics/
           ssh game "mkdir -p $APP_DIR/releases/$REL"
           rsync -az stage/ "game:$APP_DIR/releases/$REL/"
