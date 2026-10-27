@@ -18,7 +18,8 @@ pub fn register(world: &mut World) {
             let raw = args.str("query").unwrap_or("");
             let query: serde_json::Value = serde_json::from_str(raw)
                 .map_err(|e| CommandError::precondition(format!("The query is not JSON: {e}")))?;
-            let obs = super::observe_as(w, ctx, query)?;
+            let req = super::parse_query(query)?;
+            let obs = super::observe_request(w, ctx, &req)?;
             let text = serde_json::to_string_pretty(&obs).unwrap_or_default();
             Ok(Outcome::new(text, serde_json::to_value(obs).unwrap_or_default()))
         }),

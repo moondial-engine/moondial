@@ -710,3 +710,19 @@ fn sprites_from_before_frames_are_upgraded() {
     login(&mut w, "dave", "test", PASS).unwrap();
     assert_eq!(plain_str(&w, f.citizen, SPRITE, "frame"), Some("citizen"));
 }
+
+#[test]
+fn a_misshapen_query_is_the_asker_s_mistake_and_says_what_was_expected() {
+    let mut w = open(tempfile::tempdir().unwrap().path(), Timestamp(0));
+    login(&mut w, "dave", "test", PASS).unwrap();
+    let q =
+        r#"{"root":"here","relations":{"contents":{"where":{"entropic.creature.hp":{"lt":8}}}}}"#;
+    let e = call(&mut w, "dave", ActorKind::Citizen, "observe", json!([q])).unwrap_err();
+    let text = e.to_string();
+    assert!(
+        matches!(e, CommandError::Precondition { .. }),
+        "a bad shape is a precondition, not an internal error: {text}"
+    );
+    assert!(text.contains("\"op\""), "{text}");
+    assert!(!text.contains("built-in"), "{text}");
+}

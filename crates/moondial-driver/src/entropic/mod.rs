@@ -421,7 +421,7 @@ fn body_fields(now: moondial_time::Timestamp) -> BTreeMap<String, Field> {
     fields
 }
 
-/// Run an observation as the calling actor, for commands that render from one.
+/// Run a query the driver itself wrote, for commands that render from one.
 pub(crate) fn observe_as(
     world: &World,
     ctx: &CallContext,
@@ -429,13 +429,37 @@ pub(crate) fn observe_as(
 ) -> Result<crate::observe::Observed, CommandError> {
     let req: crate::observe::Request = serde_json::from_value(query)
         .map_err(|e| CommandError::internal(format!("bad built-in query: {e}")))?;
+    observe_request(world, ctx, &req)
+}
+
+/// Read a query an actor wrote. A shape error is the actor's, and says what was expected.
+pub(crate) fn parse_query(query: Value) -> Result<crate::observe::Request, CommandError> {
+    serde_json::from_value(query).map_err(|e| {
+        let e = e.to_string();
+        let hint = if e.contains("Filter") {
+            " A where is {\"field\": \"component.field\", \"op\": \"<\", \"value\": 5} (ops <, <=, ==, !=, >, >=), or {\"all\": [...]}, {\"any\": [...]}, {\"not\": ...}."
+        } else if e.contains("Root") {
+            " A root is \"self\", \"here\", \"window\", \"palace\", {\"room\": \"fogbank\"}, {\"window\": \"name\"} or {\"entity\": n}."
+        } else {
+            ""
+        };
+        CommandError::precondition(format!("The query is not the shape the world reads: {e}.{hint}"))
+    })
+}
+
+/// Run a parsed observation as the calling actor.
+pub(crate) fn observe_request(
+    world: &World,
+    ctx: &CallContext,
+    req: &crate::observe::Request,
+) -> Result<crate::observe::Observed, CommandError> {
     let viewer = if ctx.kind == moondial_registry::ActorKind::Admin {
         moondial_store::Viewer::admin()
     } else {
         moondial_store::Viewer::actor(&ctx.actor)
     };
     world
-        .observe(&viewer, ctx.kind, &req, &moondial_query::Limits::default())
+        .observe(&viewer, ctx.kind, req, &moondial_query::Limits::default())
         .map_err(|e| CommandError::precondition(e.to_string()))
 }
 

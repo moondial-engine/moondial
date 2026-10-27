@@ -63,7 +63,7 @@ observe {"root":"here","select":{"entropic.room":["name"]},
                       "exits":{"select":{"entropic.room":["name"]}}}}
 ```
 
-Roots: `self`, `here`, `window`, `palace` (yours, or `{"window":"tyler"}` for another's: you still see only what is yours to see), `{"room":"fogbank"}`, `{"entity":12}`. Relations: `contents`, `in`, `exits`. A `where` filter runs on the visible view, so a hidden field cannot be probed. Limits (depth 4, breadth 100, 200 entities, 30 queries per 10 s per actor) reject a query whole with a typed reason; unknown names come back with the nearest known one. The crate's property test queries random worlds as a stranger and asserts no owner or admin field ever appears.
+Roots: `self`, `here`, `window`, `palace` (yours, or `{"window":"tyler"}` for another's: you still see only what is yours to see), `{"room":"fogbank"}`, `{"entity":12}`. Relations: `contents`, `in`, `exits`. A `where` filter is `{"field":"entropic.creature.hp","op":"<","value":8}` (ops `<`, `<=`, `==`, `!=`, `>`, `>=`), or `{"all":[...]}`, `{"any":[...]}`, `{"not":{...}}`; it runs on the visible view, so a hidden field cannot be probed. `"timed":"curve"` returns timed fields as their curves instead of a number, for a client that evaluates them itself. Limits (depth 4, breadth 100, 200 entities, 30 queries per 10 s per actor) reject a query whole with a typed reason; unknown names come back with the nearest known one. The crate's property test queries random worlds as a stranger and asserts no owner or admin field ever appears.
 
 ### The Gate
 
