@@ -40,12 +40,14 @@ pub struct Shared {
     pub checker: Arc<moondial_clear::Checker>,
     /// The Gate's hourly budget per agent.
     pub hour_budget: Arc<Mutex<crate::gate::HourBudget>>,
+    /// Fires after anything changes the world, so sessions push what is new.
+    pub changed: tokio::sync::broadcast::Sender<()>,
     /// Origins the browser client may call from (`MOONDIAL_CORS_ORIGINS`, comma-separated).
     pub cors_origins: Vec<String>,
 }
 
 impl Shared {
-    fn is_admin(&self, token: Option<&str>) -> bool {
+    pub(crate) fn is_admin(&self, token: Option<&str>) -> bool {
         matches!((&self.admin_token, token), (Some(t), Some(given)) if !t.is_empty() && t == given)
     }
 }
@@ -291,6 +293,21 @@ async fn commands(State(s): State<Shared>, Query(q): Query<HashMap<String, Strin
     Ok(Json(json!({"commands": w.commands_for(kind)})))
 }
 
+/// Log a citizen in for a session: `Ok(fresh)` or a message.
+pub(crate) fn login_for_session(
+    w: &mut World,
+    actor: &str,
+    passphrase: &str,
+) -> Result<bool, String> {
+    valid_name(actor)?;
+    let fresh = !w
+        .store
+        .entities()
+        .any(|e| e.kind == "citizen" && e.owner.as_deref() == Some(actor));
+    entropic::login(w, actor, "session", passphrase).map_err(|e| e.to_string())?;
+    Ok(fresh)
+}
+
 /// Log a citizen in for one HTTP call, with the status codes a browser client needs.
 fn http_login(
     w: &mut World,
@@ -351,7 +368,10 @@ async fn command(
         actor: body.actor.clone(),
         kind,
     };
-    match w.call(&ctx, &body.command, &body.args) {
+    let outcome = w.call(&ctx, &body.command, &body.args);
+    drop(w);
+    let _ = s.changed.send(());
+    match outcome {
         Ok(out) => Ok(Json(
             json!({"ok": true, "summary": out.summary, "result": out.result}),
         )),
@@ -454,6 +474,9 @@ async fn gate_http(State(s): State<Shared>, Json(body): Json<GateBody>) -> Reply
         &body.actor,
         &body.message,
     );
+    drop(budget);
+    drop(w);
+    let _ = s.changed.send(());
     Ok(Json(json!({
         "ok": true,
         "verdict": passage.verdict,
@@ -528,6 +551,7 @@ pub fn router(shared: Shared) -> Router {
         .route("/v0/command", post(command))
         .route("/v0/observe", post(observe_http))
         .route("/v0/gate", post(gate_http))
+        .route("/v0/session", get(crate::session::upgrade))
         .route("/v0/view/{id}", get(view))
         .route("/v0/log", get(log))
         .layer(cors)

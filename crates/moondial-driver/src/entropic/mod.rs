@@ -79,6 +79,9 @@ pub const CITIZEN: &str = "entropic.citizen";
 pub const ACCOUNT: &str = "entropic.account";
 pub const BODY: &str = "entropic.body";
 pub const CREATURE: &str = "entropic.creature";
+/// How a thing looks. Presentation is a component like any other, so the driver never
+/// knows what a sprite is and a text client never has to see one.
+pub const SPRITE: &str = "entropic.sprite";
 
 /// A citizen's hit points at full health. Fixed in the slice; the level moves the attack.
 pub const MAX_HP: f64 = 30.0;
@@ -152,6 +155,9 @@ pub fn schemas() -> Vec<ComponentSchema> {
             .field("hp", FieldKind::Timed, Visibility::Public)
             .field("max_hp", FieldKind::Plain, Visibility::Public)
             .field("engaged", FieldKind::Plain, Visibility::Owner),
+        ComponentSchema::new(SPRITE, 1)
+            .field("glyph", FieldKind::Plain, Visibility::Public)
+            .field("tint", FieldKind::Plain, Visibility::Public),
         ComponentSchema::new(CREATURE, 1)
             .field("name", FieldKind::Plain, Visibility::Public)
             .field("hp", FieldKind::Plain, Visibility::Public)
@@ -213,6 +219,22 @@ pub fn login(
     let now = world.now();
     if let Some(f) = find_citizen(world, actor) {
         identity::check(world, f.citizen, passphrase)?;
+        if world
+            .store
+            .entity(f.citizen)
+            .is_some_and(|e| !e.components.contains_key(SPRITE))
+        {
+            world
+                .record(
+                    me.clone(),
+                    StoreEvent::ComponentSet {
+                        id: f.citizen,
+                        component: SPRITE.into(),
+                        fields: sprite_fields("@", "#e8e4da"),
+                    },
+                )
+                .map_err(internal)?;
+        }
         // Citizens from before passphrases and bodies existed get them on their next login.
         if plain_str(world, f.citizen, ACCOUNT, "passphrase_hash").is_none() {
             identity::acceptable(passphrase)?;
@@ -294,6 +316,16 @@ pub fn login(
             },
         )
         .map_err(internal)?;
+    world
+        .record(
+            me.clone(),
+            StoreEvent::ComponentSet {
+                id: citizen,
+                component: SPRITE.into(),
+                fields: sprite_fields("@", "#e8e4da"),
+            },
+        )
+        .map_err(internal)?;
     let window = world.store.allocate_id();
     world
         .record(
@@ -325,6 +357,15 @@ pub fn login(
         window,
         palace,
     })
+}
+
+/// A sprite: one glyph and a tint, enough for a terminal renderer and a placeholder for
+/// an atlas frame later.
+pub(crate) fn sprite_fields(glyph: &str, tint: &str) -> BTreeMap<String, Field> {
+    let mut fields = BTreeMap::new();
+    fields.insert("glyph".into(), Field::Plain(json!(glyph)));
+    fields.insert("tint".into(), Field::Plain(json!(tint)));
+    fields
 }
 
 fn account_fields(passphrase: &str) -> Result<BTreeMap<String, Field>, LoginError> {

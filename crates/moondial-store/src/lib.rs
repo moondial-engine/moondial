@@ -245,6 +245,17 @@ pub struct Entity {
     pub components: BTreeMap<String, Component>,
 }
 
+/// How a timed field appears in a view.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TimedForm {
+    /// The evaluated number at `now`.
+    #[default]
+    Value,
+    /// `{value, waterline, curve, bounds, paused}`: enough to evaluate it later.
+    Curve,
+}
+
 /// Who is looking, for [`Store::view`].
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Viewer {
@@ -571,8 +582,23 @@ impl Store {
     /// An entity as `viewer` may see it at `now`: its kind, owner, parent, and every
     /// component's visible fields, timed ones evaluated. `None` if the entity does not exist.
     pub fn view(&self, id: EntityId, viewer: &Viewer, now: Timestamp) -> Option<Value> {
+        self.view_as(id, viewer, now, TimedForm::Value)
+    }
+
+    /// [`Store::view`] with a choice of how timed fields appear: the evaluated number,
+    /// or the curve itself so a client can evaluate it at any moment without asking
+    /// again. A renderer animates decay from the curve at frame rate; the number is
+    /// what a text client or a filter wants.
+    pub fn view_as(
+        &self,
+        id: EntityId,
+        viewer: &Viewer,
+        now: Timestamp,
+        timed: TimedForm,
+    ) -> Option<Value> {
         let e = self.entities.get(&id)?;
         let scopes = self.scopes_for(id).ok()?;
+        let paused = scopes.iter().any(|c| c.is_paused_at(now));
         let mut comps = serde_json::Map::new();
         for (name, c) in &e.components {
             let Some(schema) = self.registry.get(name) else {
@@ -586,9 +612,16 @@ impl Store {
                 if !viewer.can_see(fs.visibility, e.owner.as_deref()) {
                     continue;
                 }
-                let v = match f {
-                    Field::Plain(v) => v.clone(),
-                    Field::Timed(t) => Value::from(t.read_at(now, &scopes)),
+                let v = match (f, timed) {
+                    (Field::Plain(v), _) => v.clone(),
+                    (Field::Timed(t), TimedForm::Value) => Value::from(t.read_at(now, &scopes)),
+                    (Field::Timed(t), TimedForm::Curve) => serde_json::json!({
+                        "value": t.read_at(now, &scopes),
+                        "waterline": {"value": t.waterline.value, "at": t.waterline.at.0},
+                        "curve": t.curve,
+                        "bounds": t.bounds,
+                        "paused": paused,
+                    }),
                 };
                 fields.insert(fname.clone(), v);
             }

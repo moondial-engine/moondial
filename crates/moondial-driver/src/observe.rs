@@ -116,7 +116,7 @@ impl RootResolver for Roots<'_> {
 /// clock events, and events on entities they can currently observe. Removed entities
 /// cannot be observed, so their removal is not shown; a later pass will carry visibility
 /// on the event itself.
-fn visible(world: &World, viewer: &Viewer, now: Timestamp, e: &Event) -> bool {
+pub(crate) fn visible(world: &World, viewer: &Viewer, now: Timestamp, e: &Event) -> bool {
     if viewer.admin {
         return true;
     }

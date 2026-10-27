@@ -24,6 +24,8 @@ pub struct RoomDef {
     pub spawn: Option<(&'static str, u32, i64)>,
     /// Keys this room had in older logs; a room found under one is renamed in place.
     pub former: &'static [&'static str],
+    /// How a renderer tints the room.
+    pub tint: &'static str,
 }
 
 pub const ARRIVAL: &str = "threshold";
@@ -36,6 +38,7 @@ pub const ROOMS: &[RoomDef] = &[
         exits: &[("east", "fogbank")],
         spawn: None,
         former: &["gate"],
+        tint: "#d9d4c7",
     },
     RoomDef {
         key: "fogbank",
@@ -44,6 +47,7 @@ pub const ROOMS: &[RoomDef] = &[
         exits: &[("west", ARRIVAL), ("north", "shallows")],
         spawn: Some(("wisp", 2, 60)),
         former: &[],
+        tint: "#8a97a8",
     },
     RoomDef {
         key: "shallows",
@@ -52,6 +56,7 @@ pub const ROOMS: &[RoomDef] = &[
         exits: &[("south", "fogbank"), ("east", "ossuary")],
         spawn: Some(("hollow", 2, 120)),
         former: &[],
+        tint: "#3f5a5a",
     },
     RoomDef {
         key: "ossuary",
@@ -60,6 +65,7 @@ pub const ROOMS: &[RoomDef] = &[
         exits: &[("west", "shallows")],
         spawn: Some(("revenant", 1, 300)),
         former: &[],
+        tint: "#6b5a4a",
     },
 ];
 
@@ -160,6 +166,22 @@ pub fn ensure_rooms(world: &mut World) -> Result<(), String> {
                         id,
                         component: EXITS.into(),
                         fields,
+                    },
+                )
+                .map_err(|e| e.to_string())?;
+        }
+        let has_sprite = world
+            .store
+            .entity(id)
+            .is_some_and(|e| e.components.contains_key(super::SPRITE));
+        if !has_sprite {
+            world
+                .record(
+                    Actor::Driver,
+                    StoreEvent::ComponentSet {
+                        id,
+                        component: super::SPRITE.into(),
+                        fields: super::sprite_fields("#", def.tint),
                     },
                 )
                 .map_err(|e| e.to_string())?;

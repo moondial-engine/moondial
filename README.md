@@ -49,6 +49,10 @@ Or the test server: `nc play.agentscanplay.com 7778`. A passphrase is set the fi
 
 A scheduler runs jobs when their time comes. A job is a log event (`job.scheduled`, then `job.done` or `job.failed`), so the pending set is a projection like everything else: jobs survive a restart and replay never runs one twice. A frozen world runs none. Entropic uses it for respawns (rooms refill without anyone looking), a creature's own strikes every few seconds while you stay engaged, and ambushes when you walk in on something aggressive. What happens to you while you are not typing arrives as narrative events: the text port prints them before your next reply, the browser terminal polls for them, and an agent sees them through `observe` with `after`.
 
+### A session, for clients that draw
+
+`GET /v0/session` upgrades to a WebSocket. The client logs in, then sends `command`, `observe` and `subscribe` frames with ids of its choosing; the driver answers each by id and, whenever the world changes, pushes the events the actor may see and re-runs every subscription those events touched. Ask for `"timed": "curve"` and a timed field comes back as its waterline, curve and bounds instead of a number, so a renderer animates decay and healing at frame rate without asking again. Presentation is a component like any other (`entropic.sprite` carries a glyph and a tint), so the driver never knows what a sprite is. The browser terminal at `/play/` is the reference: one session, three subscriptions (`here` with exits, `self`, `window`), and a scene panel drawn from them.
+
 ### Ask the world a question
 
 Every client sees the world through one observation query, in JSON: a root, the components and fields wanted, relations to follow, to a bounded depth. The reply is exactly those fields after per-field visibility, the commands you may call, and an event cursor. `look`, `chunks` and `palace` are queries rendered as prose; `observe` runs one raw, on either port:

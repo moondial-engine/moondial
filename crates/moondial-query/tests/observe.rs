@@ -429,6 +429,42 @@ fn filters_run_on_the_visible_view_at_the_query_moment() {
 }
 
 #[test]
+fn timed_fields_can_come_back_as_curves_a_client_evaluates_itself() {
+    let w = world();
+    let dave = Viewer::actor("dave");
+    let later = T0.plus(Duration::seconds(10));
+    let q = q(
+        json!({"root": {"window": "dave"}, "select": {}, "timed": "curve",
+        "relations": {"contents": {"select": {"w.chunk": ["value", "source"]}, "where": {"field": "w.chunk.source", "op": "==", "value": "wisp"}}}}),
+    );
+    let obs = observe(&w.store, &dave, later, &q, &Names(&w), &Limits::default()).unwrap();
+    let v = &obs.root["relations"]["contents"][0]["components"]["w.chunk"]["value"];
+    assert!((v["value"].as_f64().unwrap() - 7.5).abs() < 1e-9, "{v}");
+    assert_eq!(v["waterline"], json!({"value": 15.0, "at": T0.0}));
+    assert_eq!(v["curve"], json!({"Exponential": {"half_life": 10_000}}));
+    assert_eq!(v["paused"], json!(false));
+    // The filter still compared the number, not the object.
+    assert_eq!(
+        obs.root["relations"]["contents"].as_array().unwrap().len(),
+        1
+    );
+    // A stranger sees the chunk (its source is public) but no value in either form.
+    let obs = observe(
+        &w.store,
+        &Viewer::actor("mallory"),
+        later,
+        &q,
+        &Names(&w),
+        &Limits::default(),
+    )
+    .unwrap();
+    assert_eq!(
+        obs.root["relations"]["contents"][0]["components"]["w.chunk"],
+        json!({"source": "wisp"})
+    );
+}
+
+#[test]
 fn limits_and_names_are_checked_before_anything_runs() {
     let w = world();
     let dave = Viewer::actor("dave");
@@ -558,7 +594,8 @@ fn limits_and_names_are_checked_before_anything_runs() {
         &Query {
             root: Root::Entity(w.gate),
             select: None,
-            relations: BTreeMap::new()
+            relations: BTreeMap::new(),
+            timed: Default::default(),
         },
         &NoNames,
         &Limits::default()

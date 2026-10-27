@@ -15,6 +15,7 @@ mod gate;
 mod jobs;
 mod net;
 mod observe;
+mod session;
 mod world;
 
 use moondial_log::WorldId;
@@ -88,6 +89,7 @@ fn main() {
         budget: Arc::new(Mutex::new(observe::Budget::new(30, 10_000))),
         checker: Arc::new(gate::checker()),
         hour_budget: Arc::new(Mutex::new(gate::HourBudget::new(60.0, 0.25))),
+        changed: tokio::sync::broadcast::channel(64).0,
         limits: moondial_query::Limits::default(),
         cors_origins: env_or(
             "MOONDIAL_CORS_ORIGINS",
@@ -112,8 +114,9 @@ fn main() {
             let mut every = tokio::time::interval(std::time::Duration::from_secs(1));
             loop {
                 every.tick().await;
-                if let Ok(mut w) = shared.world.lock() {
-                    w.tick();
+                let ran = shared.world.lock().map(|mut w| w.tick()).unwrap_or(0);
+                if ran > 0 {
+                    let _ = shared.changed.send(());
                 }
             }
         });

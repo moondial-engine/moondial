@@ -33,7 +33,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-use moondial_store::{EntityId, RelationKind, Store, Viewer};
+use moondial_store::{EntityId, RelationKind, Store, TimedForm, Viewer};
 use moondial_time::Timestamp;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
@@ -170,6 +170,11 @@ pub struct Query {
     /// Relations to follow from the root.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub relations: BTreeMap<String, RelationQuery>,
+    /// How timed fields appear: `"value"` (the number, the default) or `"curve"` (the
+    /// waterline, curve and bounds, so a client can evaluate the value at any moment
+    /// without asking again).
+    #[serde(default)]
+    pub timed: TimedForm,
 }
 
 /// Limits a query is checked against. The driver sets them; a world may tighten them.
@@ -339,6 +344,7 @@ pub fn observe(
         viewer,
         now,
         limits,
+        timed: query.timed,
         touched: 0,
     };
     let node = walk
@@ -493,6 +499,7 @@ struct Walk<'a> {
     viewer: &'a Viewer,
     now: Timestamp,
     limits: &'a Limits,
+    timed: TimedForm,
     touched: usize,
 }
 
@@ -504,7 +511,7 @@ impl Walk<'_> {
         select: Option<&Select>,
         relations: &BTreeMap<String, RelationQuery>,
     ) -> Result<Option<Value>, QueryError> {
-        let Some(view) = self.store.view(id, self.viewer, self.now) else {
+        let Some(view) = self.store.view_as(id, self.viewer, self.now, self.timed) else {
             return Ok(None);
         };
         self.touched += 1;

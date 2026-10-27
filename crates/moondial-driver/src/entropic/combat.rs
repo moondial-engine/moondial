@@ -29,6 +29,9 @@ pub struct CreatureDef {
     pub strike_seconds: i64,
     /// How it announces itself when it ambushes.
     pub ambush: &'static str,
+    /// How a renderer draws it.
+    pub glyph: &'static str,
+    pub tint: &'static str,
 }
 
 pub const CREATURES: &[CreatureDef] = &[
@@ -41,6 +44,8 @@ pub const CREATURES: &[CreatureDef] = &[
         aggressive: false,
         strike_seconds: 12,
         ambush: "drifts closer.",
+        glyph: "w",
+        tint: "#9fd3e6",
     },
     CreatureDef {
         key: "hollow",
@@ -51,6 +56,8 @@ pub const CREATURES: &[CreatureDef] = &[
         aggressive: true,
         strike_seconds: 10,
         ambush: "stands up out of the water and comes at you.",
+        glyph: "H",
+        tint: "#6f8f7a",
     },
     CreatureDef {
         key: "revenant",
@@ -61,6 +68,8 @@ pub const CREATURES: &[CreatureDef] = &[
         aggressive: true,
         strike_seconds: 8,
         ambush: "steps out of a niche. It has been waiting.",
+        glyph: "R",
+        tint: "#c96a6a",
     },
 ];
 
@@ -147,6 +156,14 @@ pub fn fill(world: &mut World, room: EntityId) -> Result<usize, StoreError> {
                 id,
                 component: CREATURE.into(),
                 fields,
+            },
+        )?;
+        world.record(
+            Actor::Driver,
+            StoreEvent::ComponentSet {
+                id,
+                component: super::SPRITE.into(),
+                fields: super::sprite_fields(d.glyph, d.tint),
             },
         )?;
         spawned += 1;
