@@ -29,7 +29,8 @@ fail() { echo "FAIL: $*"; }
 [ "$(id -u)" -eq 0 ] || { echo "Run as root"; exit 1; }
 
 REL=$APP_DIR/current
-[ -d "$REL/deploy/nginx-snippets" ] || { fail "no deployed release with deploy/nginx-snippets; deploy first"; exit 1; }
+echo "APP_DIR=$APP_DIR SITES=$SITES SERVER_NAME_RE=$SERVER_NAME_RE RUN_USER=$RUN_USER"
+[ -d "$REL/deploy/nginx-snippets" ] || { fail "$REL/deploy/nginx-snippets not found; deploy first, or pass APP_DIR=/srv/<app>"; exit 1; }
 
 echo "######## nginx log format and snippet"
 install -m 644 "$REL/deploy/nginx-snippets/analytics-format.conf" /etc/nginx/conf.d/analytics-format.conf
