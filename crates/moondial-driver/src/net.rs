@@ -349,7 +349,9 @@ async fn commands(State(s): State<Shared>, Query(q): Query<HashMap<String, Strin
 /// and world), as JSON. An editor compiles its own checker from this, so the words it
 /// offers and the words the world accepts are one list.
 async fn vocabulary(State(s): State<Shared>) -> Reply {
-    Ok(Json(json!({"name": s.world.lock().map(|w| w.id.0.clone()).unwrap_or_default(), "vocabulary": crate::gate::disremembered_vocabulary()})))
+    Ok(Json(
+        json!({"name": s.world.lock().map(|w| w.id.0.clone()).unwrap_or_default(), "vocabulary": crate::gate::disremembered_vocabulary()}),
+    ))
 }
 
 #[derive(Deserialize)]
