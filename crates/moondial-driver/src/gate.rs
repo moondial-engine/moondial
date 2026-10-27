@@ -699,7 +699,12 @@ mod tests {
             r.contains("[FACT] spacepants holds 1 chunks in the active window as of"),
             "{r}"
         );
-        assert!(r.contains(" creatures are in The Fogbank as of"), "{r}");
+        assert!(
+            r.contains(" creatures are in The Fogbank as of")
+                || r.contains(" creature is in The Fogbank as of")
+                || r.contains("0 creatures are in The Fogbank"),
+            "{r}"
+        );
         assert!(
             r.contains("[FACT] spacepants has 30 HP of 30 HP as of"),
             "{r}"

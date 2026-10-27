@@ -156,14 +156,16 @@ impl AskBinding for Asks {
                     match observe(world, actor, q) {
                         Ok(obs) => {
                             let b = &obs.observation.root["components"][BODY];
-                            report.fact(
-                                format!(
-                                    "{who} has {:.0} HP of {:.0} HP as of {at}",
-                                    b["hp"].as_f64().unwrap_or(0.0),
-                                    b["max_hp"].as_f64().unwrap_or(0.0)
+                            match (b["hp"].as_f64(), b["max_hp"].as_f64()) {
+                                (Some(hp), Some(max)) => report.fact(
+                                    format!("{who} has {hp:.0} HP of {max:.0} HP as of {at}"),
+                                    cursor(&obs),
                                 ),
-                                cursor(&obs),
-                            );
+                                _ => report.fact(
+                                    format!("The hit points of {who} are not visible to {actor} as of {at}"),
+                                    cursor(&obs),
+                                ),
+                            }
                         }
                         Err(e) => {
                             report.fact(format!("Question {n} could not be answered: {e}"), "query")
@@ -274,7 +276,15 @@ impl AskBinding for Asks {
                                 .unwrap_or(0);
                             let name = room_name(&obs.observation.root);
                             report.fact(
-                                format!("{count} {noun} are in {name} as of {at}"),
+                                format!(
+                                    "{count} {} {} in {name} as of {at}",
+                                    if count == 1 {
+                                        noun.trim_end_matches('s')
+                                    } else {
+                                        &noun
+                                    },
+                                    if count == 1 { "is" } else { "are" }
+                                ),
                                 cursor(&obs),
                             );
                         }
