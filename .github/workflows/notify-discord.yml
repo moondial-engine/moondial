@@ -1,0 +1,63 @@
+name: Notify Discord
+
+# Posts the outcome of every deploy (Disremembered game server and the
+# agentscanplay.com / moondial.ai site) to a Discord channel.
+# Needs the DISCORD_WEBHOOK secret; without it this workflow does nothing.
+
+on:
+  workflow_run:
+    workflows:
+      - "Deploy driver (play.agentscanplay.com)"
+      - "Deploy site (agentscanplay.com, moondial.ai)"
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Post to Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          WORKFLOW: ${{ github.event.workflow_run.name }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          TRIGGER: ${{ github.event.workflow_run.event }}
+          ACTOR: ${{ github.event.workflow_run.triggering_actor.login }}
+          COMMIT_MSG: ${{ github.event.workflow_run.head_commit.message }}
+          REPO_URL: ${{ github.event.repository.html_url }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "::notice::DISCORD_WEBHOOK secret is not set; skipping"
+            exit 0
+          fi
+
+          case "$WORKFLOW" in
+            "Deploy driver"*) target="Disremembered · play.agentscanplay.com" ;;
+            "Deploy site"*)   target="Moondial site · agentscanplay.com, moondial.ai" ;;
+            *)                target="$WORKFLOW" ;;
+          esac
+
+          case "$CONCLUSION" in
+            success)   icon="🟢"; color=3066993;  word="deployed" ;;
+            failure)   icon="🔴"; color=15158332; word="deploy failed" ;;
+            cancelled) icon="⚪"; color=9807270;  word="deploy cancelled" ;;
+            *)         icon="🟡"; color=15844367; word="deploy $CONCLUSION" ;;
+          esac
+
+          subject=$(printf '%s' "$COMMIT_MSG" | head -n 1)
+          short=${SHA::7}
+
+          jq -n \
+            --arg title "$icon $target — $word" \
+            --arg url "$RUN_URL" \
+            --arg desc "[\`$short\`]($REPO_URL/commit/$SHA) $subject" \
+            --arg footer "$TRIGGER by $ACTOR" \
+            --argjson color "$color" \
+            '{username: "Moondial deploys",
+              embeds: [{title: $title, url: $url, description: $desc,
+                        color: $color, footer: {text: $footer}}]}' \
+          | curl -fsS -H "Content-Type: application/json" -d @- "$WEBHOOK"
