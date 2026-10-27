@@ -194,7 +194,14 @@ fn run_line(
             let Some((name, kind)) = actor.clone() else {
                 return Err("Not logged in. Type: login <name> <passphrase>".into());
             };
-            let text = crate::gate::compile(&name, &world.id.0, line, world.now());
+            // A line that already is a message (pasted whole, flattened by the
+            // terminal) goes in as written.
+            let pasted = crate::gate::is_message(line);
+            let text = if pasted {
+                crate::gate::reflow(line)
+            } else {
+                crate::gate::compile(&name, &world.id.0, line, world.now())
+            };
             let mut budget = shared
                 .hour_budget
                 .lock()
@@ -207,6 +214,7 @@ fn run_line(
                 &name,
                 kind,
                 crate::gate::Via::Text,
+                !pasted,
                 &text,
             );
             let shown = if *raw {
@@ -511,7 +519,12 @@ pub(crate) fn compiled_passage(
     } else {
         format!("{command} {}", words.join(" "))
     };
-    let text = crate::gate::compile(actor, &w.id.0, &line, w.now());
+    let pasted = crate::gate::is_message(&line);
+    let text = if pasted {
+        crate::gate::reflow(&line)
+    } else {
+        crate::gate::compile(actor, &w.id.0, &line, w.now())
+    };
     crate::gate::pass(
         w,
         &s.checker,
@@ -520,6 +533,7 @@ pub(crate) fn compiled_passage(
         actor,
         kind,
         via,
+        !pasted,
         &text,
     )
 }
@@ -623,6 +637,7 @@ async fn gate_http(State(s): State<Shared>, Json(body): Json<GateBody>) -> Reply
         &body.actor,
         ActorKind::Citizen,
         crate::gate::Via::Gate,
+        false,
         &body.message,
     );
     drop(budget);

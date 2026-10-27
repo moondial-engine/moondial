@@ -121,6 +121,10 @@ pub struct Report {
     pub to: String,
     pub r#ref: Option<String>,
     pub lines: Vec<Line>,
+    /// Indexes into `lines` that are receipts: what ran, which rule, which
+    /// precondition. In the CLEAR, not in the prose.
+    #[serde(skip)]
+    receipts: Vec<usize>,
 }
 
 /// The most lines a reply carries; the vocabulary's statement limit less room for a
@@ -134,6 +138,7 @@ impl Report {
             to: to.into(),
             r#ref: r#ref.map(str::to_string),
             lines: Vec::new(),
+            receipts: Vec::new(),
         }
     }
 
@@ -142,6 +147,12 @@ impl Report {
             text: text.into(),
             src: src.into(),
         });
+    }
+
+    /// A fact that is a receipt for a human: kept in the CLEAR, left out of the prose.
+    pub fn receipt(&mut self, text: impl Into<String>, src: impl Into<String>) {
+        self.receipts.push(self.lines.len());
+        self.fact(text, src);
     }
 
     pub fn quote(&mut self, text: impl Into<String>, src: impl Into<String>) {
@@ -184,16 +195,11 @@ impl Report {
     /// the receipts (event ids, which rule, which precondition) stay in the CLEAR form.
     pub fn prose(&self) -> String {
         let mut out: Vec<String> = Vec::new();
-        for line in &self.lines {
+        for (i, line) in self.lines.iter().enumerate() {
             match line {
                 Line::Quote { text, .. } => out.push(text.clone()),
-                Line::Fact { text, src } => {
-                    let receipt = src.starts_with("ev-")
-                        || matches!(src.as_str(), "precondition" | "registry" | "driver");
-                    if !receipt {
-                        out.push(sentence(text));
-                    }
-                }
+                Line::Fact { text, .. } if !self.receipts.contains(&i) => out.push(sentence(text)),
+                Line::Fact { .. } => {}
             }
         }
         out.join("\n")
@@ -327,6 +333,38 @@ impl Via {
     }
 }
 
+/// Whether a line is a CLEAR message rather than a command: it starts with the header.
+pub fn is_message(line: &str) -> bool {
+    line.trim_start().starts_with("FROM:")
+}
+
+/// A CLEAR message flattened onto one line by a single-line input gets its line
+/// breaks back: before each header field after FROM, and before each statement tag,
+/// with the blank line the header ends with.
+pub fn reflow(line: &str) -> String {
+    let mut out = String::new();
+    let mut first_tag = true;
+    for word in line.split_whitespace() {
+        let header = matches!(word, "TO:" | "INTENT:" | "REF:" | "CC:" | "DATE:");
+        let tag = ["[DO]", "[ASK]", "[FACT]", "[INFER", "[QUOTE]"]
+            .iter()
+            .any(|t| word.starts_with(t));
+        if !out.is_empty() {
+            if tag && first_tag {
+                out.push_str("\n\n");
+                first_tag = false;
+            } else if header || tag {
+                out.push('\n');
+            } else {
+                out.push(' ');
+            }
+        }
+        out.push_str(word);
+    }
+    out.push('\n');
+    out
+}
+
 /// Compile a terminal line (`attack the wisp`) into a REQUEST from `actor` to `world`:
 /// one DO, MUST, the line's first word as the verb. What a human types is what the
 /// checker reads; a line the checker refuses comes back with the rule it broke.
@@ -350,6 +388,7 @@ pub fn pass(
     actor: &str,
     kind: ActorKind,
     via: Via,
+    compiled: bool,
     text: &str,
 ) -> Passage {
     let world_name = world.id.0.clone();
@@ -360,7 +399,9 @@ pub fn pass(
     let mut report = Report::new(&world_name, actor, r#ref);
     let mut outcomes = Vec::new();
 
-    if via == Via::Gate {
+    // The budget is on messages written as messages, whichever port they came in by;
+    // a compiled line is typing, not agent traffic.
+    if !compiled {
         if let Err(resets) = budget.check(actor, now) {
             report.fact(
                 format!("{actor} has spent the message budget for the hour as of {}; the budget resets at {}", iso_minute(now), iso_minute(resets)),
@@ -379,7 +420,7 @@ pub fn pass(
     }
 
     let passed = result.verdict == "PASS";
-    if via == Via::Gate {
+    if !compiled {
         budget.charge(actor, now, passed);
     }
     // Every message that crosses the Gate is in the log, word for word, as the
@@ -387,7 +428,7 @@ pub fn pass(
     let _ = world.note(
         moondial_log::Actor::Citizen(actor.to_string()),
         "gate.message",
-        serde_json::json!({"from": actor, "text": text, "verdict": result.verdict, "score": result.score, "via": via.name()}),
+        serde_json::json!({"from": actor, "text": text, "verdict": result.verdict, "score": result.score, "via": via.name(), "compiled": compiled}),
     );
 
     // The sender must be who they say they are, and must be talking to this world.
@@ -616,9 +657,9 @@ fn run_request(
                 let src = format!("ev-{after}");
                 let at = iso_minute(world.now());
                 if after > before {
-                    report.fact(format!("Statement {n} ran {verb} for {actor} at {at} and recorded events ev-{} to ev-{after}", before + 1), &src);
+                    report.receipt(format!("Statement {n} ran {verb} for {actor} at {at} and recorded events ev-{} to ev-{after}", before + 1), &src);
                 } else {
-                    report.fact(
+                    report.receipt(
                         format!("Statement {n} ran {verb} for {actor} at {at} and changed nothing"),
                         &src,
                     );
@@ -645,7 +686,7 @@ fn run_request(
                     }
                     CommandError::Internal { .. } => ("failed inside the world", "driver"),
                 };
-                report.fact(format!("Statement {n} {reason}"), src);
+                report.receipt(format!("Statement {n} {reason}"), src);
                 report.quote(e.to_string(), &world.id.0);
             }
         }
@@ -769,6 +810,7 @@ mod tests {
             actor,
             ActorKind::Citizen,
             via,
+            via != Via::Gate,
             text,
         );
         // The world's own replies pass the same checker, always.
@@ -1108,5 +1150,35 @@ mod tests {
         assert!(!p.ok && !p.acted);
         assert!(p.prose.contains("CL-I5"), "{}", p.prose);
         assert!(p.prose.contains("Type help"), "{}", p.prose);
+    }
+
+    #[test]
+    fn a_pasted_message_gets_its_lines_back_and_is_not_compiled() {
+        let flat = "FROM: lantern-7 TO: disremembered INTENT: QUERY REF: lantern-7-scout-1 [ASK] Where is spacepants? [ASK] How many creatures are in the fogbank?";
+        assert!(is_message(flat));
+        assert!(!is_message("attack the wisp"));
+        let text = reflow(flat);
+        assert_eq!(
+            text,
+            "FROM: lantern-7\nTO: disremembered\nINTENT: QUERY\nREF: lantern-7-scout-1\n\n[ASK] Where is spacepants?\n[ASK] How many creatures are in the fogbank?\n"
+        );
+        let mut w = world();
+        let checker = checker();
+        let mut budget = HourBudget::new(60.0, 0.25);
+        let p = pass(
+            &mut w,
+            &checker,
+            &mut budget,
+            &Asks,
+            "lantern-7",
+            ActorKind::Citizen,
+            Via::Text,
+            false,
+            &text,
+        );
+        assert!(p.acted, "{}", p.reply);
+        assert!(p.reply.contains("spacepants is"), "{}", p.reply);
+        // Written as a message, so it is budgeted like one, whichever port it came by.
+        assert_eq!(budget.remaining("lantern-7", w.now()), 59.0);
     }
 }
