@@ -225,6 +225,7 @@ pub fn login(
             .store
             .entity(f.citizen)
             .is_some_and(|e| !e.components.contains_key(SPRITE))
+            || sprite_is_old(world, f.citizen)
         {
             world
                 .record(

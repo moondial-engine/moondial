@@ -207,6 +207,7 @@ pub fn ensure_spawns(world: &mut World) -> Result<(), String> {
                     .store
                     .entity(*id)
                     .is_some_and(|e| !e.components.contains_key(super::SPRITE))
+                    || super::sprite_is_old(world, *id)
             })
             .map(|c| c.0)
             .collect();

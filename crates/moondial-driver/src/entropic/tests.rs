@@ -662,6 +662,51 @@ fn logging_in_where_something_hunts_is_arriving() {
         .has(combat::JOB_AMBUSH, |p| p["citizen"] == f.citizen.0));
     let shallows = rooms::room_by_key(&w, "shallows").unwrap();
     for (id, _, _, _) in combat::creatures_in(&w, shallows) {
-        assert!(w.store.entity(id).unwrap().components.contains_key(SPRITE));
+        assert_eq!(plain_str(&w, id, SPRITE, "frame"), Some("hollow"));
     }
+    assert_eq!(plain_str(&w, f.citizen, SPRITE, "frame"), Some("citizen"));
+}
+
+#[test]
+fn sprites_from_before_frames_are_upgraded() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut w = open(dir.path(), Timestamp(0));
+    let f = login(&mut w, "dave", "test", PASS).unwrap();
+    let fog = rooms::room_by_key(&w, "fogbank").unwrap();
+    let wisp = combat::creatures_in(&w, fog)[0].0;
+    // Strip the frame from a wisp and from dave, as an older log would have them.
+    for id in [wisp, f.citizen] {
+        let mut old = std::collections::BTreeMap::new();
+        old.insert(
+            "glyph".to_string(),
+            moondial_store::Field::Plain(json!("x")),
+        );
+        old.insert(
+            "tint".to_string(),
+            moondial_store::Field::Plain(json!("#fff")),
+        );
+        w.record(
+            moondial_log::Actor::Driver,
+            moondial_store::StoreEvent::ComponentSet {
+                id,
+                component: SPRITE.into(),
+                fields: old,
+            },
+        )
+        .unwrap();
+    }
+    assert!(plain_str(&w, wisp, SPRITE, "frame").is_none());
+    drop(w);
+    let mut w = open(dir.path(), Timestamp(1000));
+    assert_eq!(
+        plain_str(&w, wisp, SPRITE, "frame"),
+        Some("wisp"),
+        "boot upgrades creatures"
+    );
+    assert!(
+        plain_str(&w, f.citizen, SPRITE, "frame").is_none(),
+        "citizens wait for their login"
+    );
+    login(&mut w, "dave", "test", PASS).unwrap();
+    assert_eq!(plain_str(&w, f.citizen, SPRITE, "frame"), Some("citizen"));
 }
