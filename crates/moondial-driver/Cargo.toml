@@ -20,6 +20,7 @@ moondial-store = { path = "../moondial-store" }
 moondial-registry = { path = "../moondial-registry" }
 moondial-query = { path = "../moondial-query" }
 moondial-clear = { path = "../moondial-clear" }
+moondial-log-postgres = { path = "../moondial-log-postgres" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

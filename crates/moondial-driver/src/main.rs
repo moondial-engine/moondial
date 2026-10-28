@@ -1,7 +1,12 @@
 //! The Moondial driver, pre-alpha. Loads one world (the Disremembered text slice), replays its
 //! log, and listens on a text port and an HTTP port. Configuration is by environment:
 //!
-//! - `MOONDIAL_DATA`: directory for the event log (default `./data`); `memory` for none.
+//! - `MOONDIAL_LOG_URL`: a PostgreSQL URL (`postgres://user:pass@host/db`); the event log
+//!   lives there when set, and `MOONDIAL_DATA` is ignored.
+//! - `MOONDIAL_DATA`: directory for the file event log (default `./data`); `memory` for none.
+//!
+//! `moondial-driver import <dir>` copies the world's file log from `<dir>` into the
+//! PostgreSQL log `MOONDIAL_LOG_URL` names, once, and exits.
 //! - `MOONDIAL_WORLD`: world name (default `disremembered`).
 //! - `MOONDIAL_TCP`: text listener (default `127.0.0.1:7778`).
 //! - `MOONDIAL_HTTP`: HTTP listener (default `127.0.0.1:7777`).
@@ -37,10 +42,39 @@ fn main() {
     }
     let world_name = env_or("MOONDIAL_WORLD", "disremembered");
     let data = env_or("MOONDIAL_DATA", "./data");
-    let backing = if data == "memory" {
-        LogBacking::Memory
-    } else {
-        LogBacking::File(data.clone().into())
+    let log_url = std::env::var("MOONDIAL_LOG_URL")
+        .ok()
+        .filter(|v| !v.is_empty());
+
+    let args: Vec<String> = std::env::args().collect();
+    if args.get(1).map(String::as_str) == Some("import") {
+        let Some(dir) = args.get(2) else {
+            eprintln!("usage: moondial-driver import <dir>   (with MOONDIAL_LOG_URL set)");
+            std::process::exit(2);
+        };
+        let Some(url) = log_url else {
+            eprintln!("import needs MOONDIAL_LOG_URL, the PostgreSQL log to copy into");
+            std::process::exit(2);
+        };
+        match import_file_log(dir, &url, &world_name) {
+            Ok(n) => println!("imported {n} events of world {world_name} from {dir}"),
+            Err(e) => {
+                eprintln!("import failed: {e}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+
+    let backing = match log_url {
+        Some(url) => LogBacking::Postgres(url),
+        None if data == "memory" => LogBacking::Memory,
+        None => LogBacking::File(data.clone().into()),
+    };
+    let where_ = match &backing {
+        LogBacking::Postgres(_) => "PostgreSQL".to_string(),
+        LogBacking::Memory => "memory".to_string(),
+        LogBacking::File(d) => d.display().to_string(),
     };
 
     let mut world = match World::open(
@@ -75,11 +109,7 @@ fn main() {
         env!("CARGO_PKG_VERSION"),
         world_name,
         events,
-        if data == "memory" {
-            "memory".to_string()
-        } else {
-            data.clone()
-        },
+        where_,
         world.registry.specs().count()
     );
 
@@ -126,4 +156,12 @@ fn main() {
             _ = b => eprintln!("http listener stopped"),
         }
     });
+}
+
+/// Copy a world's file log into the PostgreSQL log, once.
+fn import_file_log(dir: &str, url: &str, world: &str) -> Result<u64, String> {
+    let from = moondial_log::FileLog::open(dir).map_err(|e| e.to_string())?;
+    let mut to = moondial_log_postgres::PostgresLog::open(url).map_err(|e| e.to_string())?;
+    moondial_log_postgres::copy_world(&from, &mut to, &WorldId(world.to_string()))
+        .map_err(|e| e.to_string())
 }

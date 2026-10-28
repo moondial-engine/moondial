@@ -18,6 +18,8 @@ pub enum LogBacking {
     Memory,
     /// JSON lines under a directory; replayed at start.
     File(std::path::PathBuf),
+    /// PostgreSQL, by connection URL; replayed at start.
+    Postgres(String),
 }
 
 /// The driver's world.
@@ -45,6 +47,9 @@ impl World {
         let log: Box<dyn EventLog + Send> = match backing {
             LogBacking::Memory => Box::new(MemoryLog::new()),
             LogBacking::File(dir) => Box::new(FileLog::open(dir).map_err(|e| e.to_string())?),
+            LogBacking::Postgres(url) => {
+                Box::new(moondial_log_postgres::PostgresLog::open(&url).map_err(|e| e.to_string())?)
+            }
         };
         let started = now_ms();
         let mut world = World {

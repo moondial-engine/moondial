@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/moondial-time",
     "crates/moondial-log",
+    "crates/moondial-log-postgres",
     "crates/moondial-store",
     "crates/moondial-registry",
     "crates/moondial-query",

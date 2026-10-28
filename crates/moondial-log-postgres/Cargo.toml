@@ -1,0 +1,18 @@
+[package]
+name = "moondial-log-postgres"
+version = "0.1.0"
+description = "Moondial's event log on PostgreSQL: one table, one sequence per world, appends on a dedicated connection thread so the driver's synchronous log stays synchronous."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+moondial-log = { path = "../moondial-log" }
+moondial-time = { path = "../moondial-time" }
+postgres = { version = "0.19", features = ["with-serde_json-1"] }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"
