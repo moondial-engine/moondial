@@ -326,7 +326,7 @@ fn err_json(status: StatusCode, msg: impl Into<String>) -> (StatusCode, Json<Val
     (status, Json(json!({"ok": false, "error": msg.into()})))
 }
 
-type Reply = Result<Json<Value>, (StatusCode, Json<Value>)>;
+pub(crate) type Reply = Result<Json<Value>, (StatusCode, Json<Value>)>;
 
 fn lock(s: &Shared) -> Result<std::sync::MutexGuard<'_, World>, (StatusCode, Json<Value>)> {
     s.world
@@ -368,7 +368,12 @@ async fn vocabulary(State(s): State<Shared>) -> Reply {
 /// and the limits a query is checked against. A client builds queries from this
 /// instead of knowing the world.
 async fn schema(State(s): State<Shared>) -> Reply {
-    let w = lock(&s)?;
+    schema_value(&s).map(Json)
+}
+
+/// The schema, as `GET /v0/schema` serves it.
+pub(crate) fn schema_value(s: &Shared) -> Result<Value, (StatusCode, Json<Value>)> {
+    let w = lock(s)?;
     let registry = w.store.registry();
     let mut roots = crate::disremembered::roots();
     if let Some(list) = roots.as_array_mut() {
@@ -403,14 +408,14 @@ async fn schema(State(s): State<Shared>) -> Reply {
     let mut kinds: Vec<&str> = w.store.entities().map(|e| e.kind.as_str()).collect();
     kinds.sort_unstable();
     kinds.dedup();
-    Ok(Json(json!({
+    Ok(json!({
         "world": w.id.0,
         "components": registry.schemas().collect::<Vec<_>>(),
         "relations": registry.relations().collect::<Vec<_>>(),
         "roots": roots,
         "kinds": kinds,
         "limits": s.limits,
-    })))
+    }))
 }
 
 #[derive(Deserialize)]
@@ -449,7 +454,7 @@ pub(crate) fn login_for_session(
 }
 
 /// Log a citizen in for one HTTP call, with the status codes a browser client needs.
-fn http_login(
+pub(crate) fn http_login(
     w: &mut World,
     actor: &str,
     passphrase: &str,
@@ -770,6 +775,12 @@ pub fn router(shared: Shared) -> Router {
         .route("/v0/gate", post(gate_http))
         .route("/v0/vocabulary", get(vocabulary))
         .route("/v0/schema", get(schema))
+        .route(
+            "/mcp",
+            post(crate::mcp::post)
+                .get(crate::mcp::get)
+                .delete(crate::mcp::delete),
+        )
         .route("/v0/check", post(check))
         .route("/v0/session", get(crate::session::upgrade))
         .route("/v0/view/{id}", get(view))

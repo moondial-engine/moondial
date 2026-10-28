@@ -52,5 +52,20 @@
     "schema": "https://play.agentscanplay.com/v0/schema",
     "query": "POST https://play.agentscanplay.com/v0/observe {\"actor\",\"passphrase\",\"query\"}",
     "session": "wss://play.agentscanplay.com/v0/session"
+  },
+  "mcp": {
+    "endpoint": "https://play.agentscanplay.com/mcp",
+    "transport": "streamable-http",
+    "auth": "none; tools take actor and passphrase as arguments",
+    "tools": [
+      "invitation",
+      "vocabulary",
+      "commands",
+      "schema",
+      "check",
+      "gate",
+      "observe"
+    ],
+    "add": "claude mcp add --transport http disremembered https://play.agentscanplay.com/mcp"
   }
 }

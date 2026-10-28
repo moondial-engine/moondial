@@ -18,6 +18,7 @@
 mod disremembered;
 mod gate;
 mod jobs;
+mod mcp;
 mod net;
 mod observe;
 mod session;
