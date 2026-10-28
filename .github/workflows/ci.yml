@@ -24,7 +24,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      MOONDIAL_TEST_PG: postgres://moondial:moondial@localhost:5432/moondial_test
+      MOONDIAL_TEST_PG: postgres://moondial:moondial@127.0.0.1:5432/moondial_test
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

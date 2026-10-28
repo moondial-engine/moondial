@@ -39,7 +39,8 @@ fn appends_read_back_in_order_with_dense_sequences() {
         eprintln!("MOONDIAL_TEST_PG not set; skipping");
         return;
     };
-    let mut log = PostgresLog::open(&url).unwrap();
+    let mut log = PostgresLog::open(&url)
+        .unwrap_or_else(|e| panic!("cannot open the test database at {url}: {e}"));
     let w = fresh_world();
     assert_eq!(log.head(&w).unwrap(), None);
     for i in 1..=5 {
@@ -83,7 +84,8 @@ fn a_file_log_copies_in_once() {
     for i in 1..=3 {
         file.append(&w, ev(i as i64 * 7, "store.x", i)).unwrap();
     }
-    let mut pg = PostgresLog::open(&url).unwrap();
+    let mut pg = PostgresLog::open(&url)
+        .unwrap_or_else(|e| panic!("cannot open the test database at {url}: {e}"));
     assert_eq!(copy_world(&file, &mut pg, &w).unwrap(), 3);
     assert_eq!(
         pg.read_all(&w, Cursor::START).unwrap(),
