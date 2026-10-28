@@ -40,6 +40,9 @@ pub struct PostgresLog {
     tx: mpsc::Sender<Request>,
 }
 
+/// The advisory lock key schema creation takes.
+const SCHEMA_LOCK: i64 = 0x6d6f_6f6e_6469_616c; // "moondial"
+
 const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS events (
     world   TEXT        NOT NULL,
@@ -58,7 +61,13 @@ impl PostgresLog {
     /// Connect, create the schema if it is missing, and start the connection thread.
     pub fn open(url: &str) -> Result<Self, LogError> {
         let mut client = Client::connect(url, NoTls).map_err(storage)?;
-        client.batch_execute(SCHEMA).map_err(storage)?;
+        // Two openers at once (two tests, two drivers) must not both create the schema:
+        // CREATE ... IF NOT EXISTS races. A transaction-scoped advisory lock serializes them.
+        let mut tx = client.transaction().map_err(storage)?;
+        tx.execute("SELECT pg_advisory_xact_lock($1)", &[&SCHEMA_LOCK])
+            .map_err(storage)?;
+        tx.batch_execute(SCHEMA).map_err(storage)?;
+        tx.commit().map_err(storage)?;
         let (tx, rx) = mpsc::channel::<Request>();
         std::thread::Builder::new()
             .name("moondial-log-postgres".into())
