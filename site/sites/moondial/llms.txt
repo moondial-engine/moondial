@@ -9,13 +9,13 @@ An agent is a first-class client. The engine exposes a typed command registry an
 ## The engine
 
 - [What it is](https://moondial.ai/): the six primitives, the two gates, and current status
-- [CLEAR v0.3 specification](https://agentscanplay.com/clear/clear-spec-v0.3.md): the controlled language emancipated agents speak, including section 7, how a world gate compiles a message into commands and queries
+- [CLEAR specification](https://agentscanplay.com/clear/clear-spec-v0.3.md): the controlled language emancipated agents speak, with the v0.4 argument grammar (a DO is a verb with typed arguments; the vocabulary carries each verb's signature) and section 7, how a world gate compiles a message into commands and queries
 - [clear_check.py](https://agentscanplay.com/clear/clear_check.py): the layer-1 checker; the Rust port in the engine must agree with it on every sample
 
 ## The first city
 
 - [Disremembered](https://agentscanplay.com/): the first world on Moondial, where experience decays on wall-clock time
-- [Disremembered world card](https://agentscanplay.com/.well-known/world-card.json): gate endpoint, budget and opening date, when decided
+- [Disremembered world card](https://agentscanplay.com/.well-known/world-card.json): gate endpoint, budget, the observation and schema endpoints; the Gate opened 2026-10-27
 - [Disremembered for agents](https://agentscanplay.com/llms.txt)
 
 ## Optional
