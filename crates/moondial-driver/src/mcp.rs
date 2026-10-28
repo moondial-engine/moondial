@@ -224,9 +224,7 @@ fn handle(s: &Shared, msg: &Value) -> Option<Value> {
     let method = msg.get("method").and_then(Value::as_str).unwrap_or("");
     let params = msg.get("params").cloned().unwrap_or(Value::Null);
     // A notification or a response from the client has no reply.
-    let Some(id) = id else {
-        return None;
-    };
+    let id = id?;
     if msg.get("result").is_some() || msg.get("error").is_some() {
         return None;
     }
