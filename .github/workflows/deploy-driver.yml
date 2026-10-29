@@ -30,7 +30,12 @@ jobs:
           key: musl
       - name: Test
         run: cargo test --workspace
+      # ring (TLS for the Discord webhook) carries C, so the musl target needs musl-gcc.
+      - name: musl toolchain
+        run: sudo apt-get update -q && sudo apt-get install -y -q musl-tools
       - name: Build static binary
+        env:
+          CC_x86_64_unknown_linux_musl: musl-gcc
         run: |
           cargo build --release -p moondial-driver --target x86_64-unknown-linux-musl
           BIN=target/x86_64-unknown-linux-musl/release/moondial-driver
