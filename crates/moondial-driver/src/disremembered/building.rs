@@ -22,8 +22,8 @@ use moondial_time::{Curve, Duration, TimedValue};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 
-/// Most characters a description may carry.
-const MAX_DESCRIPTION_CHARS: usize = 400;
+/// Most characters a description may carry, appended or not.
+const MAX_DESCRIPTION_CHARS: usize = 800;
 /// Most characters a room name may carry.
 const MAX_NAME_CHARS: usize = 40;
 /// Below this memory the description is only its first sentence; below `FADED` it is gone.
@@ -491,6 +491,52 @@ pub fn register(world: &mut World) {
             Ok(Outcome::new(
                 format!("The room is now described: {text}"),
                 json!({"room": here.0, "description": text}),
+            ))
+        }),
+    );
+
+    world.register(
+        CommandSpec::new(
+            "disremembered.append",
+            "Add to the description of the room you stand in, if it is yours or you are permitted: a sentence after what is there.",
+        )
+        .param("text", ParamType::Text, true, "the sentence to add, quoted"),
+        Box::new(|w: &mut World, ctx, args: &Args| {
+            let f = me(w, ctx)?;
+            let here = room_of(w, f.citizen).ok_or_else(|| internal("citizen has no room"))?;
+            may_edit(w, ctx, here)?;
+            let more = args
+                .str("text")
+                .unwrap_or("")
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" ");
+            if more.chars().count() < 3 {
+                return Err(CommandError::precondition("Add at least a few characters."));
+            }
+            let current = plain_str(w, here, ROOM, "description")
+                .unwrap_or("")
+                .to_string();
+            // A fresh digging's placeholder is not kept once someone writes.
+            let current = if current == UNDESCRIBED { String::new() } else { current };
+            let joined = if current.is_empty() {
+                more.clone()
+            } else {
+                let sep = if current.ends_with(['.', '!', '?', '"', '”']) { " " } else { ". " };
+                format!("{current}{sep}{more}")
+            };
+            if joined.chars().count() > MAX_DESCRIPTION_CHARS {
+                return Err(CommandError::precondition(format!(
+                    "That would make the description longer than {MAX_DESCRIPTION_CHARS} characters; describe it afresh, shorter."
+                )));
+            }
+            let mut fields = BTreeMap::new();
+            fields.insert("description".into(), Field::Plain(json!(joined)));
+            set_room_fields(w, &ctx.actor, here, fields)?;
+            visited(w, here).map_err(internal)?;
+            Ok(Outcome::new(
+                format!("The room is now described: {joined}"),
+                json!({"room": here.0, "description": joined, "added": more}),
             ))
         }),
     );

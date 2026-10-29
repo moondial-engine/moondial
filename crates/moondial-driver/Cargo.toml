@@ -29,6 +29,7 @@ tower-http = { workspace = true }
 futures-util = { workspace = true }
 thiserror = { workspace = true }
 argon2 = "0.5"
+ureq = { version = "2", default-features = false, features = ["tls"] }
 rand_core = { version = "0.6", features = ["getrandom"] }
 
 [dev-dependencies]

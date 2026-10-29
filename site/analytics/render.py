@@ -15,12 +15,18 @@ from __future__ import annotations
 
 import argparse
 import html
+import json
 import os
 import sqlite3
+import urllib.request
 from datetime import datetime, timezone, timedelta
 
 DB = os.environ.get("ANALYTICS_DB", "/srv/agentscanplay/shared/analytics/analytics.db")
 HTML_DIR = os.environ.get("ANALYTICS_HTML", "/srv/agentscanplay/shared/analytics/html")
+
+# The game driver, for the citizens report: who came, by what door, and what they did.
+DRIVER = os.environ.get("MOONDIAL_HTTP_URL", "http://127.0.0.1:7777")
+DRIVER_ENV = os.environ.get("MOONDIAL_DRIVER_ENV", "/etc/moondial/driver.env")
 
 KEY_PATHS = ["/", "/invitation.txt", "/llms.txt", "/.well-known/world-card.json", "/clear/clear-spec-v0.3.md",
              "/clear/disremembered.yaml", "/clear/clear_check.py", "/robots.txt",
@@ -30,6 +36,53 @@ KEY_PATHS = ["/", "/invitation.txt", "/llms.txt", "/.well-known/world-card.json"
 
 def q(db, sql, args=()):
     return db.execute(sql, args).fetchall()
+
+
+def admin_token() -> str | None:
+    tok = os.environ.get("MOONDIAL_ADMIN_TOKEN")
+    if tok:
+        return tok
+    try:
+        with open(DRIVER_ENV, encoding="utf-8") as fh:
+            for line in fh:
+                if line.startswith("MOONDIAL_ADMIN_TOKEN="):
+                    return line.split("=", 1)[1].strip()
+    except OSError:
+        pass
+    return None
+
+
+def citizens(days: int) -> tuple[list[dict], str]:
+    """The driver's citizens report, or an empty list and why."""
+    tok = admin_token()
+    if not tok:
+        return [], "no admin token (set MOONDIAL_ADMIN_TOKEN or make the driver env readable)"
+    since_ms = int((datetime.now(timezone.utc) - timedelta(days=days)).timestamp() * 1000)
+    req = urllib.request.Request(f"{DRIVER}/v0/citizens?since={since_ms}", headers={"X-Moondial-Admin": tok})
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return json.load(resp).get("citizens", []), ""
+    except Exception as exc:  # noqa: BLE001 - the report must render whatever the driver does
+        return [], f"driver not reachable at {DRIVER}: {exc}"
+
+
+def when(ms: int) -> str:
+    return datetime.fromtimestamp(ms / 1000, timezone.utc).strftime("%Y-%m-%d %H:%M") if ms else ""
+
+
+def citizen_rows(cz: list[dict], days: int) -> list[list]:
+    cutoff = int((datetime.now(timezone.utc) - timedelta(days=days)).timestamp() * 1000)
+    rows = []
+    for c in cz:
+        new = "new" if c.get("first_seen", 0) >= cutoff else ""
+        doors = ", ".join(f"{k} {v}" for k, v in sorted((c.get("origins") or {}).items(), key=lambda kv: -kv[1]))
+        via = ", ".join(f"{k} {v}" for k, v in sorted((c.get("via") or {}).items(), key=lambda kv: -kv[1]))
+        msgs = c.get("messages", 0)
+        passed = c.get("passed", 0)
+        rate = f"{100 * passed // msgs}%" if msgs else ""
+        rows.append([c.get("name", ""), new, c.get("origin", ""), when(c.get("first_seen", 0)), when(c.get("last_seen", 0)),
+                     c.get("arrivals", 0), doors, msgs, c.get("written", 0), rate, via, c.get("rooms_dug", 0)])
+    return rows
 
 
 def report(db: sqlite3.Connection, days: int) -> dict:
@@ -44,6 +97,9 @@ def report(db: sqlite3.Connection, days: int) -> dict:
     out["referers"] = q(db, f"SELECT referer_host, COUNT(*) FROM requests {w} AND referer_host != '' AND referer_host NOT IN ('agentscanplay.com','www.agentscanplay.com','moondial.ai','www.moondial.ai') GROUP BY referer_host ORDER BY 2 DESC LIMIT 25", (since,))
     out["daily"] = q(db, f"SELECT day, host, COUNT(*), COUNT(DISTINCT visitor) FROM requests {w} GROUP BY day, host ORDER BY day DESC, host", (since,))
     out["errors"] = q(db, "SELECT host, path, status, COUNT(*) FROM requests WHERE day >= ? AND status >= 400 GROUP BY host, path, status ORDER BY 4 DESC LIMIT 20", (since,))
+    cz, why = citizens(days)
+    out["citizens"] = citizen_rows(cz, days)
+    out["citizens_note"] = why
     return out
 
 
@@ -70,6 +126,11 @@ def text(r: dict) -> str:
     lines.append("\nErrors (host, path, status, count)")
     for h, p, s, n in r["errors"]:
         lines.append(f"  {h:<22} {p:<34} {s:>4} {n:>6}")
+    lines.append("\nCitizens (name, new, first door, first seen, last seen, arrivals, doors, messages, written, pass, via, rooms dug)")
+    if r["citizens_note"]:
+        lines.append(f"  {r['citizens_note']}")
+    for row in r["citizens"]:
+        lines.append("  " + "  ".join(str(c) for c in row))
     return "\n".join(lines)
 
 
@@ -81,7 +142,10 @@ def table(headers, rows) -> str:
 
 def page(r: dict) -> str:
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    cz_note = f"<p class=\"sub\">{html.escape(r['citizens_note'])}</p>" if r["citizens_note"] else ""
     sections = [
+        ("Citizens: who came, by what door, and what they did", cz_note + table(
+            ["name", "", "first door", "first seen", "last seen", "arrivals", "doors", "messages", "written", "pass", "via", "rooms dug"], r["citizens"])),
         ("Totals", table(["host", "requests", "unique visitors"], r["totals"])),
         ("By visitor class", table(["host", "class", "requests", "uniques"], r["by_class"])),
         ("Root / served as", table(["host", "accept", "class", "requests"], r["root_split"])),
@@ -103,6 +167,7 @@ h2 {{ font-weight: 400; font-size: 20px; color: var(--dust); margin: 32px 0 8px;
 table {{ border-collapse: collapse; width: 100%; font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; }}
 th, td {{ text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); }} th {{ color: var(--dim); font-weight: 400; }}
 td:nth-child(n+3) {{ text-align: right; }} tr:hover td {{ background: var(--panel); }}
+td:nth-child(2) {{ color: var(--dust); }}
 </style></head><body><main>
 <h1>Moondial analytics</h1>
 <p class="sub">Since {html.escape(r['since'])} ({r['days']} days) · rendered {now} · 2xx requests unless noted · uniques are daily-salted hashes, no IPs stored</p>

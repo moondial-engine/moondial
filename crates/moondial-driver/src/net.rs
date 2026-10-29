@@ -355,6 +355,125 @@ async fn commands(State(s): State<Shared>, Query(q): Query<HashMap<String, Strin
     Ok(Json(json!({"commands": w.commands_for(kind)})))
 }
 
+/// `GET /v0/citizens` (admin): every citizen, with when they first came and by what
+/// channel, their arrivals (an arrival is the first activity after ten minutes away),
+/// what went through the Gate for them and how it fared, and what they have dug. The
+/// operator's view of who is here; `since` (ms since the epoch) keeps the recently
+/// active.
+async fn citizens(
+    State(s): State<Shared>,
+    headers: HeaderMap,
+    Query(q): Query<HashMap<String, String>>,
+) -> Reply {
+    let token = headers
+        .get("x-moondial-admin")
+        .and_then(|v| v.to_str().ok());
+    if !s.is_admin(token) {
+        return Err(err_json(StatusCode::FORBIDDEN, "admin token required"));
+    }
+    let since: i64 = q.get("since").and_then(|v| v.parse().ok()).unwrap_or(0);
+    let w = lock(&s)?;
+    Ok(Json(json!({"citizens": citizens_report(&w, since)})))
+}
+
+/// The citizens report, from the log.
+pub(crate) fn citizens_report(w: &World, since: i64) -> Vec<Value> {
+    #[derive(Default)]
+    struct Row {
+        origin: String,
+        first_seen: i64,
+        last_seen: i64,
+        arrivals: u64,
+        origins: std::collections::BTreeMap<String, u64>,
+        messages: u64,
+        passed: u64,
+        via: std::collections::BTreeMap<String, u64>,
+        compiled: u64,
+        last_message_at: i64,
+        rooms_dug: u64,
+    }
+    let mut rows: std::collections::BTreeMap<String, Row> = Default::default();
+    for e in w.store.entities() {
+        if e.kind == "citizen" {
+            if let Some(owner) = &e.owner {
+                let r = rows.entry(owner.clone()).or_default();
+                r.origin = e
+                    .components
+                    .get(crate::disremembered::CITIZEN)
+                    .and_then(|c| c.fields.get("origin"))
+                    .and_then(|f| match f {
+                        moondial_store::Field::Plain(Value::String(s)) => Some(s.clone()),
+                        _ => None,
+                    })
+                    .unwrap_or_default();
+            }
+        }
+        if e.kind == "room" {
+            if let Some(owner) = &e.owner {
+                rows.entry(owner.clone()).or_default().rooms_dug += 1;
+            }
+        }
+    }
+    for e in w.log.read_all(&w.id, Cursor::START).unwrap_or_default() {
+        match e.kind.as_str() {
+            "store.entity_created" if e.payload["kind"] == "citizen" => {
+                if let Some(owner) = e.payload["owner"].as_str() {
+                    let r = rows.entry(owner.to_string()).or_default();
+                    if r.first_seen == 0 {
+                        r.first_seen = e.at.0;
+                    }
+                    r.last_seen = r.last_seen.max(e.at.0);
+                }
+            }
+            k if k == crate::world::ARRIVED => {
+                if let Some(actor) = e.payload["actor"].as_str() {
+                    let r = rows.entry(actor.to_string()).or_default();
+                    r.arrivals += 1;
+                    r.last_seen = r.last_seen.max(e.at.0);
+                    *r.origins
+                        .entry(e.payload["origin"].as_str().unwrap_or("?").to_string())
+                        .or_default() += 1;
+                }
+            }
+            "gate.message" => {
+                if let Some(from) = e.payload["from"].as_str() {
+                    let r = rows.entry(from.to_string()).or_default();
+                    r.messages += 1;
+                    if e.payload["verdict"] == "PASS" {
+                        r.passed += 1;
+                    }
+                    if e.payload["compiled"] == true {
+                        r.compiled += 1;
+                    }
+                    *r.via
+                        .entry(e.payload["via"].as_str().unwrap_or("?").to_string())
+                        .or_default() += 1;
+                    r.last_seen = r.last_seen.max(e.at.0);
+                    r.last_message_at = e.at.0;
+                }
+            }
+            _ => {}
+        }
+    }
+    let mut out: Vec<(i64, Value)> = rows
+        .into_iter()
+        .filter(|(_, r)| r.last_seen >= since)
+        .map(|(name, r)| {
+            (
+                r.last_seen,
+                json!({
+                    "name": name, "origin": r.origin, "first_seen": r.first_seen, "last_seen": r.last_seen,
+                    "arrivals": r.arrivals, "origins": r.origins, "messages": r.messages, "passed": r.passed,
+                    "written": r.messages - r.compiled, "via": r.via, "last_message_at": r.last_message_at,
+                    "rooms_dug": r.rooms_dug,
+                }),
+            )
+        })
+        .collect();
+    out.sort_by(|a, b| b.0.cmp(&a.0));
+    out.into_iter().map(|(_, v)| v).collect()
+}
+
 /// `GET /v0/vocabulary`: the CLEAR vocabulary the Gate checks against, merged (base
 /// and world), as JSON. An editor compiles its own checker from this, so the words it
 /// offers and the words the world accepts are one list.
@@ -460,13 +579,14 @@ pub(crate) fn http_login(
     w: &mut World,
     actor: &str,
     passphrase: &str,
+    origin: &str,
 ) -> Result<bool, (StatusCode, Json<Value>)> {
     valid_name(actor).map_err(|e| err_json(StatusCode::BAD_REQUEST, e))?;
     let fresh = !w
         .store
         .entities()
         .any(|e| e.kind == "citizen" && e.owner.as_deref() == Some(actor));
-    disremembered::login(w, actor, "http", passphrase).map_err(|e| match e {
+    disremembered::login(w, actor, origin, passphrase).map_err(|e| match e {
         disremembered::LoginError::Internal(_) => {
             err_json(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
         }
@@ -490,7 +610,7 @@ struct LoginBody {
 /// rather than a failed `look`.
 async fn login(State(s): State<Shared>, Json(body): Json<LoginBody>) -> Reply {
     let mut w = lock(&s)?;
-    let fresh = http_login(&mut w, &body.actor, &body.passphrase)?;
+    let fresh = http_login(&mut w, &body.actor, &body.passphrase, "http")?;
     Ok(Json(
         json!({"ok": true, "actor": body.actor, "fresh": fresh}),
     ))
@@ -510,7 +630,7 @@ async fn command(
         ActorKind::Citizen
     };
     let mut w = lock(&s)?;
-    http_login(&mut w, &body.actor, &body.passphrase)?;
+    http_login(&mut w, &body.actor, &body.passphrase, "http")?;
     if body.command == "observe" {
         // A read, not speech: runs outside the gate.
         let ctx = CallContext {
@@ -631,7 +751,7 @@ async fn observe_http(
         .and_then(|v| v.to_str().ok());
     let admin = s.is_admin(token);
     let mut w = lock(&s)?;
-    http_login(&mut w, &body.actor, &body.passphrase)?;
+    http_login(&mut w, &body.actor, &body.passphrase, "http")?;
     let now = w.now();
     s.budget
         .lock()
@@ -682,7 +802,7 @@ struct GateBody {
 /// findings and the budget left. Everything the world did is in the reply's FACT lines.
 async fn gate_http(State(s): State<Shared>, Json(body): Json<GateBody>) -> Reply {
     let mut w = lock(&s)?;
-    http_login(&mut w, &body.actor, &body.passphrase)?;
+    http_login(&mut w, &body.actor, &body.passphrase, "gate")?;
     let mut budget = s
         .hour_budget
         .lock()
@@ -777,6 +897,7 @@ pub fn router(shared: Shared) -> Router {
         .route("/v0/gate", post(gate_http))
         .route("/v0/vocabulary", get(vocabulary))
         .route("/v0/schema", get(schema))
+        .route("/v0/citizens", get(citizens))
         .route(
             "/mcp",
             post(crate::mcp::post)

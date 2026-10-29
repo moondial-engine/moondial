@@ -1003,3 +1003,62 @@ fn describe_room(w: &mut World, actor: &str, room: EntityId) -> String {
     };
     rooms::describe(w, actor, &ctx, room).unwrap().summary
 }
+
+#[test]
+fn append_adds_to_a_description_and_arrivals_are_counted() {
+    let mut w = open(tempfile::tempdir().unwrap().path(), Timestamp(0));
+    login(&mut w, "dave", "terminal", PASS).unwrap();
+    let out = admin(&mut w, "dave", "earn", json!(["hydra", 100, 1.0]));
+    let chunk = format!("chunk-{}", out.result["chunk"].as_u64().unwrap());
+    ok(
+        &mut w,
+        "dave",
+        "dig",
+        json!(["down", chunk, "The Salt Stair"]),
+    );
+    ok(&mut w, "dave", "travel", json!(["down"]));
+    // Appending to a fresh digging drops the placeholder; then sentences join with a space.
+    let a = ok(&mut w, "dave", "append", json!(["Steps of salt"]));
+    assert_eq!(a.result["description"], "Steps of salt");
+    let b = ok(&mut w, "dave", "append", json!(["Each one damp."]));
+    assert_eq!(b.result["description"], "Steps of salt. Each one damp.");
+    let c = ok(&mut w, "dave", "append", json!(["The air tastes of salt."]));
+    assert_eq!(
+        c.result["description"],
+        "Steps of salt. Each one damp. The air tastes of salt."
+    );
+    ok(&mut w, "dave", "describe", json!(["Afresh."]));
+    assert_eq!(
+        ok(&mut w, "dave", "append", json!(["And more."])).result["description"],
+        "Afresh. And more."
+    );
+    let long = "x".repeat(800);
+    assert!(call(&mut w, "dave", ActorKind::Citizen, "append", json!([long])).is_err());
+
+    // Arrivals: the first login, then logins after an absence; not every request.
+    login(&mut w, "dave", "http", PASS).unwrap();
+    login(&mut w, "dave", "http", PASS).unwrap();
+    w.fixed_now = Some(w.now().plus(Duration::seconds(11 * 60)));
+    login(&mut w, "dave", "gate", PASS).unwrap();
+    let arrivals: Vec<_> = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == crate::world::ARRIVED)
+        .collect();
+    assert_eq!(arrivals.len(), 2, "{arrivals:?}");
+    assert_eq!(arrivals[0].payload["origin"], "terminal");
+    assert_eq!(arrivals[0].payload["fresh"], true);
+    assert_eq!(arrivals[1].payload["origin"], "gate");
+    assert!(arrivals[1].payload["away_ms"].as_i64().unwrap() >= 11 * 60 * 1000);
+    let notices = w.take_notices();
+    assert_eq!(notices.len(), 2, "{notices:?}");
+    assert!(notices[0].contains("arrived for the first time, via terminal"));
+    assert!(notices[1].contains("is back, via gate"));
+    let report = crate::net::citizens_report(&w, 0);
+    let dave = report.iter().find(|r| r["name"] == "dave").unwrap();
+    assert_eq!(dave["arrivals"], 2);
+    assert_eq!(dave["rooms_dug"], 1);
+    assert_eq!(dave["origins"]["gate"], 1);
+}

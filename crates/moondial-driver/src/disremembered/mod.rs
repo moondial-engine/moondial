@@ -300,6 +300,7 @@ pub fn login(
                 building::visited(world, room).map_err(LoginError::Internal)?;
             }
         }
+        world.arrive(actor, origin, false);
         return Ok(f);
     }
     identity::acceptable(passphrase)?;
@@ -387,6 +388,7 @@ pub fn login(
             },
         )
         .map_err(internal)?;
+    world.arrive(actor, origin, true);
     Ok(Found {
         citizen,
         window,

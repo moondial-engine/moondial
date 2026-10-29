@@ -147,7 +147,7 @@ fn call(s: &Shared, name: &str, args: &Value) -> Value {
             let Ok(mut w) = s.world.lock() else {
                 return tool_error("the world is unavailable");
             };
-            if let Err((_, Json(e))) = crate::net::http_login(&mut w, actor, passphrase) {
+            if let Err((_, Json(e))) = crate::net::http_login(&mut w, actor, passphrase, "mcp") {
                 return tool_error(e["error"].as_str().unwrap_or("login failed"));
             }
             let Ok(mut budget) = s.hour_budget.lock() else {
@@ -195,7 +195,7 @@ fn call(s: &Shared, name: &str, args: &Value) -> Value {
             let Ok(mut w) = s.world.lock() else {
                 return tool_error("the world is unavailable");
             };
-            if let Err((_, Json(e))) = crate::net::http_login(&mut w, actor, passphrase) {
+            if let Err((_, Json(e))) = crate::net::http_login(&mut w, actor, passphrase, "mcp") {
                 return tool_error(e["error"].as_str().unwrap_or("login failed"));
             }
             let now = w.now();

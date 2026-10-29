@@ -39,7 +39,18 @@ pub struct World {
     pub jobs: crate::jobs::Jobs,
     /// Job handlers by kind, registered at boot.
     pub(crate) job_handlers: Arc<std::collections::HashMap<String, crate::jobs::JobHandler>>,
+    /// When each actor was last active, in this process. A gap longer than
+    /// [`ABSENCE`] makes the next activity an arrival.
+    presence: std::collections::HashMap<String, Timestamp>,
+    /// Lines for the operator (a Discord channel, say), drained by the tick loop.
+    notices: Vec<String>,
 }
+
+/// How long an actor must be gone for their return to count as an arrival.
+pub const ABSENCE: moondial_time::Duration = moondial_time::Duration(10 * 60 * 1000);
+
+/// The arrival event: `{actor, origin, fresh, away_ms}`.
+pub const ARRIVED: &str = "citizen.arrived";
 
 impl World {
     /// Open a world, replaying its log into a fresh store.
@@ -62,6 +73,8 @@ impl World {
             rng: started.0 as u64 | 1,
             jobs: crate::jobs::Jobs::default(),
             job_handlers: Arc::new(std::collections::HashMap::new()),
+            presence: std::collections::HashMap::new(),
+            notices: Vec::new(),
         };
         let head = world.log.head(&world.id).map_err(|e| e.to_string())?;
         if head.is_some() {
@@ -94,6 +107,45 @@ impl World {
             }
         }
         Ok(world)
+    }
+
+    /// An actor is active now, by way of `origin` (terminal, http, session, gate, mcp).
+    /// The first activity after an absence is recorded as an arrival, and the operator
+    /// is told about the ones worth knowing: a first arrival, an agent's channel, or a
+    /// return after a day away.
+    pub fn arrive(&mut self, actor: &str, origin: &str, fresh: bool) {
+        let now = self.now();
+        let last = self.presence.insert(actor.to_string(), now);
+        let away = last.map(|t| now.since(t));
+        if !fresh && away.is_some_and(|d| d.0 < ABSENCE.0) {
+            return;
+        }
+        let away_ms = away.map(|d| d.0);
+        let _ = self.note(
+            Actor::Citizen(actor.to_string()),
+            ARRIVED,
+            serde_json::json!({"actor": actor, "origin": origin, "fresh": fresh, "away_ms": away_ms}),
+        );
+        let agent_channel = matches!(origin, "gate" | "mcp");
+        let long_away = away_ms.is_some_and(|ms| ms >= 86_400_000);
+        if fresh {
+            self.notices.push(format!(
+                "**{actor}** arrived for the first time, via {origin}."
+            ));
+        } else if agent_channel {
+            self.notices
+                .push(format!("**{actor}** is back, via {origin}."));
+        } else if long_away {
+            self.notices.push(format!(
+                "**{actor}** is back after {} days, via {origin}.",
+                away_ms.unwrap_or(0) / 86_400_000
+            ));
+        }
+    }
+
+    /// Take the pending operator notices.
+    pub fn take_notices(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.notices)
     }
 
     /// Seed the dice, for tests that want the same fight twice.

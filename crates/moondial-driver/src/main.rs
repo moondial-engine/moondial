@@ -14,12 +14,15 @@
 //! - `MOONDIAL_ACTIVE_HALF_LIFE_SECONDS`: the active window's half-life (default 3600).
 //! - `MOONDIAL_CORS_ORIGINS`: browser origins allowed to call the HTTP port, comma-separated
 //!   (default the agentscanplay.com site).
+//! - `MOONDIAL_DISCORD_WEBHOOK`: a Discord webhook URL; arrivals worth knowing about (a
+//!   first arrival, an agent's channel, a return after a day away) are posted there.
 
 mod disremembered;
 mod gate;
 mod jobs;
 mod mcp;
 mod net;
+mod notify;
 mod observe;
 mod session;
 mod world;
@@ -134,6 +137,15 @@ fn main() {
     let tcp = env_or("MOONDIAL_TCP", "127.0.0.1:7778");
     let http = env_or("MOONDIAL_HTTP", "127.0.0.1:7777");
 
+    // The operator's channel: notices go to a Discord webhook from their own thread, so
+    // a slow or dead webhook never holds the world.
+    let notify = notify::start(
+        std::env::var("MOONDIAL_DISCORD_WEBHOOK")
+            .ok()
+            .filter(|v| !v.is_empty()),
+        &world_name,
+    );
+
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
@@ -146,7 +158,14 @@ fn main() {
             let mut every = tokio::time::interval(std::time::Duration::from_secs(1));
             loop {
                 every.tick().await;
-                let ran = shared.world.lock().map(|mut w| w.tick()).unwrap_or(0);
+                let (ran, notices) = shared
+                    .world
+                    .lock()
+                    .map(|mut w| (w.tick(), w.take_notices()))
+                    .unwrap_or((0, Vec::new()));
+                for n in notices {
+                    let _ = notify.send(n);
+                }
                 if ran > 0 {
                     let _ = shared.changed.send(());
                 }
