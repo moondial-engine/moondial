@@ -44,6 +44,8 @@ pub struct Shared {
     pub changed: tokio::sync::broadcast::Sender<()>,
     /// Origins the browser client may call from (`MOONDIAL_CORS_ORIGINS`, comma-separated).
     pub cors_origins: Vec<String>,
+    /// Where the event log lives: `PostgreSQL`, `memory`, or a directory.
+    pub log_where: String,
 }
 
 impl Shared {
@@ -339,7 +341,7 @@ async fn health(State(s): State<Shared>) -> Reply {
     let head = w.log.head(&w.id).ok().flatten().map(|x| x.0).unwrap_or(0);
     let now = w.now();
     Ok(Json(
-        json!({"ok": true, "world": w.id.0, "events": head, "uptime_seconds": now.since(w.started).0 / 1000, "now": now.0}),
+        json!({"ok": true, "world": w.id.0, "events": head, "log": s.log_where, "uptime_seconds": now.since(w.started).0 / 1000, "now": now.0}),
     ))
 }
 

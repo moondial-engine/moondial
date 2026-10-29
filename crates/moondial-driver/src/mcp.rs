@@ -326,6 +326,7 @@ mod tests {
             hour_budget: Arc::new(Mutex::new(crate::gate::HourBudget::new(60.0, 0.25))),
             changed: tokio::sync::broadcast::channel(8).0,
             cors_origins: vec![],
+            log_where: "memory".into(),
         }
     }
 

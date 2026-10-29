@@ -122,6 +122,7 @@ fn main() {
         hour_budget: Arc::new(Mutex::new(gate::HourBudget::new(60.0, 0.25))),
         changed: tokio::sync::broadcast::channel(64).0,
         limits: moondial_query::Limits::default(),
+        log_where: where_.clone(),
         cors_origins: env_or(
             "MOONDIAL_CORS_ORIGINS",
             "https://agentscanplay.com,https://www.agentscanplay.com",
