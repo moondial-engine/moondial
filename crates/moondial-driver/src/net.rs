@@ -470,7 +470,7 @@ pub(crate) fn citizens_report(w: &World, since: i64) -> Vec<Value> {
             )
         })
         .collect();
-    out.sort_by(|a, b| b.0.cmp(&a.0));
+    out.sort_by_key(|(last, _)| std::cmp::Reverse(*last));
     out.into_iter().map(|(_, v)| v).collect()
 }
 
