@@ -47,7 +47,17 @@ pub struct World {
     /// Wrong passphrases per name: how many in a row, and when the last was. Five in a
     /// row lock the name for [`LOCKOUT`]. In this process only; a restart forgets.
     failures: std::collections::HashMap<String, (u32, Timestamp)>,
+    /// Run on every tick before the due jobs, by modules that watch the clock
+    /// (who has gone quiet, say). Registered at boot.
+    pub(crate) sweepers: Arc<Vec<Sweeper>>,
+    /// Run when an arrival is recorded, with the actor's name. Registered at boot.
+    arrival_hooks: Arc<Vec<ArrivalHook>>,
 }
+
+/// A per-tick check a module registers with [`World::on_tick`].
+pub type Sweeper = Box<dyn Fn(&mut World) -> Result<(), String> + Send + Sync>;
+/// A module's reaction to an arrival, registered with [`World::on_arrival`].
+pub type ArrivalHook = Box<dyn Fn(&mut World, &str) -> Result<(), String> + Send + Sync>;
 
 /// Wrong passphrases in a row before a name is locked.
 pub const MAX_FAILURES: u32 = 5;
@@ -84,6 +94,8 @@ impl World {
             presence: std::collections::HashMap::new(),
             notices: Vec::new(),
             failures: std::collections::HashMap::new(),
+            sweepers: Arc::new(Vec::new()),
+            arrival_hooks: Arc::new(Vec::new()),
         };
         let head = world.log.head(&world.id).map_err(|e| e.to_string())?;
         if head.is_some() {
@@ -135,6 +147,12 @@ impl World {
             ARRIVED,
             serde_json::json!({"actor": actor, "origin": origin, "fresh": fresh, "away_ms": away_ms}),
         );
+        let hooks = Arc::clone(&self.arrival_hooks);
+        for h in hooks.iter() {
+            if let Err(e) = h(self, actor) {
+                eprintln!("arrival hook for {actor}: {e}");
+            }
+        }
         let agent_channel = matches!(origin, "gate" | "mcp");
         let long_away = away_ms.is_some_and(|ms| ms >= 86_400_000);
         if fresh {
@@ -150,6 +168,25 @@ impl World {
                 away_ms.unwrap_or(0) / 86_400_000
             ));
         }
+    }
+
+    /// When this actor was last active in this process, if they have been.
+    pub fn last_active(&self, actor: &str) -> Option<Timestamp> {
+        self.presence.get(actor).copied()
+    }
+
+    /// Register a per-tick check. Boot only.
+    pub fn on_tick(&mut self, f: Sweeper) {
+        Arc::get_mut(&mut self.sweepers)
+            .expect("sweepers are registered at boot, not inside a tick")
+            .push(f);
+    }
+
+    /// Register a reaction to arrivals. Boot only.
+    pub fn on_arrival(&mut self, f: ArrivalHook) {
+        Arc::get_mut(&mut self.arrival_hooks)
+            .expect("arrival hooks are registered at boot, not inside a call")
+            .push(f);
     }
 
     /// Minutes this name stays locked, if it is: five wrong passphrases in a row within
@@ -263,7 +300,13 @@ impl World {
         args: &Value,
     ) -> Result<Outcome, CommandError> {
         let registry = Arc::clone(&self.registry);
-        registry.call(self, ctx, name, args)
+        let out = registry.call(self, ctx, name, args);
+        // A citizen who acted is present; after an absence, that is an arrival. A refused
+        // command touches nothing, so a name the world does not know leaves no trace.
+        if out.is_ok() && ctx.kind == ActorKind::Citizen {
+            self.arrive(&ctx.actor, "command", false);
+        }
+        out
     }
 
     /// Register a command. Only possible while nothing else holds the registry, which

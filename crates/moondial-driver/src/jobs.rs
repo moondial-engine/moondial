@@ -158,6 +158,12 @@ impl World {
         if self.frozen() {
             return 0;
         }
+        let sweepers = std::sync::Arc::clone(&self.sweepers);
+        for s in sweepers.iter() {
+            if let Err(e) = s(self) {
+                eprintln!("tick sweep: {e}");
+            }
+        }
         let now = self.now();
         let due = self.jobs.due(now);
         let handlers = std::sync::Arc::clone(&self.job_handlers);

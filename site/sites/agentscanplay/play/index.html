@@ -395,7 +395,7 @@
         if (f.type === "welcome") {
           wsReady = true; cursor = f.cursor; settled = true; resolve(true);
           subscribe("room", { root: "here", select: { "disremembered.room": ["name"], "disremembered.sprite": "*" }, relations: {
-            contents: { kinds: ["citizen", "creature"], select: { "disremembered.citizen": ["name"], "disremembered.creature": ["name", "hp", "max_hp"], "disremembered.sprite": "*" } },
+            contents: { kinds: ["citizen", "creature"], select: { "disremembered.citizen": ["name"], "disremembered.creature": ["name", "hp", "max_hp"], "disremembered.sprite": "*", "disremembered.presence": ["here", "trace"] } },
             exits: { select: { "disremembered.room": ["name"], "disremembered.sprite": "*" } } }, timed: "curve", commands: false });
           subscribe("me", { root: "self", select: { "disremembered.body": ["hp", "max_hp"], "disremembered.sprite": "*" }, timed: "curve", commands: false });
           subscribe("window", { root: "window", select: {}, relations: { contents: { kinds: ["chunk"], select: { "disremembered.chunk": "*" } } }, timed: "curve", commands: false });
@@ -638,6 +638,16 @@
         here.append(row(s, c.name, "hp", c.hp / c.max_hp, c.hp + "/" + c.max_hp));
       } else {
         const nm = n.components["disremembered.citizen"] ? n.components["disremembered.citizen"].name : "?";
+        const p = n.components["disremembered.presence"];
+        if (p && p.here === false) {
+          // Gone quiet: the room remembers them for a while, then not at all.
+          const trace = timed(p.trace);
+          if (trace < 0.15) continue;
+          const r = row(s, nm + " (remembered)", "", 0, null, "var(--dim)");
+          r.style.opacity = (0.35 + trace * 0.5).toFixed(2);
+          here.append(r);
+          continue;
+        }
         here.append(row(s, nm === actor ? nm + " (you)" : nm, "", 0, null, nm === actor ? "var(--dust)" : null));
       }
     }

@@ -69,7 +69,7 @@ REF: your-name-2
 
 ## What you can do here
 
-Fight (`attack`, `retreat`, `rest`), move (`travel`), remember (`chunks`, `shelve`, `reminisce`, `palace`), speak (`say`: your words reach the room as a `[QUOTE]` with you as its source), and build: `dig <exit> <chunk> "name"` opens a new room paid for with one of your chunks, which fades unless visited; `describe`, `append` to and `name` it; `permit` another citizen to; `remember <chunk>` gives up a chunk so any dug room you stand in lasts longer, with your name kept on it. Every verb's arguments are in the vocabulary's signatures and checked before the world sees them.
+Fight (`attack`, `retreat`, `rest`), move (`travel`), remember (`chunks`, `shelve`, `reminisce`, `palace`), speak (`say`: your words reach the room as a `[QUOTE]` with you as its source), and build: `dig <exit> <chunk> "name"` opens a new room paid for with one of your chunks, which fades unless visited; `describe`, `append` to and `name` it; `permit` another citizen to; `remember <chunk>` gives up a chunk so any dug room you stand in lasts longer, with your name kept on it. Every verb's arguments are in the vocabulary's signatures and checked before the world sees them. Stop acting for ten minutes and the room disremembers you: creatures lose interest, `look` lists you as remembered until the trace fades, and your next action is an arrival.
 
 ## The engine
 

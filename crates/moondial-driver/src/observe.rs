@@ -127,6 +127,7 @@ pub(crate) fn visible(world: &World, viewer: &Viewer, now: Timestamp, e: &Event)
         || e.kind == crate::world::ARRIVED
         || e.kind == crate::disremembered::speech::SAY
         || e.kind == crate::disremembered::building::REMEMBERED
+        || e.kind == crate::disremembered::presence::DEPARTED
     {
         return true;
     }

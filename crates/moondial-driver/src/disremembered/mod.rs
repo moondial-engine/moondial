@@ -12,6 +12,7 @@ pub mod building;
 mod combat;
 mod identity;
 mod memory;
+pub mod presence;
 pub mod rooms;
 pub mod speech;
 mod system;
@@ -165,6 +166,11 @@ pub fn schemas() -> Vec<ComponentSchema> {
             // Who gave up a memory so this room would last: `[{by, with, half_life_ms}]`.
             .field("kept", FieldKind::Plain, Visibility::Public),
         ComponentSchema::new(EXITS, 1).field("exits", FieldKind::Plain, Visibility::Public),
+        // Whether a citizen is here, and how well the room remembers them once gone.
+        ComponentSchema::new(presence::PRESENCE, 1)
+            .field("here", FieldKind::Plain, Visibility::Public)
+            .field("trace", FieldKind::Timed, Visibility::Public)
+            .field("gone_at", FieldKind::Plain, Visibility::Public),
         ComponentSchema::new(SPAWN, 1)
             .field("creature", FieldKind::Plain, Visibility::Admin)
             .field("count", FieldKind::Plain, Visibility::Admin)
@@ -549,7 +555,8 @@ fn plain_num(world: &World, id: EntityId, component: &str, field: &str) -> Optio
 pub fn register(world: &mut World, curves: Curves) {
     rooms::register(world);
     combat::register(world, curves.clone());
-    memory::register(world, curves);
+    memory::register(world, curves.clone());
+    presence::register(world, curves);
     speech::register(world);
     building::register(world);
     system::register(world);

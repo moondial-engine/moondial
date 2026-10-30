@@ -1345,3 +1345,132 @@ fn remembering_a_room_costs_a_chunk_and_makes_it_last() {
         "{err}"
     );
 }
+
+#[test]
+fn a_quiet_citizen_is_disremembered_by_the_room_and_returns_as_an_arrival() {
+    let t0 = Timestamp(1_000_000);
+    let mut w = open(tempfile::tempdir().unwrap().path(), t0);
+    login(&mut w, "dave", "test", PASS).unwrap();
+    login(&mut w, "tyler", "test", PASS).unwrap();
+    // Dave walks into the Shallows, where hollows hunt, and stops typing.
+    ok(&mut w, "dave", "travel", json!(["east"]));
+    ok(&mut w, "dave", "travel", json!(["north"]));
+    let shallows = rooms::room_by_key(&w, "shallows").unwrap();
+    assert!(presence::is_here(
+        &w,
+        find_citizen(&w, "dave").unwrap().citizen
+    ));
+    // Tyler, active, sees him.
+    ok(&mut w, "tyler", "travel", json!(["east"]));
+    ok(&mut w, "tyler", "travel", json!(["north"]));
+    let look = ok(&mut w, "tyler", "look", json!([]));
+    assert!(
+        look.summary.contains("Also here: dave."),
+        "{}",
+        look.summary
+    );
+
+    // Ten minutes of silence: the sweep marks him gone, and the fight that had started ends.
+    w.fixed_now = Some(t0.plus(Duration::seconds(5)));
+    w.tick(); // the ambush lands on both; dave is engaged
+    let dave = find_citizen(&w, "dave").unwrap().citizen;
+    assert!(
+        combat::engaged_with(&w, dave).is_some(),
+        "the hollow should have ambushed dave"
+    );
+    w.fixed_now = Some(t0.plus(Duration::seconds(5)));
+    ok(&mut w, "tyler", "retreat", json!([]));
+    w.fixed_now = Some(t0.plus(Duration::seconds(11 * 60)));
+    ok(&mut w, "tyler", "look", json!([])); // tyler stays active
+    let hp_before = w
+        .store
+        .read_field(dave, BODY, "hp", w.now())
+        .unwrap()
+        .as_f64()
+        .unwrap();
+    w.tick();
+    assert!(!presence::is_here(&w, dave), "dave went quiet");
+    assert!(
+        combat::engaged_with(&w, dave).is_none(),
+        "the fight ended without a blow"
+    );
+    let departed: Vec<_> = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == presence::DEPARTED)
+        .collect();
+    assert_eq!(departed.len(), 1);
+    assert_eq!(departed[0].payload["room"], shallows.0);
+    let look = ok(&mut w, "tyler", "look", json!([]));
+    assert!(
+        look.summary
+            .contains("You are alone. Remembered here: dave."),
+        "{}",
+        look.summary
+    );
+    assert_eq!(look.result["citizens"], json!([]));
+    assert_eq!(look.result["remembered"][0]["name"], "dave");
+
+    // Creatures leave the gone alone: strikes and ambushes skip him for an hour.
+    for m in 12..70 {
+        w.fixed_now = Some(t0.plus(Duration::seconds(m * 60)));
+        ok(&mut w, "tyler", "look", json!([]));
+        w.tick();
+    }
+    let hp_after = w
+        .store
+        .read_field(dave, BODY, "hp", w.now())
+        .unwrap()
+        .as_f64()
+        .unwrap();
+    assert!(
+        hp_after >= hp_before,
+        "a gone citizen is not struck: {hp_before} -> {hp_after}"
+    );
+
+    // The trace fades on the active half-life (10 s in tests): after an hour he is not listed.
+    let look = ok(&mut w, "tyler", "look", json!([]));
+    assert!(
+        !look.summary.contains("Remembered here"),
+        "{}",
+        look.summary
+    );
+
+    // Dave types again: an arrival, here, and the hollows notice.
+    let arrivals_before = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .iter()
+        .filter(|e| e.kind == crate::world::ARRIVED && e.payload["actor"] == "dave")
+        .count();
+    let look = ok(&mut w, "dave", "look", json!([]));
+    assert!(
+        look.summary.contains("Also here: tyler."),
+        "{}",
+        look.summary
+    );
+    assert!(presence::is_here(&w, dave));
+    let arrivals_after = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .iter()
+        .filter(|e| e.kind == crate::world::ARRIVED && e.payload["actor"] == "dave")
+        .count();
+    assert_eq!(arrivals_after, arrivals_before + 1);
+    let look = ok(&mut w, "tyler", "look", json!([]));
+    assert!(
+        look.summary.contains("Also here: dave."),
+        "{}",
+        look.summary
+    );
+    w.fixed_now = Some(t0.plus(Duration::seconds(70 * 60 + 5)));
+    w.tick();
+    assert!(
+        combat::engaged_with(&w, dave).is_some(),
+        "back in the Shallows, the hollow comes for him"
+    );
+}

@@ -407,16 +407,7 @@ pub fn describe(
         .as_array()
         .cloned()
         .unwrap_or_default();
-    let others: Vec<String> = here
-        .iter()
-        .filter(|n| n["kind"] == "citizen")
-        .filter_map(|n| {
-            n["components"][super::CITIZEN]["name"]
-                .as_str()
-                .map(str::to_string)
-        })
-        .filter(|n| n != actor)
-        .collect();
+    let (others, remembered) = super::presence::split(world, room, actor);
     let creatures: Vec<Value> = here
         .iter()
         .filter(|n| n["kind"] == "creature")
@@ -470,9 +461,17 @@ pub fn describe(
     } else {
         format!(" Also here: {}.", others.join(", "))
     });
+    if !remembered.is_empty() {
+        let names: Vec<&str> = remembered.iter().map(|(n, _)| n.as_str()).collect();
+        text.push_str(&format!(" Remembered here: {}.", names.join(", ")));
+    }
+    let remembered: Vec<Value> = remembered
+        .iter()
+        .map(|(n, t)| json!({"name": n, "trace": t}))
+        .collect();
     Ok(Outcome::new(
         text,
-        json!({"room": name, "description": desc, "memory": memory, "dug_by": dug_by, "exits": exits, "creatures": creatures, "citizens": others, "observation": obs}),
+        json!({"room": name, "description": desc, "memory": memory, "dug_by": dug_by, "exits": exits, "creatures": creatures, "citizens": others, "remembered": remembered, "observation": obs}),
     ))
 }
 

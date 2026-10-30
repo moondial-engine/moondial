@@ -323,7 +323,7 @@ pub fn notice_everyone(world: &mut World, room: EntityId) -> Result<(), String> 
         .filter_map(|e| e.owner.clone().map(|o| (o, e.id)))
         .collect();
     for (actor, citizen) in citizens {
-        if engaged_with(world, citizen).is_none() {
+        if engaged_with(world, citizen).is_none() && super::presence::is_here(world, citizen) {
             on_arrival(world, &actor, citizen, room)?;
         }
     }
@@ -382,6 +382,14 @@ fn end_fight(world: &mut World, citizen: EntityId) -> Result<(), String> {
     world.cancel(JOB_STRIKE, |p| p["citizen"] == citizen.0)?;
     world.cancel(JOB_AMBUSH, |p| p["citizen"] == citizen.0)?;
     Ok(())
+}
+
+/// A citizen leaves a fight without a blow: gone quiet, the room disremembers them.
+pub(crate) fn leave_fight(world: &mut World, actor: &str, citizen: EntityId) -> Result<(), String> {
+    if engaged_with(world, citizen).is_some() {
+        set_engaged(world, actor, citizen, None).map_err(|e| e.to_string())?;
+    }
+    end_fight(world, citizen)
 }
 
 /// The creature a citizen is engaged with, if it still exists.
@@ -512,7 +520,7 @@ pub fn register(world: &mut World, curves: Curves) {
             let actor = job.payload["actor"].as_str().unwrap_or("").to_string();
             // The fight must still be on: both exist, same room, still engaged.
             let same_room = w.store.entity(creature).and_then(|c| c.parent) == w.store.entity(citizen).and_then(|c| c.parent);
-            if !same_room || engaged_with(w, citizen) != Some(creature) {
+            if !same_room || engaged_with(w, citizen) != Some(creature) || !super::presence::is_here(w, citizen) {
                 return Ok(());
             }
             let cname = plain_str(w, creature, CREATURE, "name").unwrap_or("?").to_string();
@@ -538,7 +546,7 @@ pub fn register(world: &mut World, curves: Curves) {
             let citizen = EntityId(job.payload["citizen"].as_u64().unwrap_or(0));
             let actor = job.payload["actor"].as_str().unwrap_or("").to_string();
             let same_room = w.store.entity(creature).and_then(|c| c.parent) == w.store.entity(citizen).and_then(|c| c.parent);
-            if !same_room || w.store.entity(creature).is_none() || engaged_with(w, citizen).is_some() {
+            if !same_room || w.store.entity(creature).is_none() || engaged_with(w, citizen).is_some() || !super::presence::is_here(w, citizen) {
                 return Ok(());
             }
             let Some(d) = creature_def(w, creature) else { return Ok(()) };
