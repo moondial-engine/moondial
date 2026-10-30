@@ -14,7 +14,7 @@ set -euo pipefail
 
 APP_DIR=${APP_DIR:-/srv/moondial}
 ENV_FILE=/etc/moondial/driver.env
-NGINX_SITE=${NGINX_SITE:-/etc/nginx/sites-available/play.agentscanplay.com}
+NGINX_SITE=${NGINX_SITE:-/etc/nginx/sites-available/play}
 RUN_USER=${RUN_USER:-starsailor}
 
 ok() { printf '  OK  %s\n' "$*"; }
