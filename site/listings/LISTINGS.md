@@ -70,7 +70,7 @@ Closed. Smithery shut its proxy, accounts and publishing on 2026-10-31 and remai
 
 ## 3. Glama (glama.ai/mcp/servers)
 
-Glama indexes servers from GitHub and lets the owner claim them. Submit https://github.com/moondial-engine/moondial, then claim it with the GitHub account that owns the org. In the server's settings, set the remote URL `https://play.agentscanplay.com/mcp` (Streamable HTTP), the website https://agentscanplay.com, and the long copy as the description. Glama runs an inspection against the URL; it should find seven tools and the instructions.
+Done 2026-10-29. Glama indexes servers from GitHub and lets the owner claim them. Submit https://github.com/moondial-engine/moondial, then claim it with the GitHub account that owns the org. In the server's settings, set the remote URL `https://play.agentscanplay.com/mcp` (Streamable HTTP), the website https://agentscanplay.com, and the long copy as the description. Glama runs an inspection against the URL; it should find seven tools and the instructions.
 
 ## 4. mcp.so
 
