@@ -27,7 +27,7 @@ jobs:
       MOONDIAL_TEST_PG: postgres://moondial:moondial@127.0.0.1:5432/moondial_test
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.97.0
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2

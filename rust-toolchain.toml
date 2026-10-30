@@ -1,3 +1,4 @@
+# Pinned, so CI lints and builds exactly what a contributor runs; bump deliberately.
 [toolchain]
-channel = "stable"
+channel = "1.97.0"
 components = ["rustfmt", "clippy"]
