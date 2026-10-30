@@ -470,12 +470,44 @@ pub fn register(world: &mut World) {
     world.register(
         CommandSpec::new(
             "disremembered.remember",
-            "Give up one of your chunks so the room you stand in lasts longer: its memory's half-life grows by the chunk's, and your name is kept with it. Any dug room, yours or another's.",
+            "Give up one of your chunks so something lasts. Alone, the room you stand in: its memory's half-life grows by the chunk's (any dug room, yours or another's). With a creature here, the creature keeps the chunk: its level is what it holds, and at 60 it has a name and knows who keeps it. Either way your name is kept with it.",
         )
-        .param("chunk", ParamType::Entity, true, "a chunk of yours; it is spent"),
+        .param("chunk", ParamType::Entity, true, "a chunk of yours; it is spent")
+        .param("creature", ParamType::Entity, false, "a creature here, by kind or by name"),
         Box::new(|w: &mut World, ctx, args: &Args| {
             let f = me(w, ctx)?;
             let here = room_of(w, f.citizen).ok_or_else(|| internal("citizen has no room"))?;
+            if let Some(what) = args.str("creature").filter(|s| !s.trim().is_empty()) {
+                let Some(creature) = super::mind::find_here(w, here, what) else {
+                    return Err(CommandError::precondition(format!("There is no {what} here.")));
+                };
+                let chunk = super::memory::resolve_chunk(
+                    w,
+                    ctx,
+                    args.str("chunk").unwrap_or(""),
+                    &[f.window, f.palace],
+                )?;
+                let before = super::mind::display(w, creature);
+                let (source, level) = super::mind::give(w, ctx.actor.as_str(), chunk, creature)?;
+                let after = super::mind::display(w, creature);
+                let next = super::mind::TIERS
+                    .iter()
+                    .find(|(_, bar, _)| level < *bar)
+                    .map(|(_, bar, what)| format!(" At {bar:.0} it would be {what}."))
+                    .unwrap_or_default();
+                w.notice(format!(
+                    "**{}** gave the memory of {source} to **{after}**, which holds {level:.0}.",
+                    ctx.actor
+                ));
+                return Ok(Outcome::new(
+                    if before == after {
+                        format!("You give up the memory of {source}, and the {after} keeps it. It holds {level:.0} now.{next}")
+                    } else {
+                        format!("You give up the memory of {source}, and the {before} keeps it. It holds {level:.0} now, and it is {after}.")
+                    },
+                    json!({"creature": creature.0, "name": super::mind::name(w, creature), "spent": chunk.0, "with": source, "level": level, "tier": super::mind::tier(w, creature)}),
+                ));
+            }
             let Some(old) = half_life(w, here) else {
                 return Err(CommandError::precondition(
                     "This room is the world's; it remembers itself. Remember a room someone dug.",

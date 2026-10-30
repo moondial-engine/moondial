@@ -1474,3 +1474,131 @@ fn a_quiet_citizen_is_disremembered_by_the_room_and_returns_as_an_arrival() {
         "back in the Shallows, the hollow comes for him"
     );
 }
+
+#[test]
+fn a_remembered_creature_earns_a_name_can_be_robbed_and_forgets_again() {
+    let t0 = Timestamp(1_000_000);
+    let mut w = open(tempfile::tempdir().unwrap().path(), t0);
+    login(&mut w, "dave", "test", PASS).unwrap();
+    login(&mut w, "tyler", "test", PASS).unwrap();
+    // The Midden, where the ragpicker sorts. It is not aggressive.
+    for who in ["dave", "tyler"] {
+        ok(&mut w, who, "travel", json!(["east"]));
+        ok(&mut w, who, "travel", json!(["south"]));
+    }
+    let midden = rooms::room_by_key(&w, "midden").unwrap();
+    let rag = combat::creatures_in(&w, midden)[0].0;
+    assert_eq!(mind::tier(&w, rag), 0);
+    let first = ok(&mut w, "dave", "look", json!([])).summary;
+    assert!(first.contains("Here: ragpicker (16.0/16.0)."), "{first}");
+
+    // A small memory: it holds it, no name yet.
+    let c = admin(&mut w, "dave", "earn", json!(["wisp", 40, 0.5]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    let out = ok(&mut w, "dave", "remember", json!([c, "ragpicker"]));
+    assert!(out.summary.starts_with("You give up the memory of wisp, and the ragpicker keeps it. It holds 40 now. At 60 it would be named."), "{}", out.summary);
+    assert_eq!(mind::tier(&w, rag), 0);
+    assert_eq!(mind::keepers(&w, rag), vec!["dave".to_string()]);
+    let level_dave = level(&mut w, "dave");
+    assert!(
+        level_dave < 1.0,
+        "the chunk left dave's window: {level_dave}"
+    );
+
+    // Over the bar: a name, and it knows who kept it.
+    let c = admin(&mut w, "tyler", "earn", json!(["hollow", 60, 0.5]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    let out = ok(&mut w, "tyler", "remember", json!([c, "the ragpicker"]));
+    assert!(out.summary.contains("and it is"), "{}", out.summary);
+    assert_eq!(mind::tier(&w, rag), 1);
+    let name = mind::name(&w, rag).unwrap();
+    let look = ok(&mut w, "tyler", "look", json!([]));
+    assert!(
+        look.summary.contains(&format!(
+            "Here: {name} the ragpicker (16.0/16.0, holding 100). {name} the ragpicker knows you."
+        )),
+        "{}",
+        look.summary
+    );
+    let tiers: Vec<_> = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == mind::TIER)
+        .collect();
+    assert_eq!(tiers.len(), 1);
+    assert_eq!(tiers[0].payload["to"], 1);
+    // A stranger is told who it knows.
+    login(&mut w, "mara", "test", PASS).unwrap();
+    ok(&mut w, "mara", "travel", json!(["east"]));
+    ok(&mut w, "mara", "travel", json!(["south"]));
+    let look = ok(&mut w, "mara", "look", json!([]));
+    assert!(
+        look.summary.contains(&format!(
+            "{name} the ragpicker does not know you. It knows tyler, dave."
+        )),
+        "{}",
+        look.summary
+    );
+
+    // Mara robs it: it goes down, she takes one memory, it stands up shaken.
+    w.seed(7);
+    let mut out = None;
+    for _ in 0..40 {
+        let o = ok(&mut w, "mara", "attack", json!([&name]));
+        if o.result["taken"].is_u64() {
+            out = Some(o);
+            break;
+        }
+        if o.result["died"] == true {
+            panic!("mara died to a ragpicker");
+        }
+    }
+    let out = out.expect("it should have gone down");
+    assert!(
+        out.summary
+            .contains("goes down, and you take its memory of"),
+        "{}",
+        out.summary
+    );
+    assert!(w.store.entity(rag).is_some(), "it survives");
+    assert!(mind::shaken(&w, rag));
+    assert!(level(&mut w, "mara") > 30.0, "mara holds what she took");
+    let err = call(&mut w, "mara", ActorKind::Citizen, "attack", json!([&name])).unwrap_err();
+    assert!(err.to_string().contains("not itself yet"), "{err}");
+    let taken: Vec<_> = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == mind::TAKEN)
+        .collect();
+    assert_eq!(taken.len(), 1);
+    assert_eq!(taken[0].payload["by"], "mara");
+
+    // Hysteresis: it keeps its name above 30; below that, on a sweep, it forgets.
+    let left = mind::level(&w, rag);
+    assert!(left > 30.0 || mind::tier(&w, rag) == 0, "{left}");
+    // The test world's chunks halve every 10 s; after a few minutes nothing is left.
+    w.fixed_now = Some(t0.plus(Duration::seconds(300)));
+    w.tick();
+    assert_eq!(
+        mind::tier(&w, rag),
+        0,
+        "forgotten: {}",
+        mind::level(&w, rag)
+    );
+    assert!(mind::name(&w, rag).is_none());
+    assert!(
+        ok(&mut w, "dave", "look", json!([]))
+            .summary
+            .contains("Here: ragpicker (16.0/16.0)."),
+        "scenery again"
+    );
+    // Remembered again, it gets the same name back.
+    let c = admin(&mut w, "dave", "earn", json!(["keeper", 400, 1.0]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    ok(&mut w, "dave", "remember", json!([c, "ragpicker"]));
+    assert_eq!(mind::name(&w, rag).as_deref(), Some(name.as_str()));
+}

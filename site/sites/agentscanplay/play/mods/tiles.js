@@ -72,7 +72,9 @@ export default function install(m) {
       const s = n.components["disremembered.sprite"] || {};
       if (n.kind === "creature") {
         const c = n.components["disremembered.creature"] || {};
-        things.push({ id: n.id, kind: "creature", name: c.name, hp: c.hp, max: c.max_hp, sprite: s, tile: SLOTS[(hash(n.id) + slot++) % SLOTS.length] });
+        const mind = n.components["disremembered.mind"];
+        const given = mind && mind.name ? mind.name : null;
+        things.push({ id: n.id, kind: "creature", name: c.name, given, hp: c.hp, max: c.max_hp, sprite: s, tile: SLOTS[(hash(n.id) + slot++) % SLOTS.length] });
       } else if (n.kind === "citizen") {
         const name = (n.components["disremembered.citizen"] || {}).name || "?";
         const p = n.components["disremembered.presence"];
@@ -143,7 +145,9 @@ export default function install(m) {
         ctx.fillStyle = "#0b0d12"; ctx.fillRect((x * T + 2) * SCALE, (y * T - 3 + bob) * SCALE, 12 * SCALE, 2 * SCALE);
         ctx.fillStyle = frac > 0.5 ? "#7fb37f" : frac > 0.25 ? "#d1a04a" : "#c96a6a";
         ctx.fillRect((x * T + 2) * SCALE, (y * T - 3 + bob) * SCALE, Math.round(12 * frac) * SCALE, 2 * SCALE);
-        hot.set(x + "," + y, { label: "attack the " + t.name + " (" + t.hp.toFixed(0) + "/" + t.max + ")", action: () => m.command("attack", [t.name]) });
+        if (t.given) label(t.given, x, y, -1);
+        const who = t.given ? t.given + " the " + t.name : "the " + t.name;
+        hot.set(x + "," + y, { label: "attack " + who + " (" + t.hp.toFixed(0) + "/" + t.max + ")", action: () => m.command("attack", [t.given || t.name]) });
       } else if (t.kind === "you") {
         hot.set(x + "," + y, { label: "you, " + t.name + " — look around", action: () => m.command("look", []) });
       } else {
@@ -194,7 +198,7 @@ export default function install(m) {
     root: "here",
     select: { "disremembered.room": ["name", "memory", "description"], "disremembered.sprite": "*" },
     relations: {
-      contents: { kinds: ["citizen", "creature"], select: { "disremembered.citizen": ["name"], "disremembered.creature": ["name", "hp", "max_hp"], "disremembered.sprite": "*", "disremembered.presence": ["here", "trace"] } },
+      contents: { kinds: ["citizen", "creature"], select: { "disremembered.citizen": ["name"], "disremembered.creature": ["name", "hp", "max_hp"], "disremembered.sprite": "*", "disremembered.presence": ["here", "trace"], "disremembered.mind": ["name", "tier"] } },
       exits: { select: { "disremembered.room": ["name"], "disremembered.sprite": "*" } },
     },
     timed: "curve", commands: false,

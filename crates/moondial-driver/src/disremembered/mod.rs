@@ -12,6 +12,7 @@ pub mod building;
 mod combat;
 mod identity;
 mod memory;
+pub mod mind;
 pub mod presence;
 pub mod rooms;
 pub mod speech;
@@ -166,6 +167,13 @@ pub fn schemas() -> Vec<ComponentSchema> {
             // Who gave up a memory so this room would last: `[{by, with, half_life_ms}]`.
             .field("kept", FieldKind::Plain, Visibility::Public),
         ComponentSchema::new(EXITS, 1).field("exits", FieldKind::Plain, Visibility::Public),
+        // A creature that is remembered: its tier, its given name, who keeps it, and
+        // whether a memory was just taken from it. Its level is its window's.
+        ComponentSchema::new(mind::MIND, 1)
+            .field("tier", FieldKind::Plain, Visibility::Public)
+            .field("name", FieldKind::Plain, Visibility::Public)
+            .field("kept", FieldKind::Plain, Visibility::Public)
+            .field("shaken_until", FieldKind::Plain, Visibility::Public),
         // Whether a citizen is here, and how well the room remembers them once gone.
         ComponentSchema::new(presence::PRESENCE, 1)
             .field("here", FieldKind::Plain, Visibility::Public)
@@ -557,6 +565,7 @@ pub fn register(world: &mut World, curves: Curves) {
     combat::register(world, curves.clone());
     memory::register(world, curves.clone());
     presence::register(world, curves);
+    mind::register(world);
     speech::register(world);
     building::register(world);
     system::register(world);

@@ -181,6 +181,22 @@ pub fn narrate(world: &mut World, actor: &str, text: impl Into<String>) {
     );
 }
 
+/// Something happened near `entity` that everyone present in its room should hear.
+pub fn narrate_room(world: &mut World, entity: EntityId, text: &str) {
+    let Some(room) = world.store.entity(entity).and_then(|e| e.parent) else {
+        return;
+    };
+    let present: Vec<String> = world
+        .store
+        .children(room)
+        .filter(|e| e.kind == "citizen" && super::presence::is_here(world, e.id))
+        .filter_map(|e| e.owner.clone())
+        .collect();
+    for actor in present {
+        narrate(world, &actor, text.to_string());
+    }
+}
+
 fn creature_def(world: &World, creature: EntityId) -> Option<&'static CreatureDef> {
     plain_str(world, creature, CREATURE, "name").and_then(def)
 }
@@ -550,6 +566,9 @@ pub fn register(world: &mut World, curves: Curves) {
                 return Ok(());
             }
             let Some(d) = creature_def(w, creature) else { return Ok(()) };
+            if super::mind::shaken(w, creature) || super::mind::keepers(w, creature).iter().any(|k| k == &actor) {
+                return Ok(());
+            }
             set_engaged(w, &actor, citizen, Some(creature)).map_err(|e| e.to_string())?;
             let (taken, dead) = creature_strikes(w, creature, citizen).map_err(|e| e.to_string())?;
             if dead {
@@ -576,7 +595,8 @@ pub fn register(world: &mut World, curves: Curves) {
             let target = match args.str("creature") {
                 Some(name) if !name.is_empty() => {
                     let name = name.trim_start_matches("creature-").to_ascii_lowercase();
-                    here.iter().find(|(id, n, _, _)| *n == name || id.0.to_string() == name).map(|c| c.0)
+                    here.iter().find(|(id, _, _, _)| id.0.to_string() == name).map(|c| c.0)
+                        .or_else(|| super::mind::find_here(w, room, &name))
                 }
                 _ => engaged_with(w, f.citizen).filter(|id| here.iter().any(|c| c.0 == *id)).or_else(|| here.first().map(|c| c.0)),
             };
@@ -586,6 +606,12 @@ pub fn register(world: &mut World, curves: Curves) {
                 }));
             };
             let cname = plain_str(w, creature, CREATURE, "name").unwrap_or("?").to_string();
+            if super::mind::shaken(w, creature) {
+                return Err(CommandError::precondition(format!(
+                    "{} is not itself yet; there is nothing to take from it for a while.",
+                    super::mind::display(w, creature)
+                )));
+            }
             if engaged_with(w, f.citizen) != Some(creature) {
                 set_engaged(w, &ctx.actor, f.citizen, Some(creature)).map_err(internal)?;
                 end_fight(w, f.citizen).map_err(internal)?;
@@ -600,6 +626,18 @@ pub fn register(world: &mut World, curves: Curves) {
             let mut lines = vec![format!("You hit the {cname} for {dmg:.0}.")];
 
             if chp <= 0.0 {
+                // A creature that holds memories does not die: you take one, it is shaken.
+                let who = super::mind::display(w, creature);
+                if let Some((chunk, source)) = super::mind::take(w, &ctx.actor, f.window, creature)? {
+                    set_engaged(w, &ctx.actor, f.citizen, None).map_err(internal)?;
+                    end_fight(w, f.citizen).map_err(internal)?;
+                    let left = super::mind::level(w, creature);
+                    lines.push(format!(
+                        "{who} goes down, and you take its memory of {source}: chunk-{}. It gets up again, holding {left:.0}, and will not be itself for a while.",
+                        chunk.0
+                    ));
+                    return Ok(Outcome::new(lines.join(" "), json!({"creature": cname, "killed": false, "taken": chunk.0, "with": source, "left": left, "hp": hp(w, f.citizen)})));
+                }
                 // Win: the chunk's vividity is how close you came to dying.
                 let my_hp = hp(w, f.citizen);
                 let vividity = (1.0 - my_hp / super::MAX_HP).clamp(0.0, 1.0);

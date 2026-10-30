@@ -364,7 +364,7 @@ pub fn look_query(room: EntityId) -> Value {
         "relations": {
             "contents": {
                 "kinds": ["citizen", "creature"],
-                "select": {super::CITIZEN: ["name"], super::CREATURE: ["name", "hp", "max_hp"]}
+                "select": {super::CITIZEN: ["name"], super::CREATURE: ["name", "hp", "max_hp"], super::mind::MIND: ["name", "tier"]}
             }
         }
     })
@@ -413,8 +413,19 @@ pub fn describe(
         .filter(|n| n["kind"] == "creature")
         .map(|n| {
             let c = &n["components"][super::CREATURE];
-            json!({"id": n["id"], "name": c["name"], "hp": c["hp"], "max_hp": c["max_hp"]})
+            let id = EntityId(n["id"].as_u64().unwrap_or(0));
+            let mut v =
+                json!({"id": n["id"], "name": c["name"], "hp": c["hp"], "max_hp": c["max_hp"]});
+            if n["components"][super::mind::MIND].is_object() {
+                v["mind"] = super::mind::summary(world, id);
+            }
+            v
         })
+        .collect();
+    let regards: Vec<String> = creatures
+        .iter()
+        .filter_map(|c| c["id"].as_u64())
+        .filter_map(|id| super::mind::regard(world, EntityId(id), actor))
         .collect();
     let mut text = format!("{name}. {desc}");
     if let Some(who) = &dug_by {
@@ -446,15 +457,22 @@ pub fn describe(
         let list: Vec<String> = creatures
             .iter()
             .map(|c| {
-                format!(
-                    "{} ({}/{})",
-                    c["name"].as_str().unwrap_or("?"),
-                    c["hp"],
-                    c["max_hp"]
-                )
+                let who = match c["mind"]["name"].as_str() {
+                    Some(n) => format!("{n} the {}", c["name"].as_str().unwrap_or("?")),
+                    None => c["name"].as_str().unwrap_or("?").to_string(),
+                };
+                let holds = match c["mind"]["level"].as_f64() {
+                    Some(l) if l >= 0.5 => format!(", holding {l:.0}"),
+                    _ => String::new(),
+                };
+                format!("{who} ({}/{}{holds})", c["hp"], c["max_hp"])
             })
             .collect();
         text.push_str(&format!(" Here: {}.", list.join(", ")));
+        for r in &regards {
+            text.push(' ');
+            text.push_str(r);
+        }
     }
     text.push_str(&if others.is_empty() {
         " You are alone.".to_string()
