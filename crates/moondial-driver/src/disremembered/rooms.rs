@@ -1,4 +1,4 @@
-//! The map: four rooms off the Threshold, exits between them, and what spawns where.
+//! The map: fourteen rooms off the Threshold, exits between them, and what spawns where.
 //! No room, creature or exit may be named with a CLEAR reserved word or a glossary
 //! alias; a test under `disremembered::tests` holds the map to that.
 //! Rooms are entities with `disremembered.room`, `disremembered.exits` and, where something lives,
@@ -35,7 +35,7 @@ pub const ROOMS: &[RoomDef] = &[
         key: ARRIVAL,
         name: "The Threshold",
         description: "A threshold of pale stone under a moon that is always up. Everything you earn here will fade; what you do with it is yours. Nothing hunts here.",
-        exits: &[("east", "fogbank")],
+        exits: &[("east", "fogbank"), ("west", "lantern-row")],
         spawn: None,
         former: &["gate"],
         tint: "#d9d4c7",
@@ -44,7 +44,7 @@ pub const ROOMS: &[RoomDef] = &[
         key: "fogbank",
         name: "The Fogbank",
         description: "Fog rolls off the stone and swallows the path a few steps ahead. Things move in it, slowly, and mostly away from you.",
-        exits: &[("west", ARRIVAL), ("north", "shallows")],
+        exits: &[("west", ARRIVAL), ("north", "shallows"), ("south", "midden")],
         spawn: Some(("wisp", 2, 60)),
         former: &[],
         tint: "#8a97a8",
@@ -53,7 +53,12 @@ pub const ROOMS: &[RoomDef] = &[
         key: "shallows",
         name: "The Shallows",
         description: "Black water over pale sand, ankle-deep and perfectly still, until something stands up out of it.",
-        exits: &[("south", "fogbank"), ("east", "ossuary")],
+        exits: &[
+            ("south", "fogbank"),
+            ("east", "ossuary"),
+            ("north", "orchard"),
+            ("dive", "undertow"),
+        ],
         spawn: Some(("hollow", 2, 120)),
         former: &[],
         tint: "#3f5a5a",
@@ -62,10 +67,104 @@ pub const ROOMS: &[RoomDef] = &[
         key: "ossuary",
         name: "The Ossuary",
         description: "Niches cut into the rock, each one empty, each one swept clean. Something keeps them that way.",
-        exits: &[("west", "shallows")],
+        exits: &[("west", "shallows"), ("east", "gallery")],
         spawn: Some(("revenant", 1, 300)),
         former: &[],
         tint: "#6b5a4a",
+    },
+    // West of the Threshold: the quiet side, where things are kept rather than hunted.
+    RoomDef {
+        key: "lantern-row",
+        name: "Lantern Row",
+        description: "A row of lanterns on iron hooks, each one lighting as you pass and going dark behind you. They remember being lit. They do not remember by whom. Nothing hunts here.",
+        exits: &[("east", ARRIVAL), ("north", "archive"), ("down", "stairwell")],
+        spawn: None,
+        former: &[],
+        tint: "#c9a86a",
+    },
+    RoomDef {
+        key: "archive",
+        name: "The Unfiled Archive",
+        description: "Shelves to the ceiling and ledgers on every one, but the ink lifts off the page the moment you read it and drifts for the rafters. Some of it has learned to flutter.",
+        exits: &[("south", "lantern-row")],
+        spawn: Some(("inkling", 3, 45)),
+        former: &[],
+        tint: "#4a4e6b",
+    },
+    RoomDef {
+        key: "stairwell",
+        name: "The Downward Stair",
+        description: "A spiral stair cut into the rock, going down further than the hill is tall. Every landing has a door, and every door is bricked up from the other side.",
+        exits: &[("up", "lantern-row"), ("down", "cistern")],
+        spawn: None,
+        former: &[],
+        tint: "#5a5a5a",
+    },
+    RoomDef {
+        key: "cistern",
+        name: "The Cistern",
+        description: "A drowned hall, water to your waist, the ceiling lost in the dark. Every sound comes back twice: once as you made it, and once as somebody else did.",
+        exits: &[("up", "stairwell"), ("east", "undertow")],
+        spawn: Some(("drowned", 2, 150)),
+        former: &[],
+        tint: "#2f4858",
+    },
+    RoomDef {
+        key: "undertow",
+        name: "The Undertow",
+        description: "A current under the Shallows, pulling at your knees toward somewhere it will not name. Light comes down green from the surface. Things that stood up in the water above lie down here.",
+        exits: &[("west", "cistern"), ("surface", "shallows")],
+        spawn: Some(("hollow", 1, 180)),
+        former: &[],
+        tint: "#2e6b5e",
+    },
+    // North of the Shallows: a place that almost ripens.
+    RoomDef {
+        key: "orchard",
+        name: "The Orchard of Unripe Hours",
+        description: "Rows of low trees heavy with fruit that is always about to ripen and never does. The air is sweet with it. Moths the size of your hand work the branches, and are not interested in you, mostly.",
+        exits: &[("south", "shallows"), ("up", "clocktower")],
+        spawn: Some(("mothwing", 3, 40)),
+        former: &[],
+        tint: "#7d9a5a",
+    },
+    RoomDef {
+        key: "clocktower",
+        name: "The Stopped Clocktower",
+        description: "Four clock faces, one to each wall, each showing a different hour, and all of them wrong. The works fill the middle of the room, and something in the works is still wound.",
+        exits: &[("down", "orchard")],
+        spawn: Some(("hourhand", 1, 240)),
+        former: &[],
+        tint: "#8a6f3a",
+    },
+    // South of the Fogbank: where everything forgotten ends up.
+    RoomDef {
+        key: "midden",
+        name: "The Midden",
+        description: "A heap of everything anyone here has ever forgotten: names, keys, the second verse, the way home. It shifts when you are not looking at it. Something lives in it and sorts.",
+        exits: &[("north", "fogbank")],
+        spawn: Some(("ragpicker", 1, 90)),
+        former: &[],
+        tint: "#6e6250",
+    },
+    // East of the Ossuary: the deep end.
+    RoomDef {
+        key: "gallery",
+        name: "The Gallery of Faces Turned Away",
+        description: "A long hall of portraits, every one hung facing the wall. The frames are dusted. The hooks are new. One of the sitters is not entirely in its frame.",
+        exits: &[("west", "ossuary"), ("down", "oubliette")],
+        spawn: Some(("sitter", 1, 200)),
+        former: &[],
+        tint: "#5e3f4f",
+    },
+    RoomDef {
+        key: "oubliette",
+        name: "The Oubliette",
+        description: "A pit with no stair, only the rope you came down. The walls are scored with tally marks in a hand that stopped counting. The Keeper has forgotten what it keeps, but not that it keeps it.",
+        exits: &[("up", "gallery")],
+        spawn: Some(("keeper", 1, 600)),
+        former: &[],
+        tint: "#2b2b33",
     },
 ];
 
@@ -147,16 +246,25 @@ pub fn ensure_rooms(world: &mut World) -> Result<(), String> {
     }
     for def in ROOMS {
         let id = ids[def.key];
-        let has_exits = world
+        // The seed exits this room lacks, added to whatever it has (a dug exit stays).
+        // Exits that are there already, pointing anywhere, are left alone.
+        let mut exits: serde_json::Map<String, Value> = match world
             .store
             .entity(id)
-            .is_some_and(|e| e.components.contains_key(EXITS));
-        if !has_exits {
-            let exits: serde_json::Map<String, Value> = def
-                .exits
-                .iter()
-                .map(|(name, key)| (name.to_string(), json!(ids[key].0)))
-                .collect();
+            .and_then(|e| e.components.get(EXITS))
+            .and_then(|c| c.fields.get("exits"))
+        {
+            Some(Field::Plain(Value::Object(m))) => m.clone(),
+            _ => serde_json::Map::new(),
+        };
+        let mut missing = false;
+        for (name, key) in def.exits {
+            if !exits.contains_key(*name) {
+                exits.insert(name.to_string(), json!(ids[key].0));
+                missing = true;
+            }
+        }
+        if missing {
             let mut fields = BTreeMap::new();
             fields.insert("exits".into(), Field::Plain(Value::Object(exits)));
             world

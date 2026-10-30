@@ -122,9 +122,9 @@ fn the_map_is_built_once_and_travel_follows_exits() {
     login(&mut w, "dave", "test", PASS).unwrap();
     let look = ok(&mut w, "dave", "look", json!([]));
     assert_eq!(look.result["room"], json!("The Threshold"));
-    assert_eq!(look.result["exits"], json!(["east"]));
+    assert_eq!(look.result["exits"], json!(["east", "west"]));
     assert!(matches!(
-        call(&mut w, "dave", ActorKind::Citizen, "travel", json!(["up"])),
+        call(&mut w, "dave", ActorKind::Citizen, "travel", json!(["sideways"])),
         Err(CommandError::Precondition { .. })
     ));
     let fog = ok(&mut w, "dave", "travel", json!(["east"]));
@@ -1152,4 +1152,82 @@ fn an_admin_can_forget_a_passphrase_and_the_next_login_claims_it() {
         kind: ActorKind::Citizen,
     };
     assert!(w.call(&ctx, "forget", &json!(["tyler"])).is_err());
+}
+
+#[test]
+fn the_map_is_connected_and_new_seed_exits_reach_old_rooms() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut w = open(dir.path(), Timestamp(0));
+    // Every room reachable from the Threshold, and every exit lands on a seeded room.
+    let mut seen = std::collections::BTreeSet::new();
+    let mut stack = vec![rooms::ARRIVAL];
+    while let Some(k) = stack.pop() {
+        if !seen.insert(k) {
+            continue;
+        }
+        let def = rooms::ROOMS.iter().find(|r| r.key == k).unwrap();
+        for (_, to) in def.exits {
+            assert!(
+                rooms::ROOMS.iter().any(|r| r.key == *to),
+                "{k} exits to unknown {to}"
+            );
+            stack.push(to);
+        }
+    }
+    assert_eq!(
+        seen.len(),
+        rooms::ROOMS.len(),
+        "unreachable rooms: {:?}",
+        rooms::ROOMS
+            .iter()
+            .map(|r| r.key)
+            .filter(|k| !seen.contains(k))
+            .collect::<Vec<_>>()
+    );
+    // Simulate an old log: strip the fogbank's south exit, then reboot; it comes back,
+    // and a dug exit beside it survives.
+    let fog = rooms::room_by_key(&w, "fogbank").unwrap();
+    let mut exits = rooms::exits_of(&w, fog);
+    exits.remove("south");
+    let mut m = serde_json::Map::new();
+    for (k, v) in &exits {
+        m.insert(k.clone(), json!(v.0));
+    }
+    m.insert(
+        "hole".into(),
+        json!(rooms::room_by_key(&w, "ossuary").unwrap().0),
+    );
+    let mut fields = std::collections::BTreeMap::new();
+    fields.insert(
+        "exits".to_string(),
+        moondial_store::Field::Plain(Value::Object(m)),
+    );
+    w.record(
+        Actor::Driver,
+        StoreEvent::ComponentSet {
+            id: fog,
+            component: EXITS.into(),
+            fields,
+        },
+    )
+    .unwrap();
+    assert!(!rooms::exits_of(&w, fog).contains_key("south"));
+    drop(w);
+    let w = open(dir.path(), Timestamp(1));
+    let exits = rooms::exits_of(&w, fog);
+    assert_eq!(
+        exits.get("south"),
+        Some(&rooms::room_by_key(&w, "midden").unwrap())
+    );
+    assert!(exits.contains_key("hole"), "a dug exit was lost");
+    // Every spawn names a creature that exists.
+    for r in rooms::ROOMS {
+        if let Some((c, _, _)) = r.spawn {
+            assert!(
+                combat::CREATURES.iter().any(|d| d.key == c),
+                "{}: no creature {c}",
+                r.key
+            );
+        }
+    }
 }
