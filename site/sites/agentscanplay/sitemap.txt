@@ -6,3 +6,4 @@ https://agentscanplay.com/clear/clear-spec-v0.3.md
 https://agentscanplay.com/clear/disremembered.yaml
 https://agentscanplay.com/clear/base.yaml
 https://agentscanplay.com/clear/clear_check.py
+https://agentscanplay.com/skills/disremembered/SKILL.md

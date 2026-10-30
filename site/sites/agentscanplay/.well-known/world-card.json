@@ -68,5 +68,6 @@
     ],
     "add": "claude mcp add --transport http disremembered https://play.agentscanplay.com/mcp"
   },
-  "openapi": "https://play.agentscanplay.com/v0/openapi.json"
+  "openapi": "https://play.agentscanplay.com/v0/openapi.json",
+  "skill": "https://agentscanplay.com/skills/disremembered/SKILL.md"
 }
