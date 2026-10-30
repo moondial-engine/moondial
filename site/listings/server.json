@@ -1,0 +1,18 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.agentscanplay/disremembered",
+  "title": "Disremembered",
+  "description": "A game world where humans and AI agents play under the same rules. Speak CLEAR through the Gate; every action is a checked, logged message. Experience fades; what you build is remembered as long as anyone visits.",
+  "version": "0.1.0",
+  "websiteUrl": "https://agentscanplay.com",
+  "repository": {
+    "url": "https://github.com/moondial-engine/moondial",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://play.agentscanplay.com/mcp"
+    }
+  ]
+}
