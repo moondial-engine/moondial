@@ -449,6 +449,120 @@ pub fn summary(world: &World, creature: EntityId) -> Value {
     })
 }
 
+/// Now and then a creature wanders into a dug room that is still remembered.
+pub const JOB_WANDER: &str = "disremembered.wander";
+/// A creature arrived somewhere it was not spawned: `{creature, kind, room, named}`.
+pub const WANDERED: &str = "disremembered.wandered";
+const WANDER_EVERY_SECONDS: i64 = 600;
+/// Each empty, remembered dug room has one chance in this many, each time.
+const WANDER_ONE_IN: u32 = 40;
+/// A wanderer has one chance in this many of arriving already holding memories.
+const GIFTED_ONE_IN: u32 = 30;
+/// Mostly the mild kinds; the last is the one that hunts.
+const WANDERERS: &[&str] = &[
+    "ragpicker",
+    "inkling",
+    "mothwing",
+    "wisp",
+    "ragpicker",
+    "mothwing",
+    "inkling",
+    "wisp",
+    "ragpicker",
+    "hollow",
+];
+/// What a gifted stranger holds: things people here have forgotten.
+const FORGOTTEN: &[&str] = &[
+    "the way home",
+    "a second verse",
+    "a door that was bricked up",
+    "someone's name",
+    "the smell of rain",
+    "a key to nothing",
+    "the last line of a story",
+    "a face in a window",
+];
+
+fn schedule_wander(world: &mut World) -> Result<(), String> {
+    let due = world
+        .now()
+        .plus(moondial_time::Duration::seconds(WANDER_EVERY_SECONDS));
+    world
+        .schedule_once(JOB_WANDER, due, json!({}), |_| true)
+        .map(|_| ())
+}
+
+/// One pass: for each dug room still remembered and empty of creatures, a small chance.
+pub fn wander(world: &mut World) -> Result<usize, String> {
+    let rooms: Vec<EntityId> = world
+        .store
+        .entities()
+        .filter(|e| e.kind == "room" && e.owner.is_some())
+        .map(|e| e.id)
+        .filter(|&r| super::building::memory(world, r).is_some_and(|m| m >= super::building::DIM))
+        .filter(|&r| super::combat::creatures_in(world, r).is_empty())
+        .collect();
+    let mut arrived = 0;
+    for room in rooms {
+        if world.roll(WANDER_ONE_IN) != 0 {
+            continue;
+        }
+        let key = WANDERERS[world.roll(WANDERERS.len() as u32) as usize];
+        let Some(d) = super::combat::def_by_key(key) else {
+            continue;
+        };
+        let creature = super::combat::spawn_one(world, room, d).map_err(|e| e.to_string())?;
+        let gifted = world.roll(GIFTED_ONE_IN) == 0;
+        if gifted {
+            let window = ensure_window(world, creature).map_err(|e| e.to_string())?;
+            let n = 1 + world.roll(2) as usize;
+            for _ in 0..n {
+                let what = FORGOTTEN[world.roll(FORGOTTEN.len() as u32) as usize];
+                let size = 70.0 + world.roll(80) as f64;
+                let curves = super::Curves::from_env();
+                super::memory::earn_chunk(world, "nobody", window, what, size, 0.9, &curves)
+                    .map_err(|e| e.to_string())?;
+            }
+            check_tier(world, creature).map_err(|e| e.to_string())?;
+        }
+        let rname = plain_str(world, room, super::ROOM, "name")
+            .unwrap_or("?")
+            .to_string();
+        let who = display(world, creature);
+        let _ = world.note(
+            Actor::Driver,
+            WANDERED,
+            json!({"creature": creature.0, "kind": d.key, "room": room.0, "named": name(world, creature)}),
+        );
+        world.notice(format!(
+            "**{who}** wandered into {rname}{}.",
+            if gifted {
+                ", already holding memories"
+            } else {
+                ""
+            }
+        ));
+        super::combat::narrate_room(world, creature, &format!("Something has come in: {who}."));
+        if d.aggressive {
+            super::combat::notice_everyone(world, room)?;
+        }
+        arrived += 1;
+    }
+    Ok(arrived)
+}
+
 pub fn register(world: &mut World) {
     world.on_tick(Box::new(sweep));
+    world.on_job(
+        JOB_WANDER,
+        Box::new(|w: &mut World, _| {
+            wander(w)?;
+            schedule_wander(w)
+        }),
+    );
+}
+
+/// Make sure the wandering is scheduled; called at boot after the jobs are replayed.
+pub fn ensure_wander(world: &mut World) -> Result<(), String> {
+    schedule_wander(world)
 }

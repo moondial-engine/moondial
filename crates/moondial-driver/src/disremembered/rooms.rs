@@ -543,6 +543,7 @@ pub fn register(world: &mut World) {
             .map_err(internal)?;
             super::combat::on_arrival(w, &ctx.actor, f.citizen, to).map_err(internal)?;
             super::building::visited(w, to).map_err(internal)?;
+            super::talk::greet(w, &ctx.actor, to);
             let mut out = describe(w, &ctx.actor, ctx, to)?;
             out.summary = format!("You go {exit}. {}", out.summary);
             Ok(out)

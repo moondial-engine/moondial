@@ -17,6 +17,7 @@ pub mod presence;
 pub mod rooms;
 pub mod speech;
 mod system;
+pub mod talk;
 
 use crate::world::World;
 use moondial_log::Actor;
@@ -178,7 +179,9 @@ pub fn schemas() -> Vec<ComponentSchema> {
         ComponentSchema::new(presence::PRESENCE, 1)
             .field("here", FieldKind::Plain, Visibility::Public)
             .field("trace", FieldKind::Timed, Visibility::Public)
-            .field("gone_at", FieldKind::Plain, Visibility::Public),
+            .field("gone_at", FieldKind::Plain, Visibility::Public)
+            // The log position up to which words left for them have been delivered.
+            .field("heard_through", FieldKind::Plain, Visibility::Owner),
         ComponentSchema::new(SPAWN, 1)
             .field("creature", FieldKind::Plain, Visibility::Admin)
             .field("count", FieldKind::Plain, Visibility::Admin)
@@ -246,7 +249,8 @@ pub(crate) fn find_citizen(world: &World, actor: &str) -> Option<Found> {
 /// Build the rooms on first boot; add any room the log does not have yet.
 pub fn ensure_world(world: &mut World) -> Result<(), String> {
     rooms::ensure_rooms(world)?;
-    combat::ensure_spawns(world)
+    combat::ensure_spawns(world)?;
+    mind::ensure_wander(world)
 }
 
 /// Log a citizen in, creating them at the Threshold on first login. The passphrase is set on
@@ -567,6 +571,7 @@ pub fn register(world: &mut World, curves: Curves) {
     presence::register(world, curves);
     mind::register(world);
     speech::register(world);
+    talk::register(world);
     building::register(world);
     system::register(world);
 }

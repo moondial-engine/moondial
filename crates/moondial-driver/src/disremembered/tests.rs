@@ -1602,3 +1602,189 @@ fn a_remembered_creature_earns_a_name_can_be_robbed_and_forgets_again() {
     ok(&mut w, "dave", "remember", json!([c, "ragpicker"]));
     assert_eq!(mind::name(&w, rag).as_deref(), Some(name.as_str()));
 }
+
+#[test]
+fn a_named_creature_answers_and_words_wait_for_the_absent() {
+    let t0 = Timestamp(1_000_000);
+    let mut w = open(tempfile::tempdir().unwrap().path(), t0);
+    login(&mut w, "dave", "test", PASS).unwrap();
+    login(&mut w, "tyler", "test", PASS).unwrap();
+    for who in ["dave", "tyler"] {
+        ok(&mut w, who, "travel", json!(["east"]));
+        ok(&mut w, who, "travel", json!(["south"]));
+    }
+    // An unnamed creature does not understand.
+    let out = ok(&mut w, "dave", "tell", json!(["ragpicker", "hello"]));
+    assert!(
+        out.summary.contains("It does not understand you."),
+        "{}",
+        out.summary
+    );
+    assert_eq!(out.result["answered"], false);
+    // Name it.
+    let c = admin(&mut w, "dave", "earn", json!(["hollow", 80, 0.5]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    ok(&mut w, "dave", "remember", json!([c, "ragpicker"]));
+    let midden = rooms::room_by_key(&w, "midden").unwrap();
+    let rag = combat::creatures_in(&w, midden)[0].0;
+    let name = mind::name(&w, rag).unwrap();
+    // It answers its keeper, and a stranger, from facts.
+    let out = ok(&mut w, "dave", "tell", json!([&name, "hello"]));
+    assert!(
+        out.summary.contains(&format!(
+            "{name} the ragpicker says, \"dave. You again. I hold 80 today.\""
+        )),
+        "{}",
+        out.summary
+    );
+    let out = ok(&mut w, "tyler", "tell", json!([&name, "who are you?"]));
+    assert!(out.summary.contains(&format!("I am {name}. I was a ragpicker, and nothing else, until dave gave me the memory of hollow.")), "{}", out.summary);
+    let out = ok(
+        &mut w,
+        "tyler",
+        "tell",
+        json!(["the ragpicker", "what do you remember?"]),
+    );
+    assert!(
+        out.summary
+            .contains("I hold 80: the memory of hollow. dave keep me."),
+        "{}",
+        out.summary
+    );
+    let out = ok(&mut w, "tyler", "tell", json!([&name, "where are we?"]));
+    assert!(
+        out.summary.contains("The Midden. A heap of everything"),
+        "{}",
+        out.summary
+    );
+    // Its words are recorded as its own say, and said to the room.
+    let says: Vec<_> = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == speech::SAY && e.payload["creature"] == rag.0)
+        .collect();
+    assert_eq!(says.len(), 4);
+    assert_eq!(says[0].payload["from"], format!("{name} the ragpicker"));
+    // Saying its name in the room reaches it too.
+    let out = ok(
+        &mut w,
+        "dave",
+        "say",
+        json!([format!("{name}, who has been here?")]),
+    );
+    assert!(
+        out.summary.contains("Since I had a name:"),
+        "{}",
+        out.summary
+    );
+    assert!(out.summary.contains("tyler said"), "{}", out.summary);
+    // Words for the absent wait. Tyler goes quiet; dave leaves word; tyler returns to it.
+    w.fixed_now = Some(t0.plus(Duration::seconds(11 * 60)));
+    ok(&mut w, "dave", "look", json!([]));
+    w.tick();
+    assert!(!presence::is_here(
+        &w,
+        find_citizen(&w, "tyler").unwrap().citizen
+    ));
+    let out = ok(
+        &mut w,
+        "dave",
+        "tell",
+        json!(["tyler", "the ragpicker has a name now"]),
+    );
+    assert!(
+        out.summary
+            .starts_with("tyler is not here. They will hear it when they return:"),
+        "{}",
+        out.summary
+    );
+    assert_eq!(out.result["delivered"], false);
+    let before = w.log.head(&w.id).unwrap().unwrap().0;
+    ok(&mut w, "tyler", "look", json!([]));
+    let heard: Vec<String> = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor { after: before })
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == combat::NARRATIVE && e.payload["to"] == "tyler")
+        .map(|e| e.payload["text"].as_str().unwrap().to_string())
+        .collect();
+    assert!(
+        heard
+            .iter()
+            .any(|t| t == "While you were away, dave left word: \"the ragpicker has a name now\""),
+        "{heard:?}"
+    );
+    // Not twice.
+    let before = w.log.head(&w.id).unwrap().unwrap().0;
+    w.fixed_now = Some(t0.plus(Duration::seconds(30 * 60)));
+    ok(&mut w, "tyler", "look", json!([]));
+    w.tick();
+    w.fixed_now = Some(t0.plus(Duration::seconds(41 * 60)));
+    ok(&mut w, "tyler", "look", json!([]));
+    let again = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor { after: before })
+        .unwrap()
+        .into_iter()
+        .filter(|e| {
+            e.kind == combat::NARRATIVE
+                && e.payload["text"]
+                    .as_str()
+                    .unwrap_or("")
+                    .starts_with("While you were away")
+        })
+        .count();
+    assert_eq!(again, 0);
+    // Present: delivered at once, and the third party overhears.
+    ok(&mut w, "tyler", "travel", json!(["north"]));
+    ok(&mut w, "tyler", "travel", json!(["south"]));
+    let out = ok(&mut w, "dave", "tell", json!(["tyler", "welcome back"]));
+    assert!(out.summary.ends_with("They hear you."), "{}", out.summary);
+}
+
+#[test]
+fn creatures_wander_into_remembered_dug_rooms_and_rarely_arrive_knowing_things() {
+    let mut w = open(tempfile::tempdir().unwrap().path(), Timestamp(0));
+    login(&mut w, "dave", "test", PASS).unwrap();
+    let c = admin(&mut w, "dave", "earn", json!(["hydra", 100, 1.0]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    let dug = ok(&mut w, "dave", "dig", json!(["down", c, "The Salt Stair"]));
+    let room = EntityId(dug.result["room"].as_u64().unwrap());
+    // Many passes: something wanders in eventually, and only into the remembered dug room.
+    let mut arrived = 0;
+    let mut gifted = 0;
+    for seed in 0..400u64 {
+        w.seed(seed);
+        if !combat::creatures_in(&w, room).is_empty() {
+            let c = combat::creatures_in(&w, room)[0].0;
+            if mind::name(&w, c).is_some() {
+                gifted += 1;
+            }
+            w.record(
+                moondial_log::Actor::Driver,
+                StoreEvent::EntityRemoved { id: c },
+            )
+            .unwrap();
+        }
+        arrived += mind::wander(&mut w).unwrap();
+    }
+    assert!(arrived > 0, "nothing ever wandered in");
+    assert!(arrived < 60, "too many: {arrived}");
+    assert!(gifted >= 0);
+    let wandered = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == mind::WANDERED)
+        .count();
+    assert_eq!(wandered, arrived);
+    // Seed rooms are never chosen: they have owners of their own kind of none.
+    let threshold = rooms::room_by_key(&w, rooms::ARRIVAL).unwrap();
+    assert!(combat::creatures_in(&w, threshold).is_empty());
+    // The job is scheduled at boot and reschedules itself.
+    assert!(w.jobs.pending().any(|j| j.kind == mind::JOB_WANDER));
+}

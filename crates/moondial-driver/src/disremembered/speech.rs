@@ -49,7 +49,7 @@ pub fn register(world: &mut World) {
             let listeners: Vec<String> = w
                 .store
                 .children(room)
-                .filter(|e| e.kind == "citizen")
+                .filter(|e| e.kind == "citizen" && super::presence::is_here(w, e.id))
                 .filter_map(|e| e.owner.clone())
                 .filter(|o| o != &ctx.actor)
                 .collect();
@@ -61,9 +61,16 @@ pub fn register(world: &mut World) {
                 1 => format!("{} hears you.", listeners[0]),
                 n => format!("{n} others hear you."),
             };
+            // A named creature spoken to by name answers.
+            let answers = super::talk::overhear(w, room, &ctx.actor, &text)?;
+            let mut summary = format!("You say, \"{text}\" {heard}");
+            for a in &answers {
+                summary.push(' ');
+                summary.push_str(a);
+            }
             Ok(Outcome::new(
-                format!("You say, \"{text}\" {heard}"),
-                json!({"text": text, "heard_by": listeners}),
+                summary,
+                json!({"text": text, "heard_by": listeners, "answers": answers}),
             ))
         }),
     );

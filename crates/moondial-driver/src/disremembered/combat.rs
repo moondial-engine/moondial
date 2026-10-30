@@ -233,42 +233,57 @@ pub fn fill(world: &mut World, room: EntityId) -> Result<usize, StoreError> {
     let Some(d) = def(&key) else { return Ok(0) };
     let mut spawned = 0;
     for _ in creatures_in(world, room).len()..count {
-        let id = world.store.allocate_id();
-        world.record(
-            Actor::Driver,
-            StoreEvent::EntityCreated {
-                id,
-                kind: "creature".into(),
-                owner: None,
-                parent: Some(room),
-                scopes: vec![],
-            },
-        )?;
-        let mut fields = BTreeMap::new();
-        fields.insert("name".into(), Field::Plain(json!(d.name)));
-        fields.insert("hp".into(), Field::Plain(json!(d.hp)));
-        fields.insert("max_hp".into(), Field::Plain(json!(d.hp)));
-        fields.insert("attack".into(), Field::Plain(json!(d.attack)));
-        fields.insert("xp".into(), Field::Plain(json!(d.xp)));
-        world.record(
-            Actor::Driver,
-            StoreEvent::ComponentSet {
-                id,
-                component: CREATURE.into(),
-                fields,
-            },
-        )?;
-        world.record(
-            Actor::Driver,
-            StoreEvent::ComponentSet {
-                id,
-                component: super::SPRITE.into(),
-                fields: super::sprite_fields(d.glyph, d.tint, d.key),
-            },
-        )?;
+        spawn_one(world, room, d)?;
         spawned += 1;
     }
     Ok(spawned)
+}
+
+/// One creature of this kind, here.
+pub(crate) fn spawn_one(
+    world: &mut World,
+    room: EntityId,
+    d: &CreatureDef,
+) -> Result<EntityId, StoreError> {
+    let id = world.store.allocate_id();
+    world.record(
+        Actor::Driver,
+        StoreEvent::EntityCreated {
+            id,
+            kind: "creature".into(),
+            owner: None,
+            parent: Some(room),
+            scopes: vec![],
+        },
+    )?;
+    let mut fields = BTreeMap::new();
+    fields.insert("name".into(), Field::Plain(json!(d.name)));
+    fields.insert("hp".into(), Field::Plain(json!(d.hp)));
+    fields.insert("max_hp".into(), Field::Plain(json!(d.hp)));
+    fields.insert("attack".into(), Field::Plain(json!(d.attack)));
+    fields.insert("xp".into(), Field::Plain(json!(d.xp)));
+    world.record(
+        Actor::Driver,
+        StoreEvent::ComponentSet {
+            id,
+            component: CREATURE.into(),
+            fields,
+        },
+    )?;
+    world.record(
+        Actor::Driver,
+        StoreEvent::ComponentSet {
+            id,
+            component: super::SPRITE.into(),
+            fields: super::sprite_fields(d.glyph, d.tint, d.key),
+        },
+    )?;
+    Ok(id)
+}
+
+/// A creature kind by key.
+pub(crate) fn def_by_key(key: &str) -> Option<&'static CreatureDef> {
+    def(key)
 }
 
 /// Schedule the room's refill after its respawn interval, unless one is pending.

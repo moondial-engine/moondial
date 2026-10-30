@@ -27,7 +27,7 @@ const MAX_DESCRIPTION_CHARS: usize = 800;
 /// Most characters a room name may carry.
 const MAX_NAME_CHARS: usize = 40;
 /// Below this memory the description is only its first sentence; below `FADED` it is gone.
-const DIM: f64 = 0.5;
+pub(crate) const DIM: f64 = 0.5;
 pub(crate) const FADED: f64 = 0.15;
 /// What a room says of itself when its memory has faded.
 pub const HALF_REMEMBERED: &str =

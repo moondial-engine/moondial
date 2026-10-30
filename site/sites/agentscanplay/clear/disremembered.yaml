@@ -91,7 +91,7 @@ approved_verbs:
   revoke: {params: [{name: citizen, type: entity, required: true}]}
   # social
   say: {params: [{name: text, type: text, required: true}]}
-  tell:
+  tell: {params: [{name: who, type: entity, required: true}, {name: text, type: text, required: true}]}
   ally:
   join:
   invite:
