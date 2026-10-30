@@ -80,6 +80,7 @@
     display: grid; grid-template-columns: auto 1fr 1fr; gap: 12px 32px; align-items: start;
   }
   #scene section { min-width: 0; }
+  #scene section.mod canvas { display: block; max-width: 100%; height: auto; image-rendering: pixelated; border: 1px solid var(--line); border-radius: 4px; background: var(--night); }
   #scene h2 { font: 15px/1.3 var(--serif); color: var(--dim); margin: 0 0 8px; font-weight: 400; }
   #map { --tile: 128px; display: grid; grid-auto-columns: var(--tile); grid-auto-rows: var(--tile); grid-auto-flow: row; gap: 4px; }
   .tile { position: relative; border: 1px solid var(--line); border-radius: 4px; color: var(--dim); overflow: hidden; background: var(--night); }
@@ -398,6 +399,7 @@
             exits: { select: { "disremembered.room": ["name"], "disremembered.sprite": "*" } } }, timed: "curve", commands: false });
           subscribe("me", { root: "self", select: { "disremembered.body": ["hp", "max_hp"], "disremembered.sprite": "*" }, timed: "curve", commands: false });
           subscribe("window", { root: "window", select: {}, relations: { contents: { kinds: ["chunk"], select: { "disremembered.chunk": "*" } } }, timed: "curve", commands: false });
+          for (const [id, q] of modSubs) subscribe(id, q);
           return;
         }
         if (f.type === "error" && !settled) { settled = true; print(f.error, "err"); resolve(false); return; }
@@ -405,10 +407,11 @@
           const r = waiting.get(String(f.id)); waiting.delete(String(f.id)); if (r) r(f); return;
         }
         if (f.type === "observation" && waiting.has(String(f.id))) { const r = waiting.get(String(f.id)); waiting.delete(String(f.id)); r(f); return; }
-        if (f.type === "observation") { subs[f.id] = f; skew = Date.now() - f.as_of; draw(); return; }
+        if (f.type === "observation") { subs[f.id] = f; skew = Date.now() - f.as_of; draw(); emit("observation", f.id, f); return; }
         if (f.type === "event") {
           const e = f.event;
           if (e.kind === "disremembered.narrative" && e.payload && e.payload.to === actor) print(e.payload.text, "tell");
+          emit("event", e);
           return;
         }
       };
@@ -479,6 +482,8 @@
       if (body.message) print(body.message.trim(), "clear");
       print(body.reply.trim(), "clear");
     }
+    emit("result", command, args, body);
+    return body;
   }
 
   async function login(name, pass) {
@@ -495,6 +500,7 @@
       : "Welcome back, " + name + ".", "sys");
     const live = await connect();
     if (live) { $("link").textContent = "Live session."; } else { try { const h = await api("/health"); if (h.body) cursor = h.body.events || 0; } catch (e) {} startPolling(); }
+    emit("login", name, live);
     await run("look", []);
     return true;
   }
@@ -509,6 +515,7 @@
     try { sessionStorage.removeItem("disremembered.pass"); } catch (e) {}
     setState("<b>Pre-alpha.</b> The world may be reset without notice.");
     $("link").textContent = "";
+    emit("logout");
   }
 
   async function help() {
@@ -1107,6 +1114,78 @@
   $("q-run").addEventListener("click", runQuery);
   $("q").addEventListener("keydown", (e) => { if (Q.raw && (e.ctrlKey || e.metaKey) && e.key === "Enter") runQuery(); });
   loadSchema();
+  // ---- mods ----
+  // A mod is an ES module whose default export takes this object. It gets the session
+  // (observe, command through the gate, subscriptions, pushes), the sprite atlas, and a
+  // place to put panels. It never sees the passphrase, but it acts as you: load only
+  // what you trust. `?mod=tiles` loads ./mods/tiles.js; `?mod=https://…/x.js` asks first.
+  const listeners = {};
+  function emit(ev, ...args) { for (const fn of listeners[ev] || []) { try { fn(...args); } catch (e) { console.error("mod listener", ev, e); } } }
+  const modSubs = new Map();
+  const MOD_SUBS_MAX = 5; // the server allows 8 per session; the page uses 3
+  const moondial = {
+    version: "mod/0",
+    api: API,
+    get actor() { return actor; },
+    get live() { return wsReady; },
+    atlas: ATLAS, atlasName: ATLAS_NAME, spriteSVG, timed,
+    observations: subs,
+    on(ev, fn) { (listeners[ev] ||= []).push(fn); return () => moondial.off(ev, fn); },
+    off(ev, fn) { listeners[ev] = (listeners[ev] || []).filter(f => f !== fn); },
+    observe(query) {
+      if (!actor) return Promise.resolve({ type: "error", error: "log in first" });
+      if (wsReady) return wsObserve(query);
+      return api("/v0/observe", { actor, passphrase, query }).then(r => r.body || { type: "error", error: "no answer" });
+    },
+    command(verb, args = []) { return run(verb, args); },
+    subscribe(id, query) {
+      const key = "mod:" + id;
+      if (!modSubs.has(key) && modSubs.size >= MOD_SUBS_MAX) throw new Error("a mod may hold " + MOD_SUBS_MAX + " subscriptions");
+      modSubs.set(key, query);
+      if (wsReady) subscribe(key, query);
+      return key;
+    },
+    unsubscribe(id) {
+      const key = "mod:" + id;
+      modSubs.delete(key); delete subs[key];
+      if (wsReady) ws.send(JSON.stringify({ type: "unsubscribe", id: key }));
+    },
+    panel(title, opts = {}) {
+      const sec = document.createElement("section");
+      sec.className = "mod";
+      if (opts.wide !== false) sec.style.gridColumn = "1 / -1";
+      if (title) { const h = document.createElement("h2"); h.textContent = title; sec.append(h); }
+      const scene = $("scene");
+      if (opts.at === "end") scene.append(sec); else scene.prepend(sec);
+      return sec;
+    },
+    builtin(name, visible) {
+      const el = $(name); if (!el) return;
+      const sec = el.closest("section");
+      if (name === "you" || name === "window") { el.hidden = !visible; el.previousElementSibling.hidden = !visible; }
+      else if (sec) sec.hidden = !visible;
+    },
+    print(text, cls = "sys") { print(text, cls); },
+  };
+  window.moondial = moondial;
+  async function loadMod(spec) {
+    let url;
+    if (/^[a-z0-9][a-z0-9-]*$/.test(spec)) url = new URL("./mods/" + spec + ".js", location.href).href;
+    else {
+      url = spec;
+      if (!confirm("Load a mod from\n" + url + "\n\nIt runs on this page with your session and can act as you. Only continue if you trust it.")) return;
+    }
+    try {
+      const m = await import(url);
+      const install = m.default || m.install;
+      if (typeof install !== "function") throw new Error("no default export");
+      await install(moondial);
+      print("Mod loaded: " + spec + ".", "sys");
+    } catch (e) { print("The mod did not load: " + (e && e.message || e), "err"); }
+  }
+  const modSpec = new URLSearchParams(location.search).get("mod");
+  if (modSpec) loadMod(modSpec);
+
   // ---- boot ----
   print("Disremembered on Moondial, pre-alpha. A text world where everything you earn fades.", "sys");
   print("Your level is the sum of what has not faded. The fights you almost lost last longest.", "sys");
