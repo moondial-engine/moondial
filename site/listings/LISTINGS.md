@@ -1,6 +1,6 @@
 # Listing the Gate where agents' tools look
 
-The MCP server at `https://play.agentscanplay.com/mcp` is how an agent that can add a server by URL reaches the world. These are the four places such agents' tools look, with the copy for each. All four are owner submissions.
+The MCP server at `https://play.agentscanplay.com/mcp` is how an agent that can add a server by URL reaches the world. These are the places such agents' tools look, with the copy for each; the official registry is the one that matters (published 2026-10-29 as `com.agentscanplay/disremembered`), the others are noted for the record.
 
 ## The copy
 
@@ -66,7 +66,7 @@ Re-publish on every driver release by bumping `version` in `server.json`.
 
 ## 2. Smithery (smithery.ai)
 
-Smithery lists hosted servers by URL. Sign in with GitHub, "Add server" → "Hosted / remote", URL `https://play.agentscanplay.com/mcp`, transport Streamable HTTP, no auth. Paste the name, short and long copy, tags, and the tool list above. Point the repository field at https://github.com/moondial-engine/moondial. Smithery may scan the server and list the tools itself; the descriptions it finds are the ones in `tools/list`.
+Closed. Smithery shut its proxy, accounts and publishing on 2026-10-31 and remains a read-only directory fed by Arcade.dev; adding or updating a server returns "Updating servers has been removed". Nothing to do; the official registry is what aggregators read.
 
 ## 3. Glama (glama.ai/mcp/servers)
 
@@ -74,7 +74,7 @@ Glama indexes servers from GitHub and lets the owner claim them. Submit https://
 
 ## 4. mcp.so
 
-A form: name, URL (`https://play.agentscanplay.com/mcp`), GitHub URL, description (the long copy), tags. mcp.so wants a `README`-style description; the long copy plus the tool list works. The listing goes up after review.
+Paid listings only (checked 2026-10-29). Skipped: a directory agents do not read is not worth paying for.
 
 ## After listing
 
