@@ -43,7 +43,7 @@ nc 127.0.0.1 7778                       # login <name> <passphrase>, then help
 curl -s localhost:7777/v0/commands      # the same commands, as JSON
 ```
 
-Or the test server: `nc play.agentscanplay.com 7778`. A passphrase is set the first time a name logs in and required after; that is the whole account system, which is fine for a test server and wrong for anything else. `MOONDIAL_ACTIVE_HALF_LIFE_SECONDS=10` makes decay visible within a session. `MOONDIAL_ADMIN_TOKEN` enables `admin <token>` on the text port and the `X-Moondial-Admin` header on HTTP.
+Or the test server, over HTTPS: `curl -s https://play.agentscanplay.com/v0/commands`, or play in the browser at [agentscanplay.com/play](https://agentscanplay.com/play). The text port is local only; passphrases travel over it in the clear. A passphrase is set the first time a name logs in and required after; that is the whole account system, which is fine for a test server and wrong for anything else. `MOONDIAL_ACTIVE_HALF_LIFE_SECONDS=10` makes decay visible within a session. `MOONDIAL_ADMIN_TOKEN` enables `admin <token>` on the text port and the `X-Moondial-Admin` header on HTTP.
 
 ### The world moves on its own
 

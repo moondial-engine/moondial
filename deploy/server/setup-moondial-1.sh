@@ -11,8 +11,8 @@
 # - installs nginx + certbot, the play.agentscanplay.com server block (proxy to the driver's
 #   HTTP port), and requests the certificate (DNS for play.agentscanplay.com must point here)
 # - installs a nightly backup timer for the event log
-# - does NOT open the firewall: do that in the Hetzner console (22, 80, 443; 7778 if you want
-#   the raw text port reachable, which is fine for the pre-alpha and wrong after that)
+# - does NOT open the firewall: do that in the Hetzner console (22, 80, 443 only; the raw
+#   text port carries passphrases in the clear and stays on localhost, see harden.sh)
 set -uo pipefail
 exec 2>&1
 
@@ -66,7 +66,7 @@ if [ ! -f /etc/moondial/driver.env ]; then
 MOONDIAL_WORLD=disremembered
 MOONDIAL_DATA=$APP_DIR/shared/data
 MOONDIAL_HTTP=127.0.0.1:7777
-MOONDIAL_TCP=0.0.0.0:7778
+MOONDIAL_TCP=127.0.0.1:7778
 MOONDIAL_ADMIN_TOKEN=$TOKEN
 MOONDIAL_ACTIVE_HALF_LIFE_SECONDS=3600
 RUST_BACKTRACE=1
@@ -173,6 +173,6 @@ else
 fi
 
 echo; echo "######## Done"
-echo "Next: add GAME_HOST / GAME_KNOWN_HOSTS secrets in GitHub, open ports 22/80/443 (and 7778) in the Hetzner firewall,"
+echo "Next: add GAME_HOST / GAME_KNOWN_HOSTS secrets in GitHub, open ports 22/80/443 in the Hetzner firewall, run deploy/harden.sh,"
 echo "then push to main or run the 'Deploy driver' workflow. First deploy starts the service."
 echo "Admin token: sudo cat /etc/moondial/driver.env"
