@@ -179,6 +179,11 @@ impl World {
         self.failures.remove(actor);
     }
 
+    /// A line for the operator.
+    pub fn notice(&mut self, line: String) {
+        self.notices.push(line);
+    }
+
     /// Take the pending operator notices.
     pub fn take_notices(&mut self) -> Vec<String> {
         std::mem::take(&mut self.notices)

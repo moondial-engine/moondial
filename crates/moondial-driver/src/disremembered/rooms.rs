@@ -35,7 +35,7 @@ pub const ROOMS: &[RoomDef] = &[
         key: ARRIVAL,
         name: "The Threshold",
         description: "A threshold of pale stone under a moon that is always up. Everything you earn here will fade; what you do with it is yours. Nothing hunts here.",
-        exits: &[("east", "fogbank"), ("west", "lantern-row")],
+        exits: &[("east", "fogbank"), ("north", "lantern-row")],
         spawn: None,
         former: &["gate"],
         tint: "#d9d4c7",
@@ -72,12 +72,12 @@ pub const ROOMS: &[RoomDef] = &[
         former: &[],
         tint: "#6b5a4a",
     },
-    // West of the Threshold: the quiet side, where things are kept rather than hunted.
+    // North of the Threshold: the quiet side, where things are kept rather than hunted.
     RoomDef {
         key: "lantern-row",
         name: "Lantern Row",
         description: "A row of lanterns on iron hooks, each one lighting as you pass and going dark behind you. They remember being lit. They do not remember by whom. Nothing hunts here.",
-        exits: &[("east", ARRIVAL), ("north", "archive"), ("down", "stairwell")],
+        exits: &[("south", ARRIVAL), ("north", "archive"), ("down", "stairwell")],
         spawn: None,
         former: &[],
         tint: "#c9a86a",
@@ -259,9 +259,17 @@ pub fn ensure_rooms(world: &mut World) -> Result<(), String> {
         };
         let mut missing = false;
         for (name, key) in def.exits {
-            if !exits.contains_key(*name) {
-                exits.insert(name.to_string(), json!(ids[key].0));
-                missing = true;
+            match exits.get(*name).and_then(Value::as_u64) {
+                None => {
+                    exits.insert(name.to_string(), json!(ids[key].0));
+                    missing = true;
+                }
+                Some(to) if to != ids[key].0 => world.notice(format!(
+                    "Room **{}** has exit `{name}` leading to entity {to}, not seed room `{key}`; \
+                     the seed exit was not added.",
+                    def.key
+                )),
+                Some(_) => {}
             }
         }
         if missing {

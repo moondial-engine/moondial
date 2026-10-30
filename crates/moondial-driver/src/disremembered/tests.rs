@@ -122,9 +122,15 @@ fn the_map_is_built_once_and_travel_follows_exits() {
     login(&mut w, "dave", "test", PASS).unwrap();
     let look = ok(&mut w, "dave", "look", json!([]));
     assert_eq!(look.result["room"], json!("The Threshold"));
-    assert_eq!(look.result["exits"], json!(["east", "west"]));
+    assert_eq!(look.result["exits"], json!(["east", "north"]));
     assert!(matches!(
-        call(&mut w, "dave", ActorKind::Citizen, "travel", json!(["sideways"])),
+        call(
+            &mut w,
+            "dave",
+            ActorKind::Citizen,
+            "travel",
+            json!(["sideways"])
+        ),
         Err(CommandError::Precondition { .. })
     ));
     let fog = ok(&mut w, "dave", "travel", json!(["east"]));
@@ -1220,6 +1226,34 @@ fn the_map_is_connected_and_new_seed_exits_reach_old_rooms() {
         Some(&rooms::room_by_key(&w, "midden").unwrap())
     );
     assert!(exits.contains_key("hole"), "a dug exit was lost");
+    // A dug room sitting where a seed exit goes keeps its door; the operator hears.
+    let mut w = w;
+    let thr = rooms::room_by_key(&w, rooms::ARRIVAL).unwrap();
+    let mut m = serde_json::Map::new();
+    for (k, v) in rooms::exits_of(&w, thr) {
+        m.insert(k, json!(v.0));
+    }
+    let dug = rooms::room_by_key(&w, "midden").unwrap();
+    m.insert("north".into(), json!(dug.0));
+    let mut fields = std::collections::BTreeMap::new();
+    fields.insert(
+        "exits".to_string(),
+        moondial_store::Field::Plain(Value::Object(m)),
+    );
+    w.record(
+        Actor::Driver,
+        StoreEvent::ComponentSet {
+            id: thr,
+            component: EXITS.into(),
+            fields,
+        },
+    )
+    .unwrap();
+    drop(w);
+    let mut w = open(dir.path(), Timestamp(2));
+    assert_eq!(rooms::exits_of(&w, thr).get("north"), Some(&dug));
+    let notices = w.take_notices();
+    assert!(notices.iter().any(|n| n.contains("`north`")), "{notices:?}");
     // Every spawn names a creature that exists.
     for r in rooms::ROOMS {
         if let Some((c, _, _)) = r.spawn {
