@@ -5,3 +5,6 @@ target/
 
 # Built by the site deploy from crates/moondial-clear-wasm
 site/sites/agentscanplay/play/clear/
+
+# A local driver's file log
+data/
