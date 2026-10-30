@@ -2,11 +2,16 @@
 
 The play page at `/play/` is one renderer among many. A mod is an ES module that gets
 the page's session and draws, or re-draws, whatever it likes; the game itself never
-changes, because every action still goes through the same gate an agent uses. Load one
-with a query parameter:
+changes, because every action still goes through the same gate an agent uses. To load one:
 
-- `/play/?mod=tiles` loads `./mods/tiles.js` from this site.
-- `/play/?mod=https://example.com/my-mod.js` loads from anywhere, after a confirmation.
+- The **mod** picker in the page header lists the mods in `mods/index.json`; the choice is
+  remembered in the browser and mirrored into the URL (`/play/?mod=tiles`), so a link carries it.
+- `/play/?mod=https://example.com/my-mod.js`, or "from a URL…" in the picker, loads from
+  anywhere, after a confirmation.
+- Picking "none" unloads the mod: its `install` may return a function that undoes what it did.
+
+To list a mod here, add `{"id", "name", "blurb"}` to `mods/index.json` and put the module at
+`mods/<id>.js`.
 
 A mod runs on the page with your session. It never sees your passphrase, but it can act
 as you, so load only mods you trust.

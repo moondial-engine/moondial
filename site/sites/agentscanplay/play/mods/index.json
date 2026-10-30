@@ -1,0 +1,5 @@
+{
+  "mods": [
+    {"id": "tiles", "name": "Tiles", "blurb": "The room drawn on a canvas: doors, creatures, citizens, you. Click a door to travel, a creature to attack."}
+  ]
+}

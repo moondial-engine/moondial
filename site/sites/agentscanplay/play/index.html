@@ -33,6 +33,8 @@
   header .title a { border: 0; color: var(--ink); }
   header .state { color: var(--dim); font-size: 14px; text-align: right; }
   header .state b { color: var(--dust); font-weight: 400; }
+  header .state label { margin-left: 14px; white-space: nowrap; }
+  header .state select { background: var(--night); color: var(--ink); border: 1px solid var(--line); border-radius: 3px; font: inherit; font-size: 13px; padding: 1px 4px; }
 
   #main { flex: 1; display: flex; flex-direction: column; min-height: 0; }
   #term { flex: 1; display: flex; flex-direction: column; min-width: 0; }
@@ -234,7 +236,7 @@
 <body>
 <header>
   <div class="title"><a href="/">Agents can play</a> — Disremembered</div>
-  <div class="state"><span id="state"><b>Pre-alpha.</b> The world may be reset without notice.</span><label title="Every line you type becomes a CLEAR message and goes through the same gate an agent uses. Show the message and the world's reply."><input type="checkbox" id="showclear"> show CLEAR</label></div>
+  <div class="state"><span id="state"><b>Pre-alpha.</b> The world may be reset without notice.</span><label title="Every line you type becomes a CLEAR message and goes through the same gate an agent uses. Show the message and the world's reply."><input type="checkbox" id="showclear"> show CLEAR</label><label title="A mod redraws what you see; the world is the same. See /play/mods/README.md to write one."> mod <select id="modpick" aria-label="UI mod"><option value="">none</option><option value="url:">from a URL…</option></select></label></div>
 </header>
 <div id="main">
   <aside id="scene" aria-label="The scene">
@@ -408,6 +410,7 @@
         }
         if (f.type === "observation" && waiting.has(String(f.id))) { const r = waiting.get(String(f.id)); waiting.delete(String(f.id)); r(f); return; }
         if (f.type === "observation") { subs[f.id] = f; skew = Date.now() - f.as_of; draw(); emit("observation", f.id, f); return; }
+        if (f.type === "error" && f.id !== undefined) { print("Subscription " + f.id + ": " + f.error, "err"); emit("observation", f.id, f); return; }
         if (f.type === "event") {
           const e = f.event;
           if (e.kind === "disremembered.narrative" && e.payload && e.payload.to === actor) print(e.payload.text, "tell");
@@ -1178,22 +1181,67 @@
     print(text, cls = "sys") { print(text, cls); },
   };
   window.moondial = moondial;
+  let activeMod = null; // {spec, undo}
+  const pick = $("modpick");
+  function rememberMod(spec) {
+    try { if (spec) localStorage.setItem("disremembered.mod", spec); else localStorage.removeItem("disremembered.mod"); } catch (e) {}
+    const u = new URL(location.href);
+    if (spec) u.searchParams.set("mod", spec); else u.searchParams.delete("mod");
+    window.history.replaceState(null, "", u);
+  }
+  function unloadMod() {
+    if (!activeMod) return;
+    try { if (typeof activeMod.undo === "function") activeMod.undo(); } catch (e) { console.error("mod undo", e); }
+    for (const key of [...modSubs.keys()]) moondial.unsubscribe(key.slice(4));
+    for (const ev in listeners) delete listeners[ev];
+    print("Mod unloaded: " + activeMod.spec + ".", "sys");
+    activeMod = null;
+  }
   async function loadMod(spec) {
     let url;
     if (/^[a-z0-9][a-z0-9-]*$/.test(spec)) url = new URL("./mods/" + spec + ".js", location.href).href;
     else {
       url = spec;
-      if (!confirm("Load a mod from\n" + url + "\n\nIt runs on this page with your session and can act as you. Only continue if you trust it.")) return;
+      if (!confirm("Load a mod from\n" + url + "\n\nIt runs on this page with your session and can act as you. Only continue if you trust it.")) { syncPick(); return; }
     }
+    unloadMod();
     try {
       const m = await import(url);
       const install = m.default || m.install;
       if (typeof install !== "function") throw new Error("no default export");
-      await install(moondial);
+      const undo = await install(moondial);
+      activeMod = { spec, undo };
+      rememberMod(spec);
       print("Mod loaded: " + spec + ".", "sys");
-    } catch (e) { print("The mod did not load: " + (e && e.message || e), "err"); }
+    } catch (e) { print("The mod did not load: " + (e && e.message || e), "err"); rememberMod(""); }
+    syncPick();
   }
-  const modSpec = new URLSearchParams(location.search).get("mod");
+  function syncPick() {
+    const spec = activeMod ? activeMod.spec : "";
+    if (spec && ![...pick.options].some(o => o.value === spec)) {
+      const o = document.createElement("option"); o.value = spec; o.textContent = spec.replace(/^https?:\/\//, "").slice(0, 40); pick.insertBefore(o, pick.lastElementChild);
+    }
+    pick.value = spec;
+  }
+  pick.addEventListener("change", () => {
+    const v = pick.value;
+    if (v === "url:") {
+      const u = prompt("The URL of a mod (an ES module whose default export takes the page's moondial object):");
+      if (u && /^https?:\/\//.test(u.trim())) loadMod(u.trim()); else syncPick();
+    } else if (v) loadMod(v);
+    else { unloadMod(); rememberMod(""); syncPick(); }
+  });
+  // The catalog fills the picker; a mod not in it still loads by id or URL.
+  fetch(new URL("./mods/index.json", location.href)).then(r => r.ok ? r.json() : null).then(cat => {
+    if (!cat || !Array.isArray(cat.mods)) return;
+    for (const m of cat.mods) {
+      if ([...pick.options].some(o => o.value === m.id)) continue;
+      const o = document.createElement("option"); o.value = m.id; o.textContent = m.name; o.title = m.blurb || ""; pick.insertBefore(o, pick.lastElementChild);
+    }
+    syncPick();
+  }).catch(() => {});
+  let modSpec = new URLSearchParams(location.search).get("mod");
+  if (modSpec === null) { try { modSpec = localStorage.getItem("disremembered.mod"); } catch (e) {} }
   if (modSpec) loadMod(modSpec);
 
   // ---- boot ----
