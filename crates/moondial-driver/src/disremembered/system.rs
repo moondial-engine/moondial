@@ -68,7 +68,7 @@ pub fn register(world: &mut World) {
 
     world.register(
         CommandSpec::new(
-            "disremembered.reset_passphrase",
+            "disremembered.forget",
             "Admin: forget a citizen's passphrase, so the next login sets a new one.",
         )
         .param("name", ParamType::String, true, "the citizen")
