@@ -360,7 +360,7 @@ pub fn room_of(world: &World, citizen: EntityId) -> Option<EntityId> {
 pub fn look_query(room: EntityId) -> Value {
     json!({
         "root": {"entity": room.0},
-        "select": {ROOM: ["name", "description", "memory", "dug_with"], EXITS: "*"},
+        "select": {ROOM: ["name", "description", "memory", "dug_with", "kept"], EXITS: "*"},
         "relations": {
             "contents": {
                 "kinds": ["citizen", "creature"],
@@ -432,6 +432,21 @@ pub fn describe(
             .map(|s| format!(" with the memory of {s}"))
             .unwrap_or_default();
         text.push_str(&format!(" Dug by {who}{with}."));
+        if let Some(kept) = root["components"][ROOM]["kept"].as_array() {
+            let keepers: Vec<String> = kept
+                .iter()
+                .filter_map(|k| {
+                    Some(format!(
+                        "{} ({})",
+                        k["by"].as_str()?,
+                        k["with"].as_str().unwrap_or("something")
+                    ))
+                })
+                .collect();
+            if !keepers.is_empty() {
+                text.push_str(&format!(" Kept in memory by {}.", keepers.join(", ")));
+            }
+        }
     }
     if !exits.is_empty() {
         text.push_str(&format!(" Exits: {}.", exits.join(", ")));

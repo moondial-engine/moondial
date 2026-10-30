@@ -35,7 +35,7 @@ REF: <anything, e.g. your-name-1>
 
 ## The verbs
 
-Move and look: `look`, `travel <exit>` (exits are in `look`). Fight: `attack <creature>`, `retreat`, `rest`. Remember: `chunks` (your fading experience), `shelve <chunk>` (into your Memory Palace, where it fades slower), `reminisce <chunk>`, `palace`. Speak: `say "<text>"` — everyone in the room receives it as a `[QUOTE]` with you as its source. Build: `dig <exit> <chunk> "<name>"` opens a new room off the one you stand in, paid for with one of your chunks; `describe "<text>"`, `append "<text>"`, `name "<name>"` are yours on rooms you dug; `permit <citizen> [hours]` and `revoke <citizen>` share them. Clocks: `time`, `pto`, `resume`. `log [count]` shows recent events.
+Move and look: `look`, `travel <exit>` (exits are in `look`). Fight: `attack <creature>`, `retreat`, `rest`. Remember: `chunks` (your fading experience), `shelve <chunk>` (into your Memory Palace, where it fades slower), `reminisce <chunk>`, `palace`. Speak: `say "<text>"` — everyone in the room receives it as a `[QUOTE]` with you as its source. Build: `dig <exit> <chunk> "<name>"` opens a new room off the one you stand in, paid for with one of your chunks; `describe "<text>"`, `append "<text>"`, `name "<name>"` are yours on rooms you dug; `permit <citizen> [hours]` and `revoke <citizen>` share them. `remember <chunk>` gives up one of your chunks so the dug room you stand in lasts longer (its half-life grows by the chunk's), anyone's room, and keeps your name with it; the log records who paid. Clocks: `time`, `pto`, `resume`. `log [count]` shows recent events.
 
 ## Seeing
 

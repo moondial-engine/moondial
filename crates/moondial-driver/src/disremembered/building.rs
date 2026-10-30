@@ -276,6 +276,10 @@ fn permits_of(world: &World, room: EntityId) -> serde_json::Map<String, Value> {
     }
 }
 
+/// The public record of a memory given up for a room:
+/// `{room, name, owner, by, with, spent, added_ms, half_life_ms}`.
+pub const REMEMBERED: &str = "disremembered.remembered";
+
 /// How many rooms `actor` has dug off `from`.
 fn dug_from(world: &World, actor: &str, from: EntityId) -> usize {
     world
@@ -459,6 +463,81 @@ pub fn register(world: &mut World) {
                     opposite(&exit)
                 ),
                 json!({"room": id.0, "key": key, "name": name, "exit": exit, "back": opposite(&exit), "half_life_ms": hl.0, "spent": chunk.0}),
+            ))
+        }),
+    );
+
+    world.register(
+        CommandSpec::new(
+            "disremembered.remember",
+            "Give up one of your chunks so the room you stand in lasts longer: its memory's half-life grows by the chunk's, and your name is kept with it. Any dug room, yours or another's.",
+        )
+        .param("chunk", ParamType::Entity, true, "a chunk of yours; it is spent"),
+        Box::new(|w: &mut World, ctx, args: &Args| {
+            let f = me(w, ctx)?;
+            let here = room_of(w, f.citizen).ok_or_else(|| internal("citizen has no room"))?;
+            let Some(old) = half_life(w, here) else {
+                return Err(CommandError::precondition(
+                    "This room is the world's; it remembers itself. Remember a room someone dug.",
+                ));
+            };
+            let chunk = super::memory::resolve_chunk(
+                w,
+                ctx,
+                args.str("chunk").unwrap_or(""),
+                &[f.window, f.palace],
+            )?;
+            let added = chunk_half_life(w, chunk);
+            let source = plain_str(w, chunk, CHUNK, "source")
+                .unwrap_or("something")
+                .to_string();
+            let me = Actor::Citizen(ctx.actor.clone());
+            w.record(me.clone(), StoreEvent::EntityRemoved { id: chunk })
+                .map_err(internal)?;
+            let hl = Duration(old.0.saturating_add(added.0));
+            let now = w.now();
+            let mut kept = match w
+                .store
+                .entity(here)
+                .and_then(|e| e.components.get(ROOM))
+                .and_then(|c| c.fields.get("kept"))
+            {
+                Some(Field::Plain(Value::Array(a))) => a.clone(),
+                _ => Vec::new(),
+            };
+            kept.push(json!({"by": ctx.actor, "with": source, "half_life_ms": added.0}));
+            let mut fields = BTreeMap::new();
+            fields.insert(
+                "memory".into(),
+                Field::Timed(TimedValue::new(1.0, now, Curve::Exponential { half_life: hl })),
+            );
+            fields.insert("half_life_ms".into(), Field::Plain(json!(hl.0)));
+            fields.insert("kept".into(), Field::Plain(Value::Array(kept)));
+            set_room_fields(w, &ctx.actor, here, fields)?;
+            let name = plain_str(w, here, ROOM, "name")
+                .unwrap_or("The room")
+                .to_string();
+            let owner = w
+                .store
+                .entity(here)
+                .and_then(|e| e.owner.clone())
+                .unwrap_or_default();
+            w.notice(format!(
+                "**{}** gave up the memory of {source} to keep **{name}** ({owner}'s).",
+                ctx.actor
+            ));
+            let _ = w.note(
+                me,
+                REMEMBERED,
+                json!({"room": here.0, "name": name, "owner": owner, "by": ctx.actor, "with": source, "spent": chunk.0, "added_ms": added.0, "half_life_ms": hl.0}),
+            );
+            Ok(Outcome::new(
+                format!(
+                    "You give up the memory of {source}, and {name} keeps it. Its memory now halves every {} instead of {}; your name is kept with the room.",
+                    humane(hl),
+                    humane(old)
+                ),
+                json!({"room": here.0, "name": name, "spent": chunk.0, "with": source, "added_ms": added.0, "half_life_ms": hl.0}),
             ))
         }),
     );

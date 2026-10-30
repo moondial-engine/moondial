@@ -121,11 +121,12 @@ pub(crate) fn visible(world: &World, viewer: &Viewer, now: Timestamp, e: &Event)
         return true;
     }
     // Public by nature: what crossed the Gate (the invitation promises it), who arrived,
-    // what was said in a room, and the scheduler's bookkeeping.
+    // what was said in a room, who kept a room in memory, and the scheduler's bookkeeping.
     if e.kind.starts_with("gate.")
         || e.kind.starts_with("job.")
         || e.kind == crate::world::ARRIVED
         || e.kind == crate::disremembered::speech::SAY
+        || e.kind == crate::disremembered::building::REMEMBERED
     {
         return true;
     }

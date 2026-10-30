@@ -161,7 +161,9 @@ pub fn schemas() -> Vec<ComponentSchema> {
             .field("permits", FieldKind::Plain, Visibility::Owner)
             // The room it was dug from, and what memory paid for it.
             .field("origin", FieldKind::Plain, Visibility::Public)
-            .field("dug_with", FieldKind::Plain, Visibility::Public),
+            .field("dug_with", FieldKind::Plain, Visibility::Public)
+            // Who gave up a memory so this room would last: `[{by, with, half_life_ms}]`.
+            .field("kept", FieldKind::Plain, Visibility::Public),
         ComponentSchema::new(EXITS, 1).field("exits", FieldKind::Plain, Visibility::Public),
         ComponentSchema::new(SPAWN, 1)
             .field("creature", FieldKind::Plain, Visibility::Admin)

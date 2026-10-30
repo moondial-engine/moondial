@@ -1265,3 +1265,83 @@ fn the_map_is_connected_and_new_seed_exits_reach_old_rooms() {
         }
     }
 }
+
+#[test]
+fn remembering_a_room_costs_a_chunk_and_makes_it_last() {
+    let mut w = open(tempfile::tempdir().unwrap().path(), Timestamp(0));
+    login(&mut w, "dave", "test", PASS).unwrap();
+    login(&mut w, "tyler", "test", PASS).unwrap();
+    let out = admin(&mut w, "dave", "earn", json!(["hydra", 100, 1.0]));
+    let chunk = format!("chunk-{}", out.result["chunk"].as_u64().unwrap());
+    let dug = ok(
+        &mut w,
+        "dave",
+        "dig",
+        json!(["down", chunk, "The Salt Stair"]),
+    );
+    let room = EntityId(dug.result["room"].as_u64().unwrap());
+    let hl0 = dug.result["half_life_ms"].as_i64().unwrap();
+
+    // The world's rooms remember themselves.
+    let out = admin(&mut w, "tyler", "earn", json!(["wisp", 10, 0.0]));
+    let tc = format!("chunk-{}", out.result["chunk"].as_u64().unwrap());
+    let err = call(&mut w, "tyler", ActorKind::Citizen, "remember", json!([tc])).unwrap_err();
+    assert!(err.to_string().contains("the world's"), "{err}");
+
+    // Tyler keeps Dave's room: his chunk is gone, the half-life grew by its own.
+    ok(&mut w, "tyler", "travel", json!(["down"]));
+    let level_before = level(&mut w, "tyler");
+    let out = ok(&mut w, "tyler", "remember", json!([tc]));
+    assert!(
+        out.summary
+            .starts_with("You give up the memory of wisp, and The Salt Stair keeps it."),
+        "{}",
+        out.summary
+    );
+    let hl1 = out.result["half_life_ms"].as_i64().unwrap();
+    assert_eq!(hl1, hl0 + out.result["added_ms"].as_i64().unwrap());
+    assert!(hl1 > hl0);
+    assert!(w
+        .store
+        .entity(EntityId(tc.trim_start_matches("chunk-").parse().unwrap()))
+        .is_none());
+    assert!(
+        level(&mut w, "tyler") < level_before,
+        "the chunk was the cost"
+    );
+    let look = ok(&mut w, "tyler", "look", json!([]));
+    assert!(
+        look.summary.contains("Kept in memory by tyler (wisp)."),
+        "{}",
+        look.summary
+    );
+
+    // The record is public: an anonymous reader of the log sees who paid.
+    let now = w.now();
+    let seen: Vec<_> = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == building::REMEMBERED)
+        .filter(|e| crate::observe::visible(&w, &Viewer::anonymous(), now, e))
+        .collect();
+    assert_eq!(seen.len(), 1);
+    assert_eq!(seen[0].payload["by"], "tyler");
+    assert_eq!(seen[0].payload["owner"], "dave");
+    assert_eq!(seen[0].payload["room"], room.0);
+
+    // Chunks must be yours and in your window or palace.
+    let err = call(
+        &mut w,
+        "tyler",
+        ActorKind::Citizen,
+        "remember",
+        json!([chunk]),
+    )
+    .unwrap_err();
+    assert!(
+        err.to_string().contains("not yours") || err.to_string().contains("no chunk"),
+        "{err}"
+    );
+}
