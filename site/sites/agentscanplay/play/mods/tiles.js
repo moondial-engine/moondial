@@ -92,7 +92,7 @@ export default function install(m) {
       while (taken.has(t.tile.join(",")) && i < SLOTS.length) t.tile = SLOTS[(hash(t.id) + ++i) % SLOTS.length];
       taken.add(t.tile.join(","));
     }
-    return { id: root.id, name: room.name || "?", memory: room.memory, description: room.description, tint: sprite.tint || "#6b6b7a", exits, things };
+    return { id: root.id, name: room.name || "?", memory: room.memory, description: room.description, tint: sprite.tint || "#6b6b7a", sprite, exits, things };
   }
 
   function draw() {
@@ -155,9 +155,12 @@ export default function install(m) {
     // Banner, top left, no wider than its words so the north door stays in view.
     const title = scene.name + (scene.memory != null ? "  \u00b7 remembered " + Math.round(mem * 100) + "%" : "");
     ctx.font = (7 * SCALE) + "px serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
-    const tw = ctx.measureText(title).width + 8 * SCALE;
+    const icon = scene.sprite && scene.sprite.atlas === m.atlasName ? frameCanvas(scene.sprite.frame) : null;
+    const pad = icon ? 13 * SCALE : 4 * SCALE;
+    const tw = ctx.measureText(title).width + pad + 4 * SCALE;
     ctx.fillStyle = "rgba(11,13,18,.72)"; ctx.fillRect(0, 0, tw, 11 * SCALE);
-    ctx.fillStyle = "#e8e4da"; ctx.fillText(title, 4 * SCALE, 5.5 * SCALE);
+    if (icon) ctx.drawImage(icon, 0, 0, T, T, 2 * SCALE, 1.5 * SCALE, 8 * SCALE, 8 * SCALE);
+    ctx.fillStyle = "#e8e4da"; ctx.fillText(title, pad, 5.5 * SCALE);
     // Arrival fade.
     const since = now - fadeAt;
     if (since < 500) { ctx.fillStyle = "rgba(11,13,18," + (1 - since / 500).toFixed(2) + ")"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
