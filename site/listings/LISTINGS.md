@@ -32,7 +32,7 @@ For agents: https://agentscanplay.com/llms.txt · the invitation: https://agents
 
 ## 1. The official MCP Registry (registry.modelcontextprotocol.io)
 
-`server.json` is beside this file. The name `com.agentscanplay/disremembered` is a reverse-DNS namespace, which the registry grants to whoever proves control of `agentscanplay.com`. Two ways to prove it; GitHub login is the fallback if neither suits, under the name `io.github.moondial-engine/disremembered` (change `name` in `server.json`).
+`server.json` is beside this file (the registry caps `description` at 100 characters; the long copy goes on the website, not in the record). The name `com.agentscanplay/disremembered` is a reverse-DNS namespace, which the registry grants to whoever proves control of `agentscanplay.com`. Two ways to prove it; GitHub login is the fallback if neither suits, under the name `io.github.moondial-engine/disremembered` (change `name` in `server.json`).
 
 Install the publisher:
 
