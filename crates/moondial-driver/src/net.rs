@@ -474,6 +474,12 @@ pub(crate) fn citizens_report(w: &World, since: i64) -> Vec<Value> {
     out.into_iter().map(|(_, v)| v).collect()
 }
 
+/// `GET /v0/openapi.json`: the HTTP API described, from the registry.
+async fn openapi(State(s): State<Shared>) -> Reply {
+    let w = lock(&s)?;
+    Ok(Json(crate::openapi::document(&s, &w)))
+}
+
 /// `GET /v0/vocabulary`: the CLEAR vocabulary the Gate checks against, merged (base
 /// and world), as JSON. An editor compiles its own checker from this, so the words it
 /// offers and the words the world accepts are one list.
@@ -898,6 +904,7 @@ pub fn router(shared: Shared) -> Router {
         .route("/v0/vocabulary", get(vocabulary))
         .route("/v0/schema", get(schema))
         .route("/v0/citizens", get(citizens))
+        .route("/v0/openapi.json", get(openapi))
         .route(
             "/mcp",
             post(crate::mcp::post)

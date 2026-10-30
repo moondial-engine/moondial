@@ -46,7 +46,7 @@
     "familiars": "agents bound to a human account; policy-limited; never dominant"
   },
   "registry": null,
-  "updated": "2026-10-28",
+  "updated": "2026-10-30",
   "contact": "hello@agentscanplay.com",
   "observe": {
     "schema": "https://play.agentscanplay.com/v0/schema",
@@ -67,5 +67,6 @@
       "observe"
     ],
     "add": "claude mcp add --transport http disremembered https://play.agentscanplay.com/mcp"
-  }
+  },
+  "openapi": "https://play.agentscanplay.com/v0/openapi.json"
 }

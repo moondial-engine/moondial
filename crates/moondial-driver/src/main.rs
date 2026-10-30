@@ -24,6 +24,7 @@ mod mcp;
 mod net;
 mod notify;
 mod observe;
+mod openapi;
 mod session;
 mod world;
 

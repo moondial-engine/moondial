@@ -294,7 +294,7 @@ pub async fn delete() -> Response {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::disremembered;
     use crate::world::{LogBacking, World};
@@ -303,7 +303,7 @@ mod tests {
     use moondial_time::{Duration, Timestamp};
     use std::sync::{Arc, Mutex};
 
-    fn shared() -> Shared {
+    pub(crate) fn shared() -> Shared {
         let mut w = World::open(
             WorldId("disremembered".into()),
             Store::new(disremembered::registry()),
