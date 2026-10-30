@@ -374,9 +374,10 @@ pub fn reflow(line: &str) -> String {
 
 /// Compile a terminal line (`attack the wisp`) into a REQUEST from `actor` to `world`:
 /// one DO, MUST, the line's first word as the verb. What a human types is what the
-/// checker reads; a line the checker refuses comes back with the rule it broke. When
-/// the verb's first parameter is text (`say hello there`), the rest of the line is
-/// quoted for the typist, as the grammar wants it.
+/// checker reads; a line the checker refuses comes back with the rule it broke. Where
+/// the verb's signature has a text parameter (`say hello there`, `tell Pell who are
+/// you`, `dig north chunk-5 The Salt Stair`), everything from that position on is
+/// quoted for the typist, as the grammar wants it; text already in quotes is left alone.
 pub fn compile(actor: &str, world: &str, line: &str, now: Timestamp, checker: &Checker) -> String {
     let full = one_line(line);
     let body = full.trim_end_matches('.');
@@ -384,21 +385,31 @@ pub fn compile(actor: &str, world: &str, line: &str, now: Timestamp, checker: &C
         .split_once(' ')
         .map(|(v, r)| (v, r.trim()))
         .unwrap_or((body, ""));
-    // What follows a text-first verb is the text itself, period and all.
+    // What follows the text parameter is the text itself, period and all.
     let rest = full.split_once(' ').map(|(_, r)| r.trim()).unwrap_or("");
-    let text_first = checker
-        .signature(verb)
-        .and_then(|p| p.first())
-        .and_then(|p| p.get("type"))
-        .and_then(Value::as_str)
-        == Some("text");
+    let text_at = checker.signature(verb).and_then(|params| {
+        params
+            .iter()
+            .position(|p| p.get("type").and_then(Value::as_str) == Some("text"))
+    });
     let quoted;
-    let body = if text_first && !rest.is_empty() && !rest.starts_with('"') && !rest.starts_with('“')
-    {
-        quoted = format!("{verb} \"{}\"", rest.trim_end_matches('"'));
-        quoted.as_str()
-    } else {
-        body
+    let body = match text_at {
+        Some(i) if !rest.is_empty() => {
+            let tokens: Vec<&str> = rest.split_whitespace().collect();
+            if tokens.len() > i && !tokens[i].starts_with('"') && !tokens[i].starts_with('“') {
+                let text = tokens[i..].join(" ");
+                let head = tokens[..i].join(" ");
+                quoted = if head.is_empty() {
+                    format!("{verb} \"{}\"", text.trim_end_matches('"'))
+                } else {
+                    format!("{verb} {head} \"{}\"", text.trim_end_matches('"'))
+                };
+                quoted.as_str()
+            } else {
+                body
+            }
+        }
+        _ => body,
     };
     format!(
         "FROM: {actor}\nTO: {world}\nINTENT: REQUEST\nREF: {actor}-{}\n\n[DO] {actor} MUST {body}.\n",
@@ -1194,6 +1205,52 @@ mod tests {
         assert!(!p.ok && !p.acted);
         assert!(p.prose.contains("CL-I5"), "{}", p.prose);
         assert!(p.prose.contains("Type help"), "{}", p.prose);
+
+        // Text after other arguments is quoted from where the signature says it starts.
+        let text = compile(
+            "spacepants",
+            "disremembered",
+            "tell tyler who are you?",
+            now,
+            &checker,
+        );
+        assert!(
+            text.contains("[DO] spacepants MUST tell tyler \"who are you?\"."),
+            "{text}"
+        );
+        let text = compile(
+            "spacepants",
+            "disremembered",
+            "dig north chunk-5 The Salt Stair.",
+            now,
+            &checker,
+        );
+        assert!(
+            text.contains("[DO] spacepants MUST dig north chunk-5 \"The Salt Stair.\"."),
+            "{text}"
+        );
+        let text = compile(
+            "spacepants",
+            "disremembered",
+            "dig north chunk-5",
+            now,
+            &checker,
+        );
+        assert!(
+            text.contains("[DO] spacepants MUST dig north chunk-5."),
+            "{text}"
+        );
+        let text = compile(
+            "spacepants",
+            "disremembered",
+            "tell tyler \"already quoted\"",
+            now,
+            &checker,
+        );
+        assert!(
+            text.contains("[DO] spacepants MUST tell tyler \"already quoted\"."),
+            "{text}"
+        );
 
         // Speech: the typist's words are quoted for them, recorded as said, and heard.
         disremembered::login(&mut w, "tyler", "test", PASS).unwrap();
