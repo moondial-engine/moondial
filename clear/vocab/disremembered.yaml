@@ -98,6 +98,7 @@ approved_verbs:
   earn: {params: [{name: source, type: string, required: true}, {name: size, type: number, required: true}, {name: vividity, type: number, required: false}]}
   freeze: {params: []}
   thaw: {params: []}
+  reset_passphrase: {params: [{name: name, type: string, required: true}]}
   # out-of-world actions an invitation may ask of an agent
   send:
   run:

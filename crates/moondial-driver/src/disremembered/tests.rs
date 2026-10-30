@@ -1134,3 +1134,22 @@ fn the_public_log_hides_passphrase_hashes_and_owner_fields() {
         .unwrap()
         .contains("passphrase_hash"));
 }
+
+#[test]
+fn an_admin_can_reset_a_passphrase_and_the_next_login_claims_it() {
+    let mut w = open(tempfile::tempdir().unwrap().path(), Timestamp(0));
+    login(&mut w, "dave", "test", PASS).unwrap();
+    assert!(login(&mut w, "dave", "test", "a-different-one").is_err());
+    let out = admin(&mut w, "tyler", "reset_passphrase", json!(["dave"]));
+    assert_eq!(out.result["reset"], true);
+    // Too short is still refused; a good one claims the name.
+    assert!(login(&mut w, "dave", "test", "short").is_err());
+    login(&mut w, "dave", "test", "a-different-one").unwrap();
+    assert!(login(&mut w, "dave", "test", PASS).is_err());
+    // Citizens cannot reset anyone.
+    let ctx = CallContext {
+        actor: "dave".into(),
+        kind: ActorKind::Citizen,
+    };
+    assert!(w.call(&ctx, "reset_passphrase", &json!(["tyler"])).is_err());
+}

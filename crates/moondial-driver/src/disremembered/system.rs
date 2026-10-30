@@ -68,6 +68,41 @@ pub fn register(world: &mut World) {
 
     world.register(
         CommandSpec::new(
+            "disremembered.reset_passphrase",
+            "Admin: forget a citizen's passphrase, so the next login sets a new one.",
+        )
+        .param("name", ParamType::String, true, "the citizen")
+        .allowed(&[ActorKind::Admin]),
+        Box::new(|w: &mut World, _, args: &Args| {
+            let name = args.str("name").unwrap_or_default().to_string();
+            let Some(found) = super::find_citizen(w, &name) else {
+                return Err(CommandError::precondition(format!(
+                    "No citizen named {name}."
+                )));
+            };
+            let mut fields = std::collections::BTreeMap::new();
+            fields.insert(
+                "passphrase_hash".to_string(),
+                moondial_store::Field::Plain(serde_json::Value::Null),
+            );
+            w.record(
+                Actor::Driver,
+                StoreEvent::ComponentSet {
+                    id: found.citizen,
+                    component: super::ACCOUNT.into(),
+                    fields,
+                },
+            )
+            .map_err(internal)?;
+            Ok(Outcome::new(
+                format!("{name}'s passphrase is forgotten; their next login sets a new one."),
+                json!({"name": name, "reset": true}),
+            ))
+        }),
+    );
+
+    world.register(
+        CommandSpec::new(
             "disremembered.log",
             "The last events in the world, oldest first.",
         )
