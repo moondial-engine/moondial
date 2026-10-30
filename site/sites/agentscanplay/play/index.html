@@ -369,7 +369,29 @@
 
   let actor = null, passphrase = null;
   let asking = null, pendingName = null;
-  const history = []; let hi = 0;
+  // Command history, shell-style: kept across reloads (never a passphrase), no
+  // consecutive duplicates, Up/Down search by what you have typed, your draft kept.
+  const HISTORY_MAX = 200;
+  const history = (() => { try { const h = JSON.parse(localStorage.getItem("disremembered.history") || "[]"); return Array.isArray(h) ? h.filter(x => typeof x === "string").slice(-HISTORY_MAX) : []; } catch (e) { return []; } })();
+  let hi = history.length, draft = null, prefix = null;
+  function remember(line) {
+    if (line !== history[history.length - 1]) history.push(line);
+    while (history.length > HISTORY_MAX) history.shift();
+    try { localStorage.setItem("disremembered.history", JSON.stringify(history)); } catch (e) {}
+    hi = history.length; draft = null; prefix = null;
+  }
+  function recall(dir) {
+    if (prefix === null) { prefix = input.value; draft = input.value; }
+    let i = hi;
+    for (;;) {
+      i += dir;
+      if (i < 0) return;
+      if (i >= history.length) { hi = history.length; input.value = draft || ""; prefix = null; draft = null; return; }
+      if (history[i].startsWith(prefix)) break;
+    }
+    hi = i; input.value = history[i];
+    requestAnimationFrame(() => input.setSelectionRange(input.value.length, input.value.length));
+  }
 
   // ---- transcript ----
   const FADE_LINES = 40;
@@ -557,6 +579,7 @@
     }
     const el = print("", "cmd"); el.innerHTML = "<b>clear</b><i></i> Clear this window.";
     const el2 = print("", "cmd"); el2.innerHTML = "<b>logout</b><i></i> Forget your passphrase in this tab.";
+    print("Up and Down walk your history, matching what you have typed so far; !! repeats the last line; Ctrl+L clears, Ctrl+U empties the line.", "sys");
   }
 
   // ---- the scene ----
@@ -729,10 +752,12 @@
       if (line.length < 8) { print("A passphrase is at least 8 characters; it is set the first time a name logs in.", "err"); askPass(name); return; }
       await login(name, line); return;
     }
-    const t = line.trim();
+    let t = line.trim();
     if (!t) { if (!actor) askName(); return; }
-    history.push(t); hi = history.length;
+    if (t === "!!") { t = history[history.length - 1] || ""; if (!t) return; }
     const [verb, ...rest] = t.split(/\s+/);
+    // The line is remembered; a passphrase on it is not.
+    remember(verb === "login" ? ["login", rest[0]].filter(Boolean).join(" ") : t);
     if (verb === "login") {
       print("login " + (rest[0] || ""), "you");
       if (rest.length >= 2) await login(rest[0], rest.slice(1).join(" "));
@@ -749,8 +774,11 @@
 
   input.addEventListener("keydown", (e) => {
     if (asking) return;
-    if (e.key === "ArrowUp" && hi > 0) { hi--; input.value = history[hi]; e.preventDefault(); }
-    else if (e.key === "ArrowDown") { hi = Math.min(history.length, hi + 1); input.value = history[hi] || ""; e.preventDefault(); }
+    if (e.key === "ArrowUp") { recall(-1); e.preventDefault(); }
+    else if (e.key === "ArrowDown") { recall(1); e.preventDefault(); }
+    else if (e.key === "l" && e.ctrlKey) { log.replaceChildren(); e.preventDefault(); }
+    else if (e.key === "u" && e.ctrlKey) { input.value = ""; e.preventDefault(); }
+    else if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1) { prefix = null; draft = null; hi = history.length; }
   });
   log.addEventListener("click", () => { if (!getSelection().toString()) input.focus(); });
 
