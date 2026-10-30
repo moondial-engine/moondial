@@ -1062,3 +1062,75 @@ fn append_adds_to_a_description_and_arrivals_are_counted() {
     assert_eq!(dave["rooms_dug"], 1);
     assert_eq!(dave["origins"]["gate"], 1);
 }
+
+#[test]
+fn five_wrong_passphrases_lock_a_name_for_five_minutes() {
+    let mut w = open(tempfile::tempdir().unwrap().path(), Timestamp(0));
+    login(&mut w, "dave", "test", PASS).unwrap();
+    for _ in 0..5 {
+        let Err(e) = login(&mut w, "dave", "test", "not-the-passphrase") else {
+            panic!("a wrong passphrase got in")
+        };
+        assert!(matches!(e, LoginError::WrongPassphrase { .. }), "{e}");
+    }
+    // The right passphrase is refused too, until the lock lifts: no oracle for guessing.
+    let Err(e) = login(&mut w, "dave", "test", PASS) else {
+        panic!("the lock did not hold")
+    };
+    assert!(matches!(e, LoginError::Locked { minutes: 5, .. }), "{e}");
+    w.fixed_now = Some(w.now().plus(Duration::seconds(5 * 60 + 1)));
+    login(&mut w, "dave", "test", PASS).unwrap();
+    // Success resets the count.
+    assert!(login(&mut w, "dave", "test", "wrong-again-here").is_err());
+    login(&mut w, "dave", "test", PASS).unwrap();
+}
+
+#[test]
+fn the_public_log_hides_passphrase_hashes_and_owner_fields() {
+    let mut w = open(tempfile::tempdir().unwrap().path(), Timestamp(0));
+    login(&mut w, "dave", "test", PASS).unwrap();
+    login(&mut w, "tyler", "test", PASS).unwrap();
+    admin(&mut w, "dave", "earn", json!(["hydra", 100, 0.5]));
+    let now = w.now();
+    let all = w.log.read_all(&w.id, moondial_log::Cursor::START).unwrap();
+    for viewer in [
+        Viewer::anonymous(),
+        Viewer::actor("tyler"),
+        Viewer::actor("dave"),
+    ] {
+        let seen: Vec<_> = all
+            .iter()
+            .filter(|e| crate::observe::visible(&w, &viewer, now, e))
+            .map(|e| crate::observe::redacted(&w, &viewer, e.clone()))
+            .collect();
+        let text = serde_json::to_string(&seen).unwrap();
+        assert!(
+            !text.contains("passphrase_hash"),
+            "{:?} sees a hash",
+            viewer.actor
+        );
+        assert!(!text.contains("$argon2"), "{:?} sees a hash", viewer.actor);
+        let chunk_values = seen
+            .iter()
+            .filter(|e| e.kind == "store.component_set" && e.payload["component"] == CHUNK)
+            .filter(|e| e.payload["fields"].get("value").is_some())
+            .count();
+        if viewer.actor.as_deref() == Some("dave") {
+            assert!(chunk_values > 0, "the owner sees their chunk's value");
+        } else {
+            assert_eq!(
+                chunk_values, 0,
+                "{:?} sees an owner-only field",
+                viewer.actor
+            );
+        }
+    }
+    // The operator sees everything.
+    let whole: Vec<_> = all
+        .iter()
+        .map(|e| crate::observe::redacted(&w, &Viewer::admin(), e.clone()))
+        .collect();
+    assert!(serde_json::to_string(&whole)
+        .unwrap()
+        .contains("passphrase_hash"));
+}

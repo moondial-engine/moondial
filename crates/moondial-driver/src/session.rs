@@ -264,6 +264,7 @@ async fn run(socket: WebSocket, s: Shared) {
                     let events: Vec<Value> = all
                         .iter()
                         .filter(|e| crate::observe::visible(&w, &viewer, now, e))
+                        .map(|e| crate::observe::redacted(&w, &viewer, e.clone()))
                         .map(|e| json!({"type": "event", "event": e}))
                         .collect();
                     let mut refresh = Vec::new();

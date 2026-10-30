@@ -50,8 +50,22 @@ pub struct Shared {
 
 impl Shared {
     pub(crate) fn is_admin(&self, token: Option<&str>) -> bool {
-        matches!((&self.admin_token, token), (Some(t), Some(given)) if !t.is_empty() && t == given)
+        match (&self.admin_token, token) {
+            (Some(t), Some(given)) if !t.is_empty() => {
+                constant_time_eq(t.as_bytes(), given.as_bytes())
+            }
+            _ => false,
+        }
     }
+}
+
+/// Equal, in time that does not depend on where they differ.
+fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    let mut diff = (a.len() ^ b.len()) as u8;
+    for i in 0..a.len().max(b.len()) {
+        diff |= a.get(i).copied().unwrap_or(0) ^ b.get(i).copied().unwrap_or(0);
+    }
+    diff == 0
 }
 
 fn split_args(verb: &str, rest: &str) -> Value {
@@ -550,8 +564,9 @@ struct CheckBody {
     message: String,
 }
 
-/// Most bytes `/v0/check` reads; the vocabulary's own message limit is smaller.
-const MAX_CHECK_BYTES: usize = 16 * 1024;
+/// Most bytes `/v0/check` reads: the vocabulary's own message limit. The checker is
+/// regular expressions over the text, and anyone may call it.
+const MAX_CHECK_BYTES: usize = 8 * 1024;
 
 /// `POST /v0/check {message}`: the checker's verdict on a message, without sending it.
 /// What a browser without WebAssembly uses; the same result the editor computes locally.
@@ -598,6 +613,9 @@ pub(crate) fn http_login(
         }
         disremembered::LoginError::WrongPassphrase { .. } => {
             err_json(StatusCode::UNAUTHORIZED, e.to_string())
+        }
+        disremembered::LoginError::Locked { .. } => {
+            err_json(StatusCode::TOO_MANY_REQUESTS, e.to_string())
         }
         _ => err_json(StatusCode::BAD_REQUEST, e.to_string()),
     })?;
@@ -863,19 +881,51 @@ async fn view(
         .ok_or_else(|| err_json(StatusCode::NOT_FOUND, format!("no entity {id}")))
 }
 
-async fn log(State(s): State<Shared>, Query(q): Query<HashMap<String, String>>) -> Reply {
+/// `GET /v0/log`: the public event log, as an anonymous viewer sees it: what crossed
+/// the Gate, arrivals, speech, the scheduler, and store events on entities anyone may
+/// see, with the fields anyone may see. With `actor` and `passphrase`, as that citizen
+/// sees it; with the admin header, whole. `after` and `limit` page it; the reply's
+/// `cursor` is where it stopped (events the viewer may not see still advance it).
+async fn log(
+    State(s): State<Shared>,
+    headers: HeaderMap,
+    Query(q): Query<HashMap<String, String>>,
+) -> Reply {
     let after: u64 = q.get("after").and_then(|v| v.parse().ok()).unwrap_or(0);
     let limit: usize = q
         .get("limit")
         .and_then(|v| v.parse().ok())
         .unwrap_or(100)
         .min(1000);
-    let w = lock(&s)?;
-    let events = w
+    let token = headers
+        .get("x-moondial-admin")
+        .and_then(|v| v.to_str().ok());
+    let mut w = lock(&s)?;
+    let viewer = if s.is_admin(token) {
+        Viewer::admin()
+    } else if let Some(actor) = q.get("actor") {
+        http_login(
+            &mut w,
+            actor,
+            q.get("passphrase").map(String::as_str).unwrap_or(""),
+            "http",
+        )?;
+        Viewer::actor(actor.clone())
+    } else {
+        Viewer::anonymous()
+    };
+    let now = w.now();
+    let raw = w
         .log
         .read(&w.id, Cursor { after }, limit)
         .unwrap_or_default();
-    Ok(Json(json!({"events": events})))
+    let cursor = raw.last().map(|e| e.seq.0).unwrap_or(after);
+    let events: Vec<_> = raw
+        .into_iter()
+        .filter(|e| crate::observe::visible(&w, &viewer, now, e))
+        .map(|e| crate::observe::redacted(&w, &viewer, e))
+        .collect();
+    Ok(Json(json!({"events": events, "cursor": cursor})))
 }
 
 pub fn router(shared: Shared) -> Router {

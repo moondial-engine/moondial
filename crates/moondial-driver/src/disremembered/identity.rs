@@ -22,6 +22,9 @@ pub enum LoginError {
     /// A passphrase is required.
     #[error("login <name> <passphrase>: the passphrase is set on first login and required after.")]
     Missing,
+    /// Too many wrong passphrases for this name recently.
+    #[error("Too many wrong passphrases for {name}; try again in {minutes} minutes.")]
+    Locked { name: String, minutes: i64 },
     /// The world's fault.
     #[error("internal: {0}")]
     Internal(String),

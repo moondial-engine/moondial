@@ -245,7 +245,19 @@ pub fn login(
     let me = Actor::Citizen(actor.to_string());
     let now = world.now();
     if let Some(f) = find_citizen(world, actor) {
-        identity::check(world, f.citizen, passphrase)?;
+        if let Some(minutes) = world.locked_for(actor) {
+            return Err(LoginError::Locked {
+                name: actor.to_string(),
+                minutes,
+            });
+        }
+        if let Err(e) = identity::check(world, f.citizen, passphrase) {
+            if matches!(e, LoginError::WrongPassphrase { .. }) {
+                world.failed_login(actor);
+            }
+            return Err(e);
+        }
+        world.succeeded_login(actor);
         if world
             .store
             .entity(f.citizen)

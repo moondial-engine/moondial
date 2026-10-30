@@ -44,7 +44,15 @@ pub struct World {
     presence: std::collections::HashMap<String, Timestamp>,
     /// Lines for the operator (a Discord channel, say), drained by the tick loop.
     notices: Vec<String>,
+    /// Wrong passphrases per name: how many in a row, and when the last was. Five in a
+    /// row lock the name for [`LOCKOUT`]. In this process only; a restart forgets.
+    failures: std::collections::HashMap<String, (u32, Timestamp)>,
 }
+
+/// Wrong passphrases in a row before a name is locked.
+pub const MAX_FAILURES: u32 = 5;
+/// How long a locked name stays locked.
+pub const LOCKOUT: moondial_time::Duration = moondial_time::Duration(5 * 60 * 1000);
 
 /// How long an actor must be gone for their return to count as an arrival.
 pub const ABSENCE: moondial_time::Duration = moondial_time::Duration(10 * 60 * 1000);
@@ -75,6 +83,7 @@ impl World {
             job_handlers: Arc::new(std::collections::HashMap::new()),
             presence: std::collections::HashMap::new(),
             notices: Vec::new(),
+            failures: std::collections::HashMap::new(),
         };
         let head = world.log.head(&world.id).map_err(|e| e.to_string())?;
         if head.is_some() {
@@ -141,6 +150,33 @@ impl World {
                 away_ms.unwrap_or(0) / 86_400_000
             ));
         }
+    }
+
+    /// Minutes this name stays locked, if it is: five wrong passphrases in a row within
+    /// the lockout window.
+    pub fn locked_for(&self, actor: &str) -> Option<i64> {
+        let (n, last) = self.failures.get(actor)?;
+        if *n < MAX_FAILURES {
+            return None;
+        }
+        let left = LOCKOUT.0 - self.now().since(*last).0;
+        (left > 0).then(|| (left + 59_999) / 60_000)
+    }
+
+    /// A wrong passphrase for this name.
+    pub fn failed_login(&mut self, actor: &str) {
+        let now = self.now();
+        let e = self.failures.entry(actor.to_string()).or_insert((0, now));
+        if now.since(e.1).0 > LOCKOUT.0 {
+            e.0 = 0;
+        }
+        e.0 += 1;
+        e.1 = now;
+    }
+
+    /// A right passphrase: the count starts over.
+    pub fn succeeded_login(&mut self, actor: &str) {
+        self.failures.remove(actor);
     }
 
     /// Take the pending operator notices.

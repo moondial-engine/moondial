@@ -120,6 +120,15 @@ pub(crate) fn visible(world: &World, viewer: &Viewer, now: Timestamp, e: &Event)
     if viewer.admin {
         return true;
     }
+    // Public by nature: what crossed the Gate (the invitation promises it), who arrived,
+    // what was said in a room, and the scheduler's bookkeeping.
+    if e.kind.starts_with("gate.")
+        || e.kind.starts_with("job.")
+        || e.kind == crate::world::ARRIVED
+        || e.kind == crate::disremembered::speech::SAY
+    {
+        return true;
+    }
     if let (Actor::Citizen(a), Some(me)) = (&e.actor, viewer.actor.as_deref()) {
         if a == me {
             return true;
@@ -176,6 +185,7 @@ impl World {
                 .unwrap_or_default()
                 .into_iter()
                 .filter(|e| visible(self, viewer, now, e))
+                .map(|e| redacted(self, viewer, e))
                 .collect(),
             _ => Vec::new(),
         };
@@ -186,6 +196,44 @@ impl World {
             events,
         })
     }
+}
+
+/// An event with the fields this viewer may not see removed. A `store.component_set`
+/// carries every field it set, and some are the owner's or the operator's (a
+/// passphrase hash is the operator's: no one else, the owner included, needs it). The
+/// schema says who sees what; the entity says who owns it; what is left is what the
+/// viewer would get from `view`. Other event kinds carry no component fields and pass
+/// through.
+pub(crate) fn redacted(world: &World, viewer: &Viewer, mut e: Event) -> Event {
+    if e.kind != "store.component_set" {
+        return e;
+    }
+    let component = e.payload["component"].as_str().unwrap_or("").to_string();
+    let owner = e.payload["id"]
+        .as_u64()
+        .and_then(|id| world.store.entity(EntityId(id)))
+        .and_then(|en| en.owner.clone());
+    let is_owner = owner.is_some() && owner.as_deref() == viewer.actor.as_deref();
+    let in_party = owner.as_deref().is_some_and(|o| viewer.party.contains(o));
+    let schema = world.store.registry().get(&component);
+    let keep = |field: &str| -> bool {
+        if viewer.admin {
+            return true;
+        }
+        let Some(f) = schema.and_then(|c| c.get(field)) else {
+            return false;
+        };
+        match f.visibility {
+            moondial_store::Visibility::Public => true,
+            moondial_store::Visibility::Party => is_owner || in_party,
+            moondial_store::Visibility::Owner => is_owner,
+            moondial_store::Visibility::Admin => false,
+        }
+    };
+    if let Some(fields) = e.payload.get_mut("fields").and_then(Value::as_object_mut) {
+        fields.retain(|k, _| keep(k));
+    }
+    e
 }
 
 #[cfg(test)]
