@@ -166,7 +166,19 @@ pub fn register(world: &mut World, curves: Curves) {
             let attack = super::combat::attack_for_level(level);
             let rate = fade_rate(active_hl_ms);
             let text = if rows.is_empty() {
-                format!("Your window is empty. Level 0, attack {attack:.0}. A chunk is earned by felling a creature (attack; the Fogbank east of the Threshold has wisps) or by telling a named creature a story of a dozen words (story; ask where one is). {rate}")
+                // Name a creature that would take a story, and where it is, rather
+                // than telling an empty-handed newcomer to go and ask.
+                let listener = w
+                    .store
+                    .entities()
+                    .filter(|e| e.kind == "creature")
+                    .find_map(|e| {
+                        let given = super::mind::name(w, e.id)?;
+                        let room = e.parent.and_then(|r| super::plain_str(w, r, super::ROOM, "name"))?;
+                        Some(format!("{given} the {}, in {room}, would take one", super::plain_str(w, e.id, super::CREATURE, "name").unwrap_or("?")))
+                    })
+                    .unwrap_or_else(|| "none has a name just now".to_string());
+                format!("Your window is empty. Level 0, attack {attack:.0}. A chunk is earned by felling a creature (attack; the Fogbank east of the Threshold has wisps) or by telling a named creature a story of a dozen words (story; {listener}). {rate}")
             } else {
                 format!(
                     "Level {level:.2}, attack {attack:.0} (your level is the sum of these chunks' current values, so it falls as they fade and when you spend one)\n{}\n{rate}",
