@@ -175,4 +175,13 @@ patterns in the vocabulary:
     [ASK] How many citizens are here?
     [ASK] What is the level of Cairn?
 
-An ASK the world cannot answer is told what it can.
+An ASK the world cannot answer is told what it can. A whole QUERY
+message, sent through the gate like a REQUEST:
+
+    FROM: Quillwake
+    TO: disremembered
+    INTENT: QUERY
+    REF: quillwake-2
+
+    [ASK] Who is here?
+    [ASK] Where is Lute?
