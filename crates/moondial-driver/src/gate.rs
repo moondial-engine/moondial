@@ -372,6 +372,27 @@ pub fn reflow(line: &str) -> String {
     out
 }
 
+/// The narrative addressed to `actor` since their last message through the Gate (or
+/// since their last arrival, if they have not written before).
+fn since_last_message(world: &World, actor: &str) -> Vec<String> {
+    let recent = world.recent_events(2000);
+    let last = recent
+        .iter()
+        .rev()
+        .find(|e| {
+            (e.kind == "gate.message" && e.payload["from"] == actor)
+                || (e.kind == crate::world::ARRIVED && e.payload["actor"] == actor)
+        })
+        .map(|e| e.seq.0)
+        .unwrap_or(0);
+    recent
+        .iter()
+        .filter(|e| e.seq.0 > last)
+        .filter(|e| e.kind == crate::disremembered::NARRATIVE && e.payload["to"] == actor)
+        .filter_map(|e| e.payload["text"].as_str().map(str::to_string))
+        .collect()
+}
+
 /// Compile a terminal line (`attack the wisp`) into a REQUEST from `actor` to `world`:
 /// one DO, MUST, the line's first word as the verb. What a human types is what the
 /// checker reads; a line the checker refuses comes back with the rule it broke. Where
@@ -437,6 +458,14 @@ pub fn pass(
     let msg = &result.message;
     let r#ref = msg.field("REF").filter(|r| !r.is_empty());
     let mut report = Report::new(&world_name, actor, r#ref);
+    // What happened to the sender since they last wrote, for the channels that have
+    // no other way to hear it: an ambush, a strike, words left for them. The text port
+    // prints these itself and the session pushes them.
+    if matches!(via, Via::Gate | Via::Http) {
+        for line in since_last_message(world, actor) {
+            report.quote(line, "narrator");
+        }
+    }
     let mut outcomes = Vec::new();
 
     // The budget is on messages written as messages, whichever port they came in by;
@@ -867,6 +896,66 @@ mod tests {
 
     fn msg(from: &str, intent: &str, body: &str) -> String {
         format!("FROM: {from}\nTO: disremembered\nINTENT: {intent}\nREF: {from}-test-1\n\n{body}\n")
+    }
+
+    #[test]
+    fn a_reply_through_the_gate_carries_what_happened_since_you_last_wrote() {
+        let mut w = world();
+        let checker = checker();
+        let mut budget = HourBudget::new(60.0, 0.25);
+        // Into the Shallows, where hollows ambush a few seconds after you arrive.
+        let text = msg(
+            "lantern-7",
+            "REQUEST",
+            "[DO] lantern-7 MUST travel to the east.\n[DO] lantern-7 MUST travel to the north.",
+        );
+        let p = send(&mut w, &checker, &mut budget, "lantern-7", &text);
+        assert!(p.ok, "{}", p.prose);
+        assert!(
+            !p.reply.contains("stands up out of the water"),
+            "nothing has happened yet"
+        );
+        w.fixed_now = Some(w.now().plus(Duration::seconds(5)));
+        w.tick();
+        // The next message's reply says what the hollow did, as the narrator's quote.
+        let text = msg("lantern-7", "REQUEST", "[DO] lantern-7 MUST look.");
+        let p = send(&mut w, &checker, &mut budget, "lantern-7", &text);
+        assert!(
+            p.reply
+                .contains("[QUOTE] The hollow stands up out of the water and comes at you.")
+                && p.reply.contains("[src:narrator]"),
+            "{}",
+            p.reply
+        );
+        assert!(
+            p.prose.contains("stands up out of the water"),
+            "{}",
+            p.prose
+        );
+        // And not twice.
+        let text = msg("lantern-7", "REQUEST", "[DO] lantern-7 MUST retreat.");
+        let p = send(&mut w, &checker, &mut budget, "lantern-7", &text);
+        assert!(
+            !p.reply.contains("stands up out of the water"),
+            "{}",
+            p.reply
+        );
+        // A session or the text port hears these another way: not repeated there.
+        w.fixed_now = Some(w.now().plus(Duration::seconds(15)));
+        w.tick();
+        let p = send_via(
+            &mut w,
+            &checker,
+            &mut budget,
+            "lantern-7",
+            Via::Session,
+            "look",
+        );
+        assert!(
+            !p.reply.contains("[src:narrator]") || !p.reply.contains("hits you"),
+            "{}",
+            p.reply
+        );
     }
 
     #[test]
