@@ -31,6 +31,7 @@ crates/moondial-clear  CLEAR v0.4 in Rust: the Legibility check, a port of clear
 crates/moondial-driver the driver binary: loads a world, replays its log, listens on a text port and an HTTP port
 crates/moondial        the library crate that re-exports the primitives (on crates.io)
 clear/                 the CLEAR v0.3 spec, vocabularies, reference checker (clear_check.py) and its tests
+PFR.md                 the punch list: what is open, by who it is for; what shipped from visitors is site/.../feedback.txt
 site/                  agentscanplay.com and moondial.ai, and their deploy pipeline
 deploy/server/         the game server (moondial-1): setup script, systemd unit, nginx block, deploy script
 ```
