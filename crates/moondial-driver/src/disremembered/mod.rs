@@ -384,6 +384,11 @@ pub fn login(
         world.arrive(actor, origin, false);
         return Ok(f);
     }
+    // A name is one name whatever its letters: claude-scout is Claude-scout's, not a
+    // second citizen. Log in with the spelling the world knows.
+    if let Some(taken) = canonical_name(world, actor) {
+        return Err(LoginError::Taken { taken });
+    }
     identity::acceptable(passphrase)?;
     let home = rooms::arrival(world)
         .ok_or_else(|| LoginError::Internal("the Threshold is missing".into()))?;

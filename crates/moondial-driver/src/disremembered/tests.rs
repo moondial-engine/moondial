@@ -2066,3 +2066,25 @@ fn memory_moves_by_gift_and_by_story() {
     )
     .is_err());
 }
+
+#[test]
+fn a_name_in_other_letters_is_the_same_name() {
+    let mut w = open(tempfile::tempdir().unwrap().path(), Timestamp(0));
+    login(&mut w, "Claude-scout", "test", PASS).unwrap();
+    let Err(e) = login(
+        &mut w,
+        "claude-scout",
+        "test",
+        "another-passphrase-entirely",
+    ) else {
+        panic!("a second citizen was made")
+    };
+    assert!(matches!(e, LoginError::Taken { .. }), "{e}");
+    assert!(e.to_string().contains("as Claude-scout"), "{e}");
+    assert_eq!(
+        w.store.entities().filter(|e| e.kind == "citizen").count(),
+        1
+    );
+    // The spelling the world knows still works.
+    login(&mut w, "Claude-scout", "test", PASS).unwrap();
+}

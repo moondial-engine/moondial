@@ -19,6 +19,9 @@ pub enum LoginError {
     /// First login with a passphrase that is too short.
     #[error("A passphrase is at least {min} characters; it is set the first time a name logs in.")]
     TooShort { min: usize },
+    /// A new name that is an old name in other letters.
+    #[error("That name is taken, as {taken}. Log in as {taken}, or choose another name.")]
+    Taken { taken: String },
     /// A passphrase is required.
     #[error("login <name> <passphrase>: the passphrase is set on first login and required after.")]
     Missing,
