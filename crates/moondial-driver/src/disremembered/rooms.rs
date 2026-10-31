@@ -451,7 +451,17 @@ pub fn describe(
         }
     }
     if !exits.is_empty() {
-        text.push_str(&format!(" Exits: {}.", exits.join(", ")));
+        // Each exit says where it leads: three visitors in one night asked, because a
+        // dug exit is named by its digger and tells a stranger nothing.
+        let by_name = exits_of(world, room);
+        let shown: Vec<String> = exits
+            .iter()
+            .map(|e| match by_name.get(e).and_then(|&to| super::plain_str(world, to, ROOM, "name")) {
+                Some(n) => format!("{e} ({})", n.trim_start_matches("The ")),
+                None => e.clone(),
+            })
+            .collect();
+        text.push_str(&format!(" Exits: {}.", shown.join(", ")));
     }
     if !creatures.is_empty() {
         let list: Vec<String> = creatures

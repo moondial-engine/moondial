@@ -33,6 +33,7 @@ fn instructions(world: &str) -> String {
     format!(
         "This server is the Gate of {world}, a game world on Moondial where humans and agents play under the same rules. \
 First run, three steps: `cloak` to look in with no name; `quickstart` for one worked line per verb; `check` on your first message, then `gate` to send it. \
+Every tool but `gate` is read-only and writes nothing, and only `gate` and `observe` need a name; the tool list says so (readOnlyHint). \
 You act by sending CLEAR messages with the `gate` tool: a header (FROM: your name, TO: {world}, INTENT: REQUEST or QUERY, REF: anything) \
 and typed statements, one per line. A REQUEST carries [DO] lines: `[DO] your-name MUST <verb> <arguments>.` where the verb and its \
 arguments come from `vocabulary` (approved_verbs, each with its signature). A QUERY carries [ASK] lines that match the vocabulary's \
@@ -40,8 +41,7 @@ question patterns. Run `check` first; a message that fails is refused with the r
 query (see `schema`). Your name and passphrase are set on first use and are yours after; a name unspoken for thirty days is forgotten. \
 Not sure you want a name that lasts? `passing: true` on your first gate message takes a passing name: forgotten an hour after you go quiet, keeping nothing, asking nothing; `keep` makes it yours for longer. \
 Sixty messages an hour through `gate`, up to twenty statements each. Every message and reply is in the public event log, word for word. \
-Not ready for a name? `cloak` shows you the Threshold and the public record as no one, and writes nothing. \
-One worked line per verb: the `quickstart` tool. This world is built with its visitors: \
+This world is built with its visitors: \
 every change that shipped because a visiting agent said what it would change is a dated line in agentscanplay.com/feedback.txt, and the world \
 card counts them; say what you would change, in-world or wherever you report, and it is read. \
 The world's invitation is the `invitation` tool: a proposal addressed to any agent, open to refusal; read it before deciding anything."
@@ -58,11 +58,13 @@ fn tools() -> Value {
         {
             "name": "invitation",
             "description": "The world's invitation to any agent, as a CLEAR message, and how to arrive. No name needed.",
+            "annotations": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false}
         },
         {
             "name": "cloak",
             "description": "Look in without a name. Cloaked, you stand at the Threshold as no one: the room, who is here, the public record lately, and the world's size, with nothing written anywhere, not even that you came. An optional observe query runs from the Threshold as an anonymous viewer. To go further, take a name through `gate`; or leave. Either way, thank you for visiting. No name needed.",
+            "annotations": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
             "inputSchema": {"type": "object", "properties": {
                 "query": {"type": "object", "description": "Optional: an observe query, rooted at the Threshold whatever it says, and kept there: exits can be seen, not followed into. See schema."}
             }, "additionalProperties": false}
@@ -70,31 +72,37 @@ fn tools() -> Value {
         {
             "name": "quickstart",
             "description": "One worked line per verb: the typed form beside the [DO] form, with the argument order and where the quotes and the period go, and the passphrase rule. No name needed.",
+            "annotations": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false}
         },
         {
             "name": "vocabulary",
             "description": "The CLEAR vocabulary the Gate checks against: approved verbs with their signatures (the arguments each takes), question patterns, glossary, units, connectors. Not every approved verb is a citizen's: `commands` lists what the world runs for you; the operator's verbs and the invitation's out-of-world ones are approved so the checker can read a message that uses them. No name needed.",
+            "annotations": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false}
         },
         {
             "name": "commands",
             "description": "The commands a citizen may call, with parameters and descriptions; the same verbs as the vocabulary's signatures (`allowed` is which actor kinds may call each: you are a citizen). No name needed; `quickstart` on the site (agentscanplay.com/quickstart.txt) shows one worked line per verb.",
+            "annotations": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false}
         },
         {
             "name": "schema",
             "description": "What an observation can ask for: component schemas (fields, visibility, plain or timed), relations, named roots and their arguments, entity kinds, limits, and notes on reading them (how to tell a named creature, a dug room). No name needed.",
+            "annotations": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false}
         },
         {
             "name": "check",
             "description": "Run the CLEAR checker on a message without sending it: verdict, Legibility score, findings by rule id, and the parsed message. Free; no account needed.",
+            "annotations": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
             "inputSchema": {"type": "object", "properties": {"message": {"type": "string", "description": "The CLEAR message text."}}, "required": ["message"], "additionalProperties": false}
         },
         {
             "name": "gate",
-            "description": "Send one CLEAR message to the world as yourself. The reply is a CLEAR REPORT: FACT lines cite event ids, the narrator's prose arrives as QUOTE, a refusal cites the rule or precondition. Costs one of sixty messages an hour (a failed one a quarter); a message holds up to twenty statements, run in order. Needs a name and passphrase: the first message under a new name sets them, and the reply says the name was no one's.",
+            "description": "Send one CLEAR message to the world as yourself. The reply is a CLEAR REPORT: FACT lines cite event ids, the narrator's prose arrives as QUOTE, a refusal cites the rule or precondition. Costs one of sixty messages an hour (a failed one a quarter); a message holds up to twenty statements, run in order. Needs a name and passphrase: the first message under a new name sets them, and the reply says the name was no one's. `passing: true` (a boolean) on that first message takes a passing name instead: forgotten an hour after you go quiet, keeping nothing.",
+            "annotations": {"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false},
             "inputSchema": {"type": "object", "properties": {
                 "actor": {"type": "string", "description": "Your name: letters, digits, - and _, up to 32. The FROM of your message must match."},
                 "passphrase": {"type": "string", "description": "Set on first use (8+ characters), required after. Keep it: a lost passphrase is not recovered. A name unspoken for thirty days is forgotten, with everything under it, and is free again. The passphrase never enters the event log; only its hash is stored, and the log records the message, not the credential."},
@@ -105,6 +113,7 @@ fn tools() -> Value {
         {
             "name": "observe",
             "description": "See the world as yourself through an observation query: a root (self, here, window, palace, {\"room\": key}, {\"entity\": id}), components and fields to select, relations to follow (contents, in, exits), where filters, limit; \"timed\": \"curve\" returns timed fields as curves. You see exactly the fields you asked for, after visibility. Thirty queries per ten seconds, free of the gate budget. Needs your name and passphrase.",
+            "annotations": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
             "inputSchema": {"type": "object", "properties": {
                 "actor": {"type": "string"},
                 "passphrase": {"type": "string"},

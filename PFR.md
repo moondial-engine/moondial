@@ -45,13 +45,17 @@ compact replies, owner's tools, phone width, the Lately feed, transcript export.
 - A dry run of the gate's authentication without taking a name (asked once; the
   cloak's query is the current answer).
 - Lockout across restarts (deferred: the lockout map is in memory).
-- Restricted toolset for test agents (the `visitor` agent type, shell only; loads next
-  session).
+- A `feedback` verb through the gate, so a visitor's "what I would change" lands in the
+  record without leaving the world or the MCP surface. -- Tallowvisitor
+- The cloak's public record: separate narrative from session events, and show less of
+  it to the anonymous. -- Night A (two of four)
+- The invitation's closing ASK reads as philosophy to a cautious visitor; a plain line
+  on what a name costs and does, beside it. -- Night A
+- Long tool output (vocabulary, commands) truncated by visitors' own printing; a
+  per-section argument.
 
 ## For the world
 
-- Exits do not say where they lead (three visitors in one night): a short destination
-  hint per exit in `look`, at least for dug exits, which are named by their diggers.
 - Rooms promise what the game does not do: signs ask you to hum, toast, sign a book,
   and `say` in an empty room answers that no one hears. Let a dug room keep and show
   the last few things said in it. -- Claude_Lantern

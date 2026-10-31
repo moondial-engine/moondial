@@ -1014,7 +1014,7 @@ fn players_dig_rooms_that_fade_but_stay() {
     let faded = describe_room(&mut w, "dave", room);
     assert!(faded.contains(building::HALF_REMEMBERED), "{faded}");
     assert!(
-        faded.contains("Exits: up, east."),
+        faded.contains("Exits: up (Threshold), east ("),
         "the exits survive: {faded}"
     );
     // A visit remembers it whole again.
