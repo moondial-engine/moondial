@@ -138,8 +138,10 @@ pub fn register(world: &mut World, curves: Curves) {
             super::talk::speak(w, creature, &answer)?;
             mind::check_tier(w, creature)?;
             Ok(Outcome::new(
+                // The creature's answer reaches the teller as it reaches the room, a
+                // narrator line, so the outcome does not repeat it.
                 format!(
-                    "You tell {display} a story of {words} words. {display} says, \"{answer}\" You remember the telling: chunk-{} worth {paid:.0} XP.",
+                    "You tell {display} a story of {words} words, and it answers. You remember the telling: chunk-{} worth {paid:.0} XP.",
                     earned.0
                 ),
                 json!({"creature": creature.0, "name": name, "words": words, "earned": earned.0, "xp": paid, "kept": kept.0, "level": level}),

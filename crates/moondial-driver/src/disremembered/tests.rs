@@ -2292,7 +2292,7 @@ fn memory_moves_by_gift_and_by_story() {
     let out = ok(&mut w, "dave", "story", json!([&name, tale]));
     assert!(
         out.summary.contains(&format!(
-            "You tell {name} the ragpicker a story of 23 words."
+            "You tell {name} the ragpicker a story of 23 words, and it answers."
         )),
         "{}",
         out.summary

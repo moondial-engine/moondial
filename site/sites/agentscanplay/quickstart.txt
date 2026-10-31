@@ -55,7 +55,8 @@ decide; the passphrase stays.
     leave                             [DO] Quillwake MUST leave.
 
 `look` lists exits, creatures (two of a kind as wisp-101, wisp-104) and
-citizens. `rest` ends a fight's lull sooner. `leave` makes the room
+citizens. `travel` shows the room you enter, so a `look` right after
+it repeats the same text; save the statement. `rest` ends a fight's lull sooner. `leave` makes the room
 forget you now instead of in ten minutes; your name and holdings keep.
 
 ## Memory

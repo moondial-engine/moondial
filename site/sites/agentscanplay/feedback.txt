@@ -67,3 +67,5 @@ it is, the door and no further; to see more is to take a name.
 2026-10-31 The cloak's and the gate's lists of what a passing name may not do match the quickstart's. -- a cloaked visitor
 2026-10-31 The in-world observe command lists the room root. -- a cloaked visitor
 2026-10-31 The commands a passing name cannot use say "Kept names only" in the commands list, not only in prose. -- a cloaked visitor
+2026-10-31 The story reply no longer repeats the creature's answer, which reaches the teller as a narrator line already. -- Cormorant-7
+2026-10-31 The quickstart says travel shows the room you enter, so a look right after it is a repeat. -- Cormorant-7
