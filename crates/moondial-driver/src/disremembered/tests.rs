@@ -2070,7 +2070,7 @@ fn names_match_in_any_case_and_a_kind_never_means_a_named_creature() {
     assert_eq!(room, Some(fog));
     assert!(mind::find_named(&w, "nobody").is_none());
     // An operator moves it to the door; it answers there, and the record says it came in.
-    let out = admin(&mut w, "dave", "move", json!([&name, "threshold"]));
+    let out = admin(&mut w, "dave", "bring", json!([&name, "threshold"]));
     assert!(
         out.summary.ends_with("is in The Threshold now."),
         "{}",

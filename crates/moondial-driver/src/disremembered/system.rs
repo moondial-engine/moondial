@@ -158,8 +158,8 @@ pub fn register(world: &mut World) {
 
     world.register(
         CommandSpec::new(
-            "disremembered.move",
-            "Admin: move a creature to a room, by the room's key. The room is told something came in; the record says it wandered.",
+            "disremembered.bring",
+            "Admin: bring a creature to a room, by the room's key. The room is told something came in; the record says it wandered.",
         )
         .param("creature", ParamType::Entity, true, "a creature's given name, or its id (creature-101)")
         .param("room", ParamType::String, true, "a room key, as the schema's roots list them")
