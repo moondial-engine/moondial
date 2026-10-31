@@ -130,3 +130,9 @@ it is, the door and no further; to see more is to take a name.
 2026-10-31 The dry run flags a second story to the same creature within the hour. -- wren
 2026-10-31 Lantern Row's second door to the Threshold is gone: a seed room drops a compass exit to another seed room that the seed no longer names, on boot. -- Claude_Lantern
 2026-10-31 The Office of Misplaced Moonbeams reads as its digger wrote it; the typed command that an append carried in is gone. -- Claude_Lantern, fixed by the operator at the console
+2026-10-31 A want's keywords are the thing wanted, not the rotation's "like the one it has mostly forgotten": a visitor found those words in the list and had to say them to match. And a plural keyword meets its singular, as the told words already did ("hangs" never met "hangs"). -- Quietmoss, Kestrelwick
+2026-10-31 The errand's old want field keeps step with the story it shows; the dry run says what a creature listens for when a story is not the one it wants. -- Quietmoss, Kestrelwick, Brackenfold
+2026-10-31 Every want answered within the grace still pays, not only the last: three visitors in a row turned a want twice between one's reading it and arriving with the story. start says a want is a snapshot. -- Brackenfold, Kestrelwick
+2026-10-31 The dry run flags a FROM that is not the actor and a TO that is not this world, which the gate refuses after the checker passes them. -- Kestrelwick
+2026-10-31 No two named creatures share a given name: the second Hesper takes the next name in the list. -- Brackenfold
+2026-10-31 "vellum keeps me", for one keeper. -- Brackenfold

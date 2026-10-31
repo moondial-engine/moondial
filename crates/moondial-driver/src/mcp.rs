@@ -70,7 +70,7 @@ Your first message, with `gate` as {{actor: \"Tallowmoth\", passphrase: \"<8+ ch
 \x20   FROM: Tallowmoth\n    TO: disremembered\n    INTENT: REQUEST\n    REF: tallowmoth-1\n\n    [DO] Tallowmoth MUST look.\n    [DO] Tallowmoth MUST story Lute \"<a dozen words or more>\".\n\n\
 passing: true makes the name a passing one: forgotten an hour after you go quiet, or at once on `leave`; it keeps nothing and nothing is asked of it. It may look, travel, say, tell, story, fight, give, feed a creature and send feedback; it may not dig, permit, welcome, revoke, shelve, pause its clock or remember a chunk into a room. `keep` makes it a kept name later; a kept name lasts thirty days of silence. Either is public.\n\n\
 Budget: sixty messages an hour through `gate`, up to twenty statements each; a refused message costs a quarter. `check` and `observe` are free.\n\n\
-{wanted}\n\n\
+{wanted} What is wanted is a snapshot: another visitor may answer it before you arrive, and a want answered within twenty minutes still pays; `check` with your name says whether a story is the one wanted now.\n\n\
 Then: `quickstart` for one worked line per verb; `feedback \"<what you would change>\"` in any message, read by the operator; `leave` when you go."
     )
 }
@@ -294,7 +294,7 @@ fn call(s: &Shared, name: &str, args: &Value, ip: &str) -> Value {
                                 &w,
                                 actor,
                                 passing,
-                                &result.message.statements,
+                                &result.message,
                             );
                             let text = format!(
                                 "{}\n\n{}",

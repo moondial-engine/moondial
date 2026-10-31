@@ -49,6 +49,30 @@ fn name_for(creature: EntityId) -> &'static str {
     NAMES[(h % NAMES.len() as u64) as usize]
 }
 
+/// The creature's name by hash, or the next in the list that no other named creature
+/// has: two Hespers stood in the world at once, and `story Hesper` would have had to
+/// choose. A creature keeps its own name if it forgets and is remembered again, so
+/// its own name is never "taken".
+fn free_name_for(world: &World, creature: EntityId) -> String {
+    let taken: Vec<String> = world
+        .store
+        .entities()
+        .filter(|e| e.kind == "creature" && e.id != creature)
+        .filter_map(|e| name(world, e.id))
+        .collect();
+    let start = NAMES
+        .iter()
+        .position(|n| *n == name_for(creature))
+        .unwrap_or(0);
+    for i in 0..NAMES.len() {
+        let n = NAMES[(start + i) % NAMES.len()];
+        if !taken.iter().any(|t| t.eq_ignore_ascii_case(n)) {
+            return n.to_string();
+        }
+    }
+    format!("{}-{}", name_for(creature), creature.0)
+}
+
 /// The window a creature keeps its memories in, if it has one.
 pub fn window_of(world: &World, creature: EntityId) -> Option<EntityId> {
     world
@@ -389,7 +413,17 @@ pub fn check_tier(world: &mut World, creature: EntityId) -> Result<(), CommandEr
         .and_then(Value::as_str)
         .map(str::to_string);
     let given: Option<String> = if want >= 1 {
-        Some(heir.unwrap_or_else(|| name_for(creature).to_string()))
+        Some(
+            heir.filter(|h| {
+                !world
+                    .store
+                    .entities()
+                    .filter(|e| e.kind == "creature" && e.id != creature)
+                    .filter_map(|e| name(world, e.id))
+                    .any(|t| t.eq_ignore_ascii_case(h))
+            })
+            .unwrap_or_else(|| free_name_for(world, creature)),
+        )
     } else {
         None
     };

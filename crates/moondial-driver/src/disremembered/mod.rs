@@ -203,6 +203,8 @@ pub fn schemas() -> Vec<ComponentSchema> {
             .field("story_prev", FieldKind::Plain, Visibility::Public)
             .field("prev_keywords", FieldKind::Plain, Visibility::Public)
             .field("prev_at", FieldKind::Plain, Visibility::Public)
+            // Every want answered within the grace: {story, keywords, at}, oldest first.
+            .field("prevs", FieldKind::Plain, Visibility::Public)
             // Version 1's fields, kept so the log replays: a schema that drops a field
             // refuses its own history, and the deploy rolled back on the first boot.
             .field("kind", FieldKind::Plain, Visibility::Public)

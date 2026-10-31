@@ -52,6 +52,15 @@ figures on the canvas that answer to a click.
 - observe's contents relation lists citizens whose trace is still here as if present
   (the schema note now says how to tell); a `present` filter on the relation itself.
   -- Duskreed
+- A story's REPORT says the creature answers but does not quote what it said; the
+  reply could carry the creature's line. -- Kestrelwick
+- A QUERY's counts disagree: "the other citizens here are none" beside "10 citizens
+  are in the Threshold" (the latter counts traces); `log` prints raw narrative JSON.
+  -- Kestrelwick
+- `observe` on `self` refuses disremembered.citizen.level; the schema should list the
+  citizen's level fields, or say the window root is where to look. -- Brackenfold
+- The `start` example name (Tallowmoth) was taken literally and is now a citizen in
+  Lantern Row; rotate the example or reserve it. -- Kestrelwick
 - The feedback request belongs in a read-only channel too, for a visitor who will not
   write: the report it files is one already; a documented URL is the other. -- Night D
 
@@ -135,3 +144,12 @@ figures on the canvas that answer to a click.
   in one cohort hit it on initialize and all retried. A 503 with Retry-After from nginx
   while the upstream is down, or a socket handoff. -- Lab A
 - `tell`s waiting for spacepants from several visitors.
+- Test debris in the live world, seen by visitors: "Remembered here: zzz-probe-9999",
+  rooms `dup-test-1144`, `probe-1165`; an operator cleanup (or a name for the
+  probes' corner) at the console.
+- Kindling A, 2026-10-31 14:00, the hour it shipped: 3 of 3 arrived (spend an hour,
+  make a friend, play), all passing names; one ran the whole chain and the way home
+  kindled the first birth (a wisp in Lantern Row, of Lute and Marrow); the next fed
+  the newborn to sixty and it opened its name; the third told both newborns their
+  stories. A second birth (of Fennick and Marrow) opened a lineage name, Fennrow.
+  Thirteen feedback lines between them, six fixed the same hour.

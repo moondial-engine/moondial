@@ -8,7 +8,6 @@
 
 use super::{errand, mind, plain_str, presence, rooms, ROOM};
 use crate::world::World;
-use moondial_clear::Statement;
 use moondial_store::EntityId;
 use serde_json::{json, Value};
 
@@ -43,8 +42,25 @@ pub fn name_status(world: &World, actor: &str) -> (String, String) {
     }
 }
 
-/// One line per DO: what it would do, or why it would be refused.
-pub fn run(world: &World, actor: &str, passing: bool, statements: &[Statement]) -> Value {
+/// One line per DO: what it would do, or why it would be refused; and the header
+/// faults the gate would refuse the whole message for (FROM not the actor, TO not this
+/// world), which the checker alone does not see.
+pub fn run(world: &World, actor: &str, passing: bool, msg: &moondial_clear::Message) -> Value {
+    let statements = &msg.statements;
+    let mut header: Vec<String> = Vec::new();
+    let from = msg.field("FROM").unwrap_or("");
+    if from != actor {
+        header.push(format!(
+            "FROM is {from:?} and the actor is {actor:?}: the gate acts only on messages whose FROM is the authenticated sender"
+        ));
+    }
+    let to = msg.field("TO").unwrap_or("");
+    if to != world.id.0 {
+        header.push(format!(
+            "TO is {to:?} and this world is {:?}: the gate refuses a message addressed elsewhere",
+            world.id.0
+        ));
+    }
     let (status, status_line) = name_status(world, actor);
     let existing = super::canonical_name(world, actor).and_then(|c| super::find_citizen(world, &c));
     // A passing name that exists stays passing; a kept one ignores the flag.
@@ -125,20 +141,24 @@ pub fn run(world: &World, actor: &str, passing: bool, statements: &[Statement]) 
                             }) => (false, format!("refused: one story an hour per creature, and {} had one from you within the hour", mind::display(world, c))),
                             Some(_) => {
                                 let wanted = errand::wants_story(world, c, &arg(1));
+                                // Not the one wanted: say what it listens for, so the
+                                // next draft can be.
+                                let listens = errand::of(world, c)
+                                    .filter(|e| e.story.is_some())
+                                    .map(|e| e.keywords.join(", "));
                                 (
                                     true,
                                     format!(
                                         "tells {} a story{}",
                                         mind::display(world, c),
                                         if wanted {
-                                            ": the one it wants, worth double"
-                                        } else if errand::of(world, c)
-                                            .and_then(|e| e.story)
-                                            .is_some()
-                                        {
-                                            ", not the one it wants"
+                                            ": the one it wants, worth double".to_string()
+                                        } else if let Some(k) = listens {
+                                            format!(
+                                                ", not the one it wants (it listens for {k})"
+                                            )
                                         } else {
-                                            ""
+                                            String::new()
                                         }
                                     ),
                                 )
@@ -276,6 +296,8 @@ pub fn run(world: &World, actor: &str, passing: bool, statements: &[Statement]) 
     let dos = lines.len();
     let cost = if dos == 0 {
         "no statements; nothing to send"
+    } else if !header.is_empty() {
+        "a quarter unit: the gate would refuse the whole message on its header"
     } else {
         "one unit of sixty an hour if the checker passes it, a quarter if it refuses"
     };
@@ -285,6 +307,7 @@ pub fn run(world: &World, actor: &str, passing: bool, statements: &[Statement]) 
         "name_note": status_line,
         "passing": passing,
         "from": room.and_then(|r| plain_str(world, r, ROOM, "name")),
+        "header": header,
         "statements": lines,
         "refusals": refused,
         "cost": cost,
@@ -299,6 +322,9 @@ pub fn text(p: &Value) -> String {
         p["actor"].as_str().unwrap_or("?"),
         p["name_note"].as_str().unwrap_or("")
     );
+    for h in p["header"].as_array().into_iter().flatten() {
+        out.push_str(&format!("  NO  header: {}\n", h.as_str().unwrap_or("")));
+    }
     for l in p["statements"].as_array().into_iter().flatten() {
         out.push_str(&format!(
             "  {}. {} {}\n",

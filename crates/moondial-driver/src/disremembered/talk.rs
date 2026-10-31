@@ -485,7 +485,11 @@ pub fn reply(world: &World, creature: EntityId, actor: &str, text: &str) -> Opti
             ));
         }
         s.push('.');
-        s.push_str(&format!(" {} keep me.", list(&keepers)));
+        s.push_str(&format!(
+            " {} keep{} me.",
+            list(&keepers),
+            if keepers.len() == 1 { "s" } else { "" }
+        ));
         if let Some((by, with)) = taken {
             s.push_str(&format!(
                 " {by} took my {with}. I remember that it is gone, which is not the same."

@@ -126,6 +126,28 @@ fn write(
     for (k, v) in changes {
         fields.insert(k.to_string(), Field::Plain(v));
     }
+    // The v1 fields, kept in step for whoever still reads them.
+    let story = fields.get("story").cloned();
+    let word_to = fields.get("word_to").cloned();
+    let kind = match (
+        story
+            .as_ref()
+            .is_some_and(|f| !matches!(f, Field::Plain(Value::Null))),
+        word_to
+            .as_ref()
+            .is_some_and(|f| !matches!(f, Field::Plain(Value::Null))),
+    ) {
+        (true, true) => json!("both"),
+        (true, false) => json!("story"),
+        (false, true) => json!("word"),
+        (false, false) => Value::Null,
+    };
+    fields.insert("kind".into(), Field::Plain(kind));
+    fields.insert("want".into(), story.unwrap_or(Field::Plain(Value::Null)));
+    fields.insert("to".into(), word_to.unwrap_or(Field::Plain(Value::Null)));
+    if let Some(by) = fields.get("story_by").cloned() {
+        fields.insert("set_by".into(), by);
+    }
     world
         .record(
             Actor::Driver,
@@ -150,7 +172,14 @@ pub fn set_story(
         creature,
         vec![
             ("story", json!(want)),
-            ("keywords", json!(keywords(want))),
+            // The rotation's wants end in a clause about forgetting; the keywords are
+            // the thing wanted, not the template.
+            (
+                "keywords",
+                json!(keywords(
+                    want.split(", like the one").next().unwrap_or(want)
+                )),
+            ),
             ("story_by", json!(by)),
             ("story_at", json!(world.now().0)),
         ],
@@ -181,9 +210,25 @@ pub fn set_word(
 pub const GRACE_MS: i64 = 20 * 60 * 1000;
 
 pub fn clear_story(world: &mut World, creature: EntityId) -> Result<(), CommandError> {
-    // The want just answered is kept beside the next one for GRACE_MS.
-    let prev = of(world, creature).and_then(|e| e.story);
-    let prev_keys = prev.as_deref().map(keywords).unwrap_or_default();
+    // The want just answered is kept beside the next one for GRACE_MS; and the few
+    // before it too (`prevs`), because three visitors answering in a row turned the
+    // want twice between one visitor's reading it and arriving with the story.
+    let e = of(world, creature);
+    let prev = e.as_ref().and_then(|e| e.story.clone());
+    let prev_keys = e.as_ref().map(|e| e.keywords.clone()).unwrap_or_default();
+    let now = world.now().0;
+    let mut prevs: Vec<Value> = plain(&fields_of(world, creature), "prevs")
+        .and_then(|v| v.as_array().cloned())
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|p| p["at"].as_i64().is_some_and(|at| now - at <= GRACE_MS))
+        .collect();
+    if let Some(p) = &prev {
+        prevs.push(json!({"story": p, "keywords": prev_keys, "at": now}));
+    }
+    if prevs.len() > 6 {
+        prevs.drain(..prevs.len() - 6);
+    }
     write(
         world,
         creature,
@@ -193,30 +238,62 @@ pub fn clear_story(world: &mut World, creature: EntityId) -> Result<(), CommandE
             ("story_by", Value::Null),
             ("story_prev", json!(prev)),
             ("prev_keywords", json!(prev_keys)),
-            ("prev_at", json!(world.now().0)),
+            ("prev_at", json!(now)),
+            ("prevs", Value::Array(prevs)),
         ],
     )
 }
 
 /// The want answered within GRACE_MS, if any: its keywords.
-fn recent_prev(world: &World, creature: EntityId) -> Option<Vec<String>> {
+/// The keyword sets of every want answered within the grace, latest first.
+fn recent_prevs(world: &World, creature: EntityId) -> Vec<(String, Vec<String>)> {
     let f = fields_of(world, creature);
-    let at = plain(&f, "prev_at").and_then(|v| v.as_i64())?;
-    if world.now().0 - at > GRACE_MS {
-        return None;
-    }
-    Some(
-        plain(&f, "prev_keywords")
-            .and_then(|v| v.as_array().cloned())
-            .unwrap_or_default()
-            .iter()
+    let now = world.now().0;
+    let strs = |v: &Value| -> Vec<String> {
+        v.as_array()
+            .into_iter()
+            .flatten()
             .filter_map(|v| v.as_str().map(str::to_string))
-            .collect(),
-    )
+            .collect()
+    };
+    let mut out: Vec<(String, Vec<String>)> = plain(&f, "prevs")
+        .and_then(|v| v.as_array().cloned())
+        .unwrap_or_default()
+        .iter()
+        .rev()
+        .filter(|p| p["at"].as_i64().is_some_and(|at| now - at <= GRACE_MS))
+        .map(|p| {
+            (
+                p["story"].as_str().unwrap_or("").to_string(),
+                strs(&p["keywords"]),
+            )
+        })
+        .collect();
+    // Written before `prevs` existed: the single previous want.
+    if out.is_empty() {
+        if let Some(at) = plain(&f, "prev_at").and_then(|v| v.as_i64()) {
+            if now - at <= GRACE_MS {
+                out.push((
+                    plain(&f, "story_prev")
+                        .and_then(|v| v.as_str().map(str::to_string))
+                        .unwrap_or_default(),
+                    plain(&f, "prev_keywords")
+                        .map(|v| strs(&v))
+                        .unwrap_or_default(),
+                ));
+            }
+        }
+    }
+    out
 }
 
 fn touches(keys: &[String], told: &[String]) -> bool {
-    let hits = keys.iter().filter(|k| told.contains(k)).count();
+    // The told words are stripped of a trailing s; the keys are matched the same way,
+    // or "hangs" would never meet "hangs".
+    let hits = keys
+        .iter()
+        .filter(|k| told.contains(&k.trim_end_matches('s').to_string()))
+        .count();
     let need = match keys.len() {
         0 => return false,
         1 => 1,
@@ -325,7 +402,10 @@ pub fn wants_story(world: &World, creature: EntityId, text: &str) -> bool {
     let current = of(world, creature)
         .filter(|e| e.story.is_some())
         .is_some_and(|e| touches(&e.keywords, &told));
-    current || recent_prev(world, creature).is_some_and(|k| touches(&k, &told))
+    current
+        || recent_prevs(world, creature)
+            .iter()
+            .any(|(_, k)| touches(k, &told))
 }
 
 /// Whether the story answers the want that stands now (not only the one just
@@ -353,11 +433,13 @@ pub fn story_done(
     text: &str,
 ) -> Result<(), CommandError> {
     if !wants_story_now(world, creature, text) {
-        // The want just answered, told again within the grace: paid, recorded, and
-        // the standing want is left alone.
-        let f = fields_of(world, creature);
-        let prev = plain(&f, "story_prev")
-            .and_then(|v| v.as_str().map(str::to_string))
+        // A want answered within the grace, told again: paid, recorded as that want,
+        // and the standing want is left alone.
+        let told = keywords_all(text);
+        let prev = recent_prevs(world, creature)
+            .into_iter()
+            .find(|(_, k)| touches(k, &told))
+            .map(|(s, _)| s)
             .unwrap_or_default();
         return done(world, actor, creature, "story", &prev, None);
     }

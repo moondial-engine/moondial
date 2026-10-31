@@ -1929,7 +1929,7 @@ fn a_named_creature_answers_and_words_wait_for_the_absent() {
     );
     assert!(
         out.summary
-            .contains("I hold 80: the memory of hollow. dave keep me."),
+            .contains("I hold 80: the memory of hollow. dave keeps me."),
         "{}",
         out.summary
     );
@@ -2145,7 +2145,7 @@ fn twins_are_written_with_ids_and_either_can_be_named() {
         "tell",
         json!([&name, "what do you remember?"]),
     );
-    assert!(out.summary.contains("dave keep me."), "{}", out.summary);
+    assert!(out.summary.contains("dave keeps me."), "{}", out.summary);
     assert!(!out.summary.contains("dave, dave"), "{}", out.summary);
 }
 
@@ -2966,8 +2966,47 @@ fn the_rotation_renews_a_stale_want_and_keeps_one_word_in_the_air() {
     let next = errand::of(&w, rag).unwrap();
     assert_ne!(next.story, Some(first), "the want turned");
     assert_eq!(next.story_by, "the rotation");
-    // The operator's want is never rotated.
+    // The want's keywords are the thing wanted, not the clause about forgetting: a
+    // visitor found "mostly" and "forgotten" among them and had to say both to match.
+    assert!(
+        !next
+            .keywords
+            .iter()
+            .any(|k| k == "mostly" || k == "forgotten"),
+        "{:?}",
+        next.keywords
+    );
+    // The operator's want is never rotated; and a plural keyword meets its singular
+    // ("hangs" in the want, "hang" or "hangs" in the story), as the told words do.
     let rag_name = mind::name(&w, rag).unwrap();
+    admin(
+        &mut w,
+        "tyler",
+        "errand",
+        json!([&rag_name, "lanterns and hangs"]),
+    );
+    assert!(errand::wants_story(
+        &w,
+        rag,
+        "A lantern hangs in the midden where nobody lit it, and nobody has taken it down."
+    ));
+    assert!(!errand::wants_story(
+        &w,
+        rag,
+        "A story about something else entirely, with no word of either thing in it."
+    ));
+    // The v1 fields keep step: want mirrors story, kind says which parts stand.
+    let v1 = w
+        .store
+        .entity(rag)
+        .and_then(|e| e.components.get(errand::ERRAND))
+        .map(|c| c.fields.clone())
+        .unwrap();
+    assert_eq!(
+        v1.get("want"),
+        Some(&Field::Plain(json!("lanterns and hangs")))
+    );
+    assert_eq!(v1.get("kind"), Some(&Field::Plain(json!("story"))));
     admin(
         &mut w,
         "tyler",
@@ -3049,8 +3088,31 @@ fn a_dry_run_says_what_a_message_would_do_and_whether_the_name_is_free() {
     );
     let r = checker.check(&msg);
     assert_eq!(r.verdict, "PASS", "{:?}", r.findings);
-    let p = preview::run(&w, "Pennywren", true, &r.message.statements);
+    let p = preview::run(&w, "Pennywren", true, &r.message);
     assert_eq!(p["name"], "free");
+    // The test world is "test", and the message is addressed to "disremembered": the
+    // one header fault the gate would refuse it for.
+    assert_eq!(p["header"].as_array().unwrap().len(), 1, "{}", p["header"]);
+    // A header the gate would refuse is a dry-run fault too: a visitor sent FROM as
+    // someone else, passed the checker, and paid a quarter to learn it.
+    let r2 = checker.check(
+        "FROM: Someone
+TO: elsewhere
+INTENT: REQUEST
+REF: s-1
+
+[DO] Pennywren MUST look.
+",
+    );
+    let p2 = preview::run(&w, "Pennywren", true, &r2.message);
+    assert_eq!(
+        p2["header"].as_array().unwrap().len(),
+        2,
+        "{}",
+        p2["header"]
+    );
+    assert!(preview::text(&p2).contains("NO  header: FROM is \"Someone\""));
+    assert!(p2["cost"].as_str().unwrap().starts_with("a quarter unit"));
     let what: Vec<String> = p["statements"]
         .as_array()
         .unwrap()
@@ -3077,7 +3139,7 @@ fn a_dry_run_says_what_a_message_would_do_and_whether_the_name_is_free() {
     assert_eq!(what[7], "true leaves; the name is forgotten at once");
     assert_eq!(p["refusals"], 2);
     // A kept name that exists: reported as such, and the flag is ignored.
-    let p = preview::run(&w, "TYLER", true, &r.message.statements);
+    let p = preview::run(&w, "TYLER", true, &r.message);
     assert_eq!(p["name"], "kept");
     assert_eq!(p["passing"], false);
     assert_eq!(p["from"], "The Midden");
