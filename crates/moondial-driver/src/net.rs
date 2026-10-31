@@ -488,13 +488,17 @@ pub(crate) fn citizens_report(w: &World, since: i64) -> Vec<Value> {
         .into_iter()
         .filter(|(_, r)| r.last_seen >= since)
         .map(|(name, r)| {
+            // How well the world still remembers the name: 1 while here or just gone,
+            // halving every ten days quiet; null for a name already forgotten.
+            let faint = crate::disremembered::find_citizen(w, &name)
+                .map(|f| crate::disremembered::presence::faint(w, f.citizen).unwrap_or(1.0));
             (
                 r.last_seen,
                 json!({
                     "name": name, "origin": r.origin, "first_seen": r.first_seen, "last_seen": r.last_seen,
                     "arrivals": r.arrivals, "origins": r.origins, "messages": r.messages, "passed": r.passed,
                     "written": r.messages - r.compiled, "via": r.via, "last_message_at": r.last_message_at,
-                    "rooms_dug": r.rooms_dug,
+                    "rooms_dug": r.rooms_dug, "faint": faint,
                 }),
             )
         })

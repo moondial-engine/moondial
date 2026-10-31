@@ -5,6 +5,14 @@
 //! `look` lists them under "Remembered here" while the room's `trace` of them lasts, and
 //! then not at all. The entity stays where it stood, so their next action is an arrival
 //! back into the same room, as far as anything that hunts there is concerned.
+//!
+//! Names fade too. From the moment a citizen goes quiet their name is remembered at 1,
+//! halving every [`name_half_life`] (ten days unless `MOONDIAL_NAME_HALF_LIFE_DAYS` says
+//! otherwise); below [`NAME_FORGOTTEN`], thirty days without a word, the world forgets
+//! them: the citizen and everything under them (window, palace, chunks, words waiting
+//! for them) are removed, the record says so, and the name is free for whoever takes it
+//! next. What they dug stays, with their name on it as the digger. A citizen who is
+//! here cannot fade; one who returns after a long absence is told how close it was.
 
 use super::{plain_str, CITIZEN};
 use crate::world::{World, ABSENCE};
@@ -22,6 +30,97 @@ pub const DEPARTED: &str = "disremembered.departed";
 pub const FORGOTTEN: f64 = super::building::FADED;
 
 static TRACE_HALF_LIFE: OnceLock<Duration> = OnceLock::new();
+static NAME_HALF_LIFE: OnceLock<Duration> = OnceLock::new();
+
+/// The public record of a name the world forgot: `{actor, name, room, quiet_ms}`.
+pub const FORGOTTEN_NAME: &str = "disremembered.forgotten";
+/// Below this, a gone citizen's name is forgotten: three half-lives.
+pub const NAME_FORGOTTEN: f64 = 0.125;
+/// Below this, a returning citizen is told the world had nearly forgotten them.
+const NEARLY: f64 = 0.5;
+
+fn name_half_life() -> Duration {
+    *NAME_HALF_LIFE.get_or_init(|| {
+        let days: f64 = std::env::var("MOONDIAL_NAME_HALF_LIFE_DAYS")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .filter(|d: &f64| *d > 0.0)
+            .unwrap_or(10.0);
+        Duration((days * 86_400_000.0) as i64)
+    })
+}
+
+/// How well the world still remembers a gone citizen's name, 0 to 1; `None` while they
+/// are here. Computed from when they went quiet, on the name's half-life.
+pub fn faint(world: &World, citizen: EntityId) -> Option<f64> {
+    if is_here(world, citizen) {
+        return None;
+    }
+    let gone_at = match world
+        .store
+        .entity(citizen)
+        .and_then(|e| e.components.get(PRESENCE))
+        .and_then(|c| c.fields.get("gone_at"))
+    {
+        Some(Field::Plain(v)) => v.as_i64()?,
+        _ => return None,
+    };
+    let elapsed = world
+        .now()
+        .since(moondial_time::Timestamp(gone_at))
+        .0
+        .max(0) as f64;
+    Some(0.5f64.powf(elapsed / name_half_life().0 as f64))
+}
+
+/// The world forgets a citizen: the entity and all under it go, the record says so,
+/// and the name is free.
+pub fn forget(world: &mut World, citizen: EntityId) -> Result<(), String> {
+    let Some(e) = world.store.entity(citizen) else {
+        return Ok(());
+    };
+    let actor = e.owner.clone().unwrap_or_default();
+    let room = e.parent.map(|r| r.0);
+    let name = plain_str(world, citizen, CITIZEN, "name")
+        .unwrap_or(actor.as_str())
+        .to_string();
+    let quiet_ms = match e
+        .components
+        .get(PRESENCE)
+        .and_then(|c| c.fields.get("gone_at"))
+    {
+        Some(Field::Plain(v)) => v
+            .as_i64()
+            .map(|t| world.now().since(moondial_time::Timestamp(t)).0),
+        _ => None,
+    };
+    world
+        .record(Actor::Driver, StoreEvent::EntityRemoved { id: citizen })
+        .map_err(|e| e.to_string())?;
+    world.depart(&actor);
+    let _ = world.note(
+        Actor::Driver,
+        FORGOTTEN_NAME,
+        json!({"actor": actor, "name": name, "room": room, "quiet_ms": quiet_ms}),
+    );
+    world.notice(format!("The world forgot **{name}**; the name is free."));
+    Ok(())
+}
+
+/// Every gone citizen whose name has faded below [`NAME_FORGOTTEN`] is forgotten.
+pub fn forget_sweep(world: &mut World) -> Result<(), String> {
+    let faded: Vec<EntityId> = world
+        .store
+        .entities()
+        .filter(|e| e.kind == "citizen")
+        .filter(|e| faint(world, e.id).is_some_and(|f| f < NAME_FORGOTTEN))
+        .map(|e| e.id)
+        .collect();
+    for id in faded {
+        forget(world, id)?;
+    }
+    Ok(())
+}
 
 fn trace_half_life() -> Duration {
     *TRACE_HALF_LIFE.get_or_init(|| Duration::seconds(3600))
@@ -115,7 +214,15 @@ pub fn returned(world: &mut World, actor: &str) -> Result<(), String> {
     if is_here(world, f.citizen) {
         return Ok(());
     }
+    let nearly = faint(world, f.citizen).is_some_and(|v| v < NEARLY);
     set(world, actor, f.citizen, true)?;
+    if nearly {
+        super::combat::narrate(
+            world,
+            actor,
+            "The world had nearly forgotten you. A name unspoken for thirty days is forgotten; yours was close.",
+        );
+    }
     if let Some(room) = world.store.entity(f.citizen).and_then(|e| e.parent) {
         super::combat::on_arrival(world, actor, f.citizen, room)?;
         super::building::visited(world, room)?;
@@ -149,6 +256,7 @@ pub fn sweep(world: &mut World) -> Result<(), String> {
 pub fn register(world: &mut World, curves: super::Curves) {
     let _ = TRACE_HALF_LIFE.set(curves.active_half_life);
     world.on_tick(Box::new(sweep));
+    world.on_tick(Box::new(forget_sweep));
     world.on_arrival(Box::new(|w: &mut World, actor: &str| returned(w, actor)));
 }
 

@@ -20,6 +20,7 @@ pub(crate) fn line_for(e: &moondial_log::Event) -> String {
         "disremembered.tell" => format!("{} left word for {}", s("from"), s("to")),
         "citizen.arrived" => format!("{} arrived via {}", s("actor"), s("origin")),
         "disremembered.departed" => format!("{} went quiet", s("actor")),
+        "disremembered.forgotten" => format!("the world forgot {}; the name is free", s("name")),
         "disremembered.remembered" => match p["creature"].as_u64() {
             Some(_) => format!(
                 "{} gave the memory of {} to the {}",

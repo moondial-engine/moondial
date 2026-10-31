@@ -1503,6 +1503,90 @@ fn a_quiet_citizen_is_disremembered_by_the_room_and_returns_as_an_arrival() {
 }
 
 #[test]
+fn a_name_unspoken_for_thirty_days_is_forgotten_and_free() {
+    let t0 = Timestamp(1_000_000);
+    let mut w = open(tempfile::tempdir().unwrap().path(), t0);
+    login(&mut w, "dave", "test", PASS).unwrap();
+    login(&mut w, "tyler", "test", PASS).unwrap();
+    let c = admin(&mut w, "dave", "earn", json!(["wisp", 30, 0.5]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    ok(&mut w, "dave", "dig", json!(["cellar", c, "Dave's Cellar"]));
+    let dave = find_citizen(&w, "dave").unwrap().citizen;
+    let day = 86_400;
+    // Dave goes quiet; tyler keeps the world ticking.
+    w.fixed_now = Some(t0.plus(Duration::seconds(11 * 60)));
+    ok(&mut w, "tyler", "look", json!([]));
+    w.tick();
+    assert!(!presence::is_here(&w, dave));
+    let f = presence::faint(&w, dave).unwrap();
+    assert!(f > 0.99, "{f}");
+    // Fifteen days: faint, not forgotten; a return is told how close it was.
+    w.fixed_now = Some(t0.plus(Duration::seconds(15 * day)));
+    ok(&mut w, "tyler", "look", json!([]));
+    w.tick();
+    let f = presence::faint(&w, dave).unwrap();
+    assert!((0.3..0.4).contains(&f), "{f}");
+    assert!(find_citizen(&w, "dave").is_some());
+    ok(&mut w, "dave", "look", json!([]));
+    let heard: Vec<_> = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == combat::NARRATIVE && e.payload["to"] == "dave")
+        .filter_map(|e| e.payload["text"].as_str().map(str::to_string))
+        .collect();
+    assert!(
+        heard.iter().any(|t| t.contains("nearly forgotten")),
+        "{heard:?}"
+    );
+    assert!(
+        presence::faint(&w, dave).is_none(),
+        "here again: not fading"
+    );
+    // Then thirty-one days of silence: forgotten, publicly, and the name is free.
+    w.fixed_now = Some(t0.plus(Duration::seconds(15 * day + 11 * 60)));
+    ok(&mut w, "tyler", "look", json!([]));
+    w.tick();
+    w.fixed_now = Some(t0.plus(Duration::seconds(46 * day + 11 * 60)));
+    ok(&mut w, "tyler", "look", json!([]));
+    w.tick();
+    assert!(find_citizen(&w, "dave").is_none(), "dave is forgotten");
+    assert!(w.store.entity(dave).is_none());
+    let forgotten: Vec<_> = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == presence::FORGOTTEN_NAME)
+        .collect();
+    assert_eq!(forgotten.len(), 1);
+    assert_eq!(forgotten[0].payload["name"], "dave");
+    assert!(forgotten[0].payload["quiet_ms"].as_i64().unwrap() >= 31 * day as i64 * 1000);
+    // The cellar stays, dug by dave.
+    let cellar = rooms::room_by_key(&w, "cellar").or_else(|| {
+        w.store
+            .entities()
+            .find(|e| e.kind == "room" && e.owner.as_deref() == Some("dave"))
+            .map(|e| e.id)
+    });
+    assert!(cellar.is_some(), "what dave dug stays");
+    // Tyler is still here, and a new dave arrives fresh.
+    assert!(find_citizen(&w, "tyler").is_some());
+    let f = login(&mut w, "dave", "test", "another-pass-9").unwrap();
+    assert_ne!(f.citizen, dave);
+    let fresh = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == crate::world::ARRIVED && e.payload["actor"] == "dave")
+        .next_back()
+        .unwrap();
+    assert_eq!(fresh.payload["fresh"], true);
+}
+
+#[test]
 fn a_remembered_creature_earns_a_name_can_be_robbed_and_forgets_again() {
     let t0 = Timestamp(1_000_000);
     let mut w = open(tempfile::tempdir().unwrap().path(), t0);
