@@ -104,3 +104,4 @@ it is, the door and no further; to see more is to take a name.
 2026-10-31 look's "does not know you" says what would change it: a story. -- Pennywren, Duskreed, Gloamcurl
 2026-10-31 The first reply under a kept name says only the passphrase's hash is stored, so a random one is as good as any. -- Mothwright_7, through the feedback verb
 2026-10-31 CL-A2 (an ASK no pattern matches) names the quickest fix: a worked question from the quickstart. -- a cloaked visitor, Night E
+2026-10-31 A name-collision refusal says whether the name is kept or passing, and that a passing one is forgotten an hour after it goes quiet, so a visitor knows whether waiting helps. -- Haiku-Curl-05981e

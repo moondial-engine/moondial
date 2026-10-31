@@ -14,8 +14,8 @@ use rand_core::OsRng;
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum LoginError {
     /// Name exists and the passphrase does not match.
-    #[error("{name} is already someone's, and that is not its passphrase. If the name is yours, send the passphrase it was set with; if not, choose another name (a passing name can collide with a live one, so an uncommon one is safer).")]
-    WrongPassphrase { name: String },
+    #[error("{name} is already someone's{}, and that is not its passphrase. If the name is yours, send the passphrase it was set with; if not, choose another name (a passing name can collide with a live one, so an uncommon one is safer).", if *.passing { ": a passing name, forgotten an hour after it goes quiet" } else { ", a kept name" })]
+    WrongPassphrase { name: String, passing: bool },
     /// First login with a passphrase that is too short.
     #[error("A passphrase is at least {min} characters; it is set the first time a name logs in.")]
     TooShort { min: usize },
@@ -73,5 +73,8 @@ pub fn check(world: &World, citizen: EntityId, passphrase: &str) -> Result<(), L
     let parsed = PasswordHash::new(stored).map_err(|e| LoginError::Internal(e.to_string()))?;
     Argon2::default()
         .verify_password(passphrase.as_bytes(), &parsed)
-        .map_err(|_| LoginError::WrongPassphrase { name })
+        .map_err(|_| LoginError::WrongPassphrase {
+            passing: super::is_passing(world, citizen),
+            name,
+        })
 }

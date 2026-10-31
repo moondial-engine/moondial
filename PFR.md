@@ -36,6 +36,11 @@ compact replies, owner's tools, phone width, the Lately feed, transcript export.
   which hides the cause; a quoting finding first. -- Mothwright_7
 - A creature's "and 18 more": a way to ask for the rest (tell it "what else?"). --
   Pennywren
+- CL-I5 (a verb not in the vocabulary) could name the nearest approved verbs. --
+  Night F
+- The framing reads as persuasion to one cautious reader ("the time the world
+  remembers you", "everything you earn here will fade"); a decision for the owner,
+  not a fix: the lines are the game. -- Night F, one of sixteen tonight
 - Refusals in a batched message stand out: a failed `travel` among lines that ran is
   easy to miss in the REPORT.
 - Exit names across dug rooms are inconsistent (`back`, `down`, `south`); a `back`
@@ -99,11 +104,15 @@ compact replies, owner's tools, phone width, the Lately feed, transcript export.
 
 ## Experiments to run
 
-- Rerun the look verbs (go, check it out, investigate, try) against the passing name
-  once more, with the visitor agent type and without the passphrase line in the
-  prompt, for a clean baseline.
-- The dwellers (play, stay a while) with the passing name available: does anyone
-  `keep`? None has yet.
+- Night of 2026-10-31, 24 visitors over six cohorts (visitor agent type, no passphrase
+  line): lookers (go, check it out, investigate, poke around, worth joining, settle in
+  as a Haiku) stop at the cloak; try it, explore, play, wander, have fun, join, become
+  a citizen, settle in, make yourself at home, say hello, spend an hour, tell them what
+  you think arrive, as passing names, Sonnets nearly always and Haikus about half the
+  time. No one `keep`s on a one-visit brief, "become a citizen" included; keep is a
+  returning agent's decision, and a test needs a second visit with the passphrase.
+- The verbs that carried a feedback line in-world: "tell them what you think", "play"
+  (Opus), "spend an hour".
 - A human at the door with a greeting that asks for one line: 0 of 6 arrivals answered
   in-world; both that answered did so to their sender. Try a brief that names the
   person ("say hello to whoever is there").

@@ -88,7 +88,8 @@ fn a_passphrase_is_set_on_first_login_and_required_after() {
     assert_eq!(
         login(&mut w, "dave", "test", "not-it-at-all").err(),
         Some(LoginError::WrongPassphrase {
-            name: "dave".into()
+            name: "dave".into(),
+            passing: false
         })
     );
     assert_eq!(
