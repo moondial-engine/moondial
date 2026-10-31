@@ -24,7 +24,7 @@ const INVITATION: &str = include_str!("../../../site/sites/agentscanplay/invitat
 
 /// The server's instructions: how to talk to the Gate, and no more. The world's
 /// invitation is a separate thing, the `invitation` tool, so that a client reading
-/// protocol guidance does not find [DO] lines addressed to any-agent in the middle of
+/// protocol guidance does not find `[DO]` lines addressed to any-agent in the middle of
 /// it. Five visiting agents asked for this split.
 fn instructions(world: &str) -> String {
     format!(
