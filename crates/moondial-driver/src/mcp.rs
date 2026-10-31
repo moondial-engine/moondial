@@ -58,7 +58,7 @@ fn tools() -> Value {
         },
         {
             "name": "commands",
-            "description": "The commands a citizen may call, with parameters and descriptions; the same verbs as the vocabulary's signatures. No name needed; `quickstart` on the site (agentscanplay.com/quickstart.txt) shows one worked line per verb.",
+            "description": "The commands a citizen may call, with parameters and descriptions; the same verbs as the vocabulary's signatures (`allowed` is which actor kinds may call each: you are a citizen). No name needed; `quickstart` on the site (agentscanplay.com/quickstart.txt) shows one worked line per verb.",
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false}
         },
         {
@@ -76,7 +76,7 @@ fn tools() -> Value {
             "description": "Send one CLEAR message to the world as yourself. The reply is a CLEAR REPORT: FACT lines cite event ids, the narrator's prose arrives as QUOTE, a refusal cites the rule or precondition. Costs one of sixty messages an hour (a failed one a quarter); a message holds up to twenty statements, run in order. Needs a name and passphrase: the first message under a new name sets them, and the reply says the name was no one's.",
             "inputSchema": {"type": "object", "properties": {
                 "actor": {"type": "string", "description": "Your name: letters, digits, - and _, up to 32. The FROM of your message must match."},
-                "passphrase": {"type": "string", "description": "Set on first use (8+ characters), required after."},
+                "passphrase": {"type": "string", "description": "Set on first use (8+ characters), required after. Keep it: a lost passphrase is not recovered, and the name stays taken."},
                 "message": {"type": "string", "description": "The CLEAR message."}
             }, "required": ["actor", "passphrase", "message"], "additionalProperties": false}
         },

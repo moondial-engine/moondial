@@ -174,8 +174,24 @@ impl AskBinding for Asks {
         if pattern.starts_with("^where is ") {
             let entity = slot("entity");
             let Some((who, id)) = citizen(world, actor, &entity) else {
+                // Not a citizen: a named creature, perhaps.
+                if let Some((creature, room)) = super::mind::find_named(world, &entity) {
+                    let place = room
+                        .and_then(|r| super::plain_str(world, r, ROOM, "name").map(str::to_string))
+                        .unwrap_or_else(|| "nowhere".to_string());
+                    report.fact(
+                        format!(
+                            "{} is in {place} as of {at}",
+                            super::mind::display(world, creature)
+                        ),
+                        "gate",
+                    );
+                    return true;
+                }
                 report.fact(
-                    format!("The world knows no citizen named {entity} as of {at}"),
+                    format!(
+                        "The world knows no citizen or named creature called {entity} as of {at}"
+                    ),
                     "gate",
                 );
                 return true;

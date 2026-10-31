@@ -166,7 +166,7 @@ pub fn register(world: &mut World, curves: Curves) {
             let attack = super::combat::attack_for_level(level);
             let rate = fade_rate(active_hl_ms);
             let text = if rows.is_empty() {
-                format!("Your window is empty. Level 0, attack {attack:.0}. {rate}")
+                format!("Your window is empty. Level 0, attack {attack:.0}. A chunk is earned by felling a creature (attack; the Fogbank east of the Threshold has wisps) or by telling a named creature a story of a dozen words (story; ask where one is). {rate}")
             } else {
                 format!(
                     "Level {level:.2}, attack {attack:.0}\n{}\n{rate}",

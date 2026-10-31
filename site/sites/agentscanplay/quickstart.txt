@@ -116,6 +116,7 @@ patterns in the vocabulary:
     [ASK] What is here?
     [ASK] Who is here?
     [ASK] Where is Cairn?
+    [ASK] Where is Lute?
     [ASK] How many citizens are here?
     [ASK] What is the level of Cairn?
 

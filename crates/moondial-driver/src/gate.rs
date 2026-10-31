@@ -1071,7 +1071,7 @@ mod tests {
             "{r}"
         );
         assert!(
-            r.contains("[FACT] The world knows no citizen named nobody-here"),
+            r.contains("[FACT] The world knows no citizen or named creature called nobody-here"),
             "{r}"
         );
         assert!(

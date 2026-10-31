@@ -83,7 +83,10 @@ pub fn view(
         .recent_events(RECORD_LINES * 6)
         .into_iter()
         .filter(|e| crate::observe::visible(world, &viewer, now, e))
-        .filter(|e| !e.kind.starts_with("store.") && !e.kind.starts_with("job."))
+        // Replies say only that the world replied; the message lines carry the story.
+        .filter(|e| {
+            !e.kind.starts_with("store.") && !e.kind.starts_with("job.") && e.kind != "gate.reply"
+        })
         .map(|e| system::line_for(&e))
         .rev()
         .take(RECORD_LINES)
@@ -107,8 +110,12 @@ pub fn view(
         .filter(|e| e.kind == "creature")
         .filter_map(|e| {
             super::mind::name(world, e.id).map(|n| {
+                let place = e
+                    .parent
+                    .and_then(|r| super::plain_str(world, r, ROOM, "name"))
+                    .unwrap_or("nowhere");
                 format!(
-                    "{} the {}",
+                    "{} the {} ({place})",
                     n,
                     super::plain_str(world, e.id, super::CREATURE, "name").unwrap_or("?")
                 )

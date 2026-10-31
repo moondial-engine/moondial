@@ -112,6 +112,18 @@ pub fn name(world: &World, creature: EntityId) -> Option<String> {
         .map(str::to_string)
 }
 
+/// A named creature anywhere in the world, by its given name in any case: the creature
+/// and the room it stands in.
+pub fn find_named(world: &World, given: &str) -> Option<(EntityId, Option<EntityId>)> {
+    let want = given.trim().to_ascii_lowercase();
+    world
+        .store
+        .entities()
+        .filter(|e| e.kind == "creature")
+        .find(|e| name(world, e.id).is_some_and(|n| n.to_ascii_lowercase() == want))
+        .map(|e| (e.id, e.parent))
+}
+
 /// "Ossian the ragpicker", or "ragpicker".
 pub fn display(world: &World, creature: EntityId) -> String {
     let kind = plain_str(world, creature, CREATURE, "name").unwrap_or("?");

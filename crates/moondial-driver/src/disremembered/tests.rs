@@ -1952,6 +1952,11 @@ fn names_match_in_any_case_and_a_kind_never_means_a_named_creature() {
     );
     ok(&mut w, "dave", "retreat", json!([]));
     assert!(ok(&mut w, "dave", "tell", json!([&name, "hi"])).result["answered"] == true);
+    // A named creature is found anywhere by its name, with its room.
+    let (found, room) = mind::find_named(&w, &name.to_ascii_uppercase()).unwrap();
+    assert_eq!(found, a);
+    assert_eq!(room, Some(fog));
+    assert!(mind::find_named(&w, "nobody").is_none());
     // The log verb reads like a log, and shows this viewer only what they may see.
     let out = ok(&mut w, "dave", "log", json!([40]));
     assert!(
