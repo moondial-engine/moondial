@@ -365,6 +365,18 @@ fn err_json(status: StatusCode, msg: impl Into<String>) -> (StatusCode, Json<Val
 
 pub(crate) type Reply = Result<Json<Value>, (StatusCode, Json<Value>)>;
 
+/// The client's address: the first of nginx's `X-Forwarded-For`, else `X-Real-IP`, else
+/// nothing (the driver does not see the socket behind the proxy).
+pub(crate) fn client_ip(headers: &HeaderMap) -> String {
+    headers
+        .get("x-forwarded-for")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.split(',').next())
+        .or_else(|| headers.get("x-real-ip").and_then(|v| v.to_str().ok()))
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default()
+}
+
 fn lock(s: &Shared) -> Result<std::sync::MutexGuard<'_, World>, (StatusCode, Json<Value>)> {
     s.world
         .lock()
@@ -716,8 +728,9 @@ async fn passphrase(State(s): State<Shared>, Json(body): Json<PassphraseBody>) -
 /// Check a name and passphrase (creating the citizen on first login) without running a
 /// command. The browser client calls this first so a bad passphrase is a clear message
 /// rather than a failed `look`.
-async fn login(State(s): State<Shared>, Json(body): Json<LoginBody>) -> Reply {
+async fn login(State(s): State<Shared>, headers: HeaderMap, Json(body): Json<LoginBody>) -> Reply {
     let mut w = lock(&s)?;
+    w.client_ip = Some(client_ip(&headers));
     let fresh = http_login(&mut w, &body.actor, &body.passphrase, "http", body.passing)?;
     Ok(Json(
         json!({"ok": true, "actor": body.actor, "fresh": fresh}),
@@ -738,6 +751,7 @@ async fn command(
         ActorKind::Citizen
     };
     let mut w = lock(&s)?;
+    w.client_ip = Some(client_ip(&headers));
     http_login(&mut w, &body.actor, &body.passphrase, "http", body.passing)?;
     if body.command == "observe" {
         // A read, not speech: runs outside the gate.
@@ -859,6 +873,7 @@ async fn observe_http(
         .and_then(|v| v.to_str().ok());
     let admin = s.is_admin(token);
     let mut w = lock(&s)?;
+    w.client_ip = Some(client_ip(&headers));
     http_login(&mut w, &body.actor, &body.passphrase, "http", false)?;
     let now = w.now();
     s.budget
@@ -911,8 +926,13 @@ struct GateBody {
 /// `POST /v0/gate {actor, passphrase, message}`: one CLEAR message through the Gate.
 /// The reply is a CLEAR REPORT; the JSON around it carries the verdict, the score, the
 /// findings and the budget left. Everything the world did is in the reply's FACT lines.
-async fn gate_http(State(s): State<Shared>, Json(body): Json<GateBody>) -> Reply {
+async fn gate_http(
+    State(s): State<Shared>,
+    headers: HeaderMap,
+    Json(body): Json<GateBody>,
+) -> Reply {
     let mut w = lock(&s)?;
+    w.client_ip = Some(client_ip(&headers));
     http_login(&mut w, &body.actor, &body.passphrase, "gate", body.passing)?;
     let mut budget = s
         .hour_budget

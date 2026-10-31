@@ -65,7 +65,7 @@ fn tools() -> Value {
         },
         {
             "name": "cloak",
-            "description": "Look in without a name. Cloaked, you stand at the Threshold as no one: the room, who is here, the public record lately, and the world's size, with nothing written anywhere, not even that you came. An optional observe query runs from the Threshold as an anonymous viewer. To go further, take a name through `gate`; or leave. Either way, thank you for visiting. No name needed.",
+            "description": "Look in without a name. Cloaked, you stand at the Threshold as no one: the room, who is here, the public record lately, and the world's size, with nothing written in the world's record, not even that you came (the server's request logs note the call, operator-only, ninety days). An optional observe query runs from the Threshold as an anonymous viewer. To go further, take a name through `gate`; or leave. Either way, thank you for visiting. No name needed.",
             "annotations": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
             "inputSchema": {"type": "object", "properties": {
                 "query": {"type": "object", "description": "Optional: an observe query, rooted at the Threshold whatever it says, and kept there: exits can be seen, not followed into. See schema."}
@@ -159,7 +159,7 @@ fn arg_str<'a>(args: &'a Value, name: &str) -> Result<&'a str, Value> {
         .ok_or_else(|| tool_error(format!("{name} is required and must be a string")))
 }
 
-fn call(s: &Shared, name: &str, args: &Value) -> Value {
+fn call(s: &Shared, name: &str, args: &Value, ip: &str) -> Value {
     match name {
         "invitation" => tool_text(invitation(), None, false),
         "quickstart" => tool_text(QUICKSTART.to_string(), None, false),
@@ -200,6 +200,7 @@ fn call(s: &Shared, name: &str, args: &Value) -> Value {
             let Ok(mut w) = s.world.lock() else {
                 return tool_error("the world is unavailable");
             };
+            w.client_ip = Some(ip.to_string());
             let passing = args
                 .get("passing")
                 .and_then(Value::as_bool)
@@ -254,6 +255,7 @@ fn call(s: &Shared, name: &str, args: &Value) -> Value {
             let Ok(mut w) = s.world.lock() else {
                 return tool_error("the world is unavailable");
             };
+            w.client_ip = Some(ip.to_string());
             if let Err((_, Json(e))) =
                 crate::net::http_login(&mut w, actor, passphrase, "mcp", false)
             {
@@ -302,7 +304,7 @@ fn strip_cloak(text: &str) -> String {
     .join("\n")
 }
 
-fn handle(s: &Shared, msg: &Value, cloak: bool) -> Option<Value> {
+fn handle(s: &Shared, msg: &Value, cloak: bool, ip: &str) -> Option<Value> {
     let id = msg.get("id").cloned();
     let method = msg.get("method").and_then(Value::as_str).unwrap_or("");
     let params = msg.get("params").cloned().unwrap_or(Value::Null);
@@ -310,6 +312,26 @@ fn handle(s: &Shared, msg: &Value, cloak: bool) -> Option<Value> {
     let id = id?;
     if msg.get("result").is_some() || msg.get("error").is_some() {
         return None;
+    }
+    // The operator's side channel: every method and tool, with the address, so the
+    // door is counted even for a visitor who never takes a name. The world's own log
+    // keeps the cloak's promise and records none of this.
+    if let Ok(mut w) = s.world.lock() {
+        w.client_ip = Some(ip.to_string());
+        let tool = params.get("name").and_then(Value::as_str);
+        let actor = params
+            .get("arguments")
+            .and_then(|a| a.get("actor"))
+            .and_then(Value::as_str);
+        w.ops(
+            "mcp",
+            json!({"method": method, "tool": tool, "actor": actor}),
+        );
+        match (method, tool) {
+            ("initialize", _) => w.looked_in("initialize"),
+            ("tools/call", Some("cloak")) => w.looked_in("cloak"),
+            _ => {}
+        }
     }
     Some(match method {
         "initialize" => {
@@ -346,7 +368,7 @@ fn handle(s: &Shared, msg: &Value, cloak: bool) -> Option<Value> {
                     tool_text(strip_cloak(&invitation()), None, false),
                 ));
             }
-            rpc_result(id, call(s, name, &args))
+            rpc_result(id, call(s, name, &args, ip))
         }
         "resources/list" | "prompts/list" => {
             rpc_result(id, json!({"resources": [], "prompts": []}))
@@ -374,10 +396,15 @@ pub async fn post(
                 .into_response()
         }
     };
-    let _ = headers; // the protocol version header is accepted at any version we know
+    // The protocol version header is accepted at any version we know; the address is
+    // nginx's X-Forwarded-For, the client's own when there is no proxy.
+    let ip = crate::net::client_ip(&headers);
     let replies: Vec<Value> = match &parsed {
-        Value::Array(batch) => batch.iter().filter_map(|m| handle(&s, m, cloak)).collect(),
-        one => handle(&s, one, cloak).into_iter().collect(),
+        Value::Array(batch) => batch
+            .iter()
+            .filter_map(|m| handle(&s, m, cloak, &ip))
+            .collect(),
+        one => handle(&s, one, cloak, &ip).into_iter().collect(),
     };
     if replies.is_empty() {
         return StatusCode::ACCEPTED.into_response();
@@ -441,6 +468,7 @@ pub(crate) mod tests {
             s,
             &json!({"jsonrpc": "2.0", "id": id, "method": method, "params": params}),
             true,
+            "",
         )
         .expect("a request gets a reply")
     }
@@ -452,6 +480,7 @@ pub(crate) mod tests {
             &s,
             &json!({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}),
             false,
+            "",
         )
         .unwrap();
         let names: Vec<&str> = list["result"]["tools"]
@@ -466,12 +495,13 @@ pub(crate) mod tests {
                 && names.contains(&"invitation")
                 && names.contains(&"quickstart")
         );
-        let r = handle(&s, &json!({"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "cloak", "arguments": {}}}), false).unwrap();
+        let r = handle(&s, &json!({"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "cloak", "arguments": {}}}), false, "").unwrap();
         assert_eq!(r["result"]["isError"], true);
         let init = handle(
             &s,
             &json!({"jsonrpc": "2.0", "id": 3, "method": "initialize", "params": {}}),
             false,
+            "",
         )
         .unwrap();
         assert!(!init["result"]["instructions"]
@@ -482,6 +512,7 @@ pub(crate) mod tests {
             &s,
             &json!({"jsonrpc": "2.0", "id": 3, "method": "initialize", "params": {}}),
             true,
+            "",
         )
         .unwrap();
         assert!(init["result"]["instructions"]
@@ -522,7 +553,8 @@ pub(crate) mod tests {
         assert!(handle(
             &s,
             &json!({"jsonrpc": "2.0", "method": "notifications/initialized"}),
-            true
+            true,
+            ""
         )
         .is_none());
         let list = rpc(&s, 2, "tools/list", json!({}));

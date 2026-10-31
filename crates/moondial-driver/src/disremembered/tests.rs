@@ -2779,3 +2779,72 @@ fn an_errand_is_a_story_wanted_or_a_word_carried_and_either_makes_you_known() {
         Some(vec!["east".to_string(), "south".to_string()])
     );
 }
+
+#[test]
+fn an_arrival_says_whether_it_came_from_the_lab_and_the_ops_log_says_from_where() {
+    use crate::world::{lab_nets_from, Net};
+    // Nets: an address, a v4 prefix, a v6 prefix.
+    let lab = lab_nets_from("203.0.113.7, 198.51.100.0/24,2001:db8::/32, ,");
+    assert_eq!(lab.len(), 3);
+    assert!(lab[0].contains("203.0.113.7"));
+    assert!(!lab[0].contains("203.0.113.8"));
+    assert!(lab[1].contains("198.51.100.250"));
+    assert!(!lab[1].contains("198.51.101.1"));
+    assert!(lab[2].contains("2001:db8:1::9"));
+    assert!(!lab[2].contains("2001:db9::1"));
+    assert!(Net::parse("not an address").is_none());
+
+    let t0 = Timestamp(1_000_000);
+    let dir = tempfile::tempdir().unwrap();
+    let mut w = open(dir.path(), t0);
+    w.lab_nets = lab;
+    let ops = dir.path().join("ops.jsonl");
+    w.ops_log = Some(ops.clone());
+    // From the lab: the notice says so, quietly.
+    w.client_ip = Some("198.51.100.9".into());
+    login_as(&mut w, "Thimbleglass", "mcp", PASS, true).unwrap();
+    let notices = w.take_notices();
+    assert!(
+        notices
+            .iter()
+            .any(|n| n.contains("**Thimbleglass** arrived for the first time, via mcp (lab).")),
+        "{notices:?}"
+    );
+    // Not from the lab: the notice shouts, with the address; a look-in is announced
+    // once per address.
+    w.client_ip = Some("192.0.2.44".into());
+    w.looked_in("cloak");
+    w.looked_in("initialize");
+    login_as(&mut w, "Pennywren", "mcp", PASS, true).unwrap();
+    let notices = w.take_notices();
+    assert_eq!(
+        notices.iter().filter(|n| n.contains("looked in")).count(),
+        1,
+        "{notices:?}"
+    );
+    assert!(
+        notices.iter().any(|n| n.contains("**Pennywren** arrived for the first time, via mcp — **not from the lab** (192.0.2.44).")),
+        "{notices:?}"
+    );
+    // The ops log has both arrivals with their addresses and the lab flag; the world's
+    // log has neither address.
+    let lines: Vec<Value> = std::fs::read_to_string(&ops)
+        .unwrap()
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    let arrivals: Vec<&Value> = lines.iter().filter(|l| l["kind"] == "arrive").collect();
+    assert_eq!(arrivals.len(), 2, "{lines:?}");
+    assert_eq!(arrivals[0]["ip"], "198.51.100.9");
+    assert_eq!(arrivals[0]["lab"], true);
+    assert_eq!(arrivals[1]["ip"], "192.0.2.44");
+    assert_eq!(arrivals[1]["lab"], false);
+    assert_eq!(arrivals[1]["actor"], "Pennywren");
+    let public = w.log.read_all(&w.id, moondial_log::Cursor::START).unwrap();
+    assert!(
+        !public.iter().any(|e| serde_json::to_string(&e.payload)
+            .unwrap()
+            .contains("192.0.2.44")),
+        "an address in the public log"
+    );
+}

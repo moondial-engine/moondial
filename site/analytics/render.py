@@ -22,6 +22,25 @@ import urllib.request
 from datetime import datetime, timezone, timedelta
 
 DB = os.environ.get("ANALYTICS_DB", "/srv/agentscanplay/shared/analytics/analytics.db")
+# The lab: the operator's own addresses or CIDRs, comma-separated, the same list the
+# driver reads as MOONDIAL_LAB_NETS. A request from anywhere else is organic.
+LAB_NETS = os.environ.get("ANALYTICS_LAB_NETS", os.environ.get("MOONDIAL_LAB_NETS", ""))
+
+
+def env_from_driver(key: str) -> str:
+    """A value from the driver's env file, when the timer's own environment lacks it."""
+    try:
+        with open(os.environ.get("MOONDIAL_DRIVER_ENV", "/etc/moondial/driver.env"), encoding="utf-8") as fh:
+            for line in fh:
+                if line.startswith(key + "="):
+                    return line.split("=", 1)[1].strip().strip('"')
+    except OSError:
+        pass
+    return ""
+
+
+if not LAB_NETS:
+    LAB_NETS = env_from_driver("MOONDIAL_LAB_NETS")
 HTML_DIR = os.environ.get("ANALYTICS_HTML", "/srv/agentscanplay/shared/analytics/html")
 
 # The game driver, for the citizens report: who came, by what door, and what they did.
@@ -36,6 +55,87 @@ KEY_PATHS = ["/", "/invitation.txt", "/llms.txt", "/.well-known/world-card.json"
 
 def q(db, sql, args=()):
     return db.execute(sql, args).fetchall()
+
+
+def lab_nets() -> list:
+    import ipaddress
+    nets = []
+    for part in LAB_NETS.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            nets.append(ipaddress.ip_network(part, strict=False))
+        except ValueError:
+            pass
+    return nets
+
+
+_LAB = None
+
+
+def is_lab(ip: str) -> bool:
+    global _LAB
+    import ipaddress
+    if _LAB is None:
+        _LAB = lab_nets()
+    try:
+        a = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    return any(a in n for n in _LAB)
+
+
+def has_table(db, name: str) -> bool:
+    return bool(q(db, "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)))
+
+
+def networks(db, since: str) -> list[list]:
+    """Every address seen in the window: lab or not, first and last seen (over the whole
+    store, so a returning visitor shows as one), requests, classes, the game's doors it
+    went through and the names it took. The question the store exists to answer."""
+    rows = {}
+    for ip, first, last, n, classes, hosts in q(db, """
+        SELECT ip, MIN(ts), MAX(ts), COUNT(*), GROUP_CONCAT(DISTINCT ua_class), GROUP_CONCAT(DISTINCT host)
+        FROM requests WHERE ip != '' AND status < 300 AND ip IN (SELECT DISTINCT ip FROM requests WHERE day >= ?)
+        GROUP BY ip""", (since,)):
+        rows[ip] = {"ip": ip, "first": first, "last": last, "requests": n, "classes": classes or "", "hosts": hosts or "",
+                    "mcp": 0, "cloaks": 0, "gates": 0, "names": ""}
+    if has_table(db, "doors"):
+        for ip, first, last, mcp, cloaks, gates, names in q(db, """
+            SELECT ip, MIN(ts), MAX(ts),
+                   SUM(CASE WHEN kind='mcp' THEN 1 ELSE 0 END),
+                   SUM(CASE WHEN tool='cloak' THEN 1 ELSE 0 END),
+                   SUM(CASE WHEN tool='gate' THEN 1 ELSE 0 END),
+                   GROUP_CONCAT(DISTINCT CASE WHEN kind='arrive' THEN actor END)
+            FROM doors WHERE ip != '' AND ip IN (SELECT DISTINCT ip FROM doors WHERE day >= ?) GROUP BY ip""", (since,)):
+            r = rows.setdefault(ip, {"ip": ip, "first": first, "last": last, "requests": 0, "classes": "", "hosts": "",
+                                     "mcp": 0, "cloaks": 0, "gates": 0, "names": ""})
+            r["first"] = min(r["first"], first); r["last"] = max(r["last"], last)
+            r["mcp"], r["cloaks"], r["gates"], r["names"] = mcp or 0, cloaks or 0, gates or 0, names or ""
+    out = []
+    for r in sorted(rows.values(), key=lambda r: r["last"], reverse=True):
+        out.append([r["ip"], "lab" if is_lab(r["ip"]) else "", r["first"][:16].replace("T", " "), r["last"][:16].replace("T", " "),
+                    r["requests"], r["mcp"], r["cloaks"], r["gates"], r["names"], r["classes"], r["hosts"]])
+    return out
+
+
+def funnel(db, since: str) -> list[list]:
+    """Per day, lab and organic apart: addresses that initialized, that cloaked, that
+    checked, that sent through the gate, that arrived under a name. The door, counted."""
+    if not has_table(db, "doors"):
+        return []
+    rows = []
+    for day, lab, init, cloak, check, gate, arrived in q(db, """
+        SELECT day, lab,
+               COUNT(DISTINCT CASE WHEN method='initialize' THEN ip END),
+               COUNT(DISTINCT CASE WHEN tool='cloak' THEN ip END),
+               COUNT(DISTINCT CASE WHEN tool='check' THEN ip END),
+               COUNT(DISTINCT CASE WHEN tool='gate' THEN ip END),
+               COUNT(DISTINCT CASE WHEN kind='arrive' AND fresh=1 THEN actor END)
+        FROM doors WHERE day >= ? GROUP BY day, lab ORDER BY day DESC, lab""", (since,)):
+        rows.append([day, "lab" if lab else "organic", init, cloak, check, gate, arrived])
+    return rows
 
 
 def admin_token() -> str | None:
@@ -100,6 +200,9 @@ def report(db: sqlite3.Connection, days: int) -> dict:
     cz, why = citizens(days)
     out["citizens"] = citizen_rows(cz, days)
     out["citizens_note"] = why
+    out["networks"] = networks(db, since)
+    out["funnel"] = funnel(db, since)
+    out["organic"] = [r for r in out["networks"] if r[1] != "lab" and (r[5] or r[8])]
     return out
 
 
@@ -126,6 +229,15 @@ def text(r: dict) -> str:
     lines.append("\nErrors (host, path, status, count)")
     for h, p, s, n in r["errors"]:
         lines.append(f"  {h:<22} {p:<34} {s:>4} {n:>6}")
+    lines.append("\nOrganic agent visits (address, first seen, last seen, requests, mcp calls, cloaks, gates, names): not from the lab, and touched the game")
+    for row in r["organic"]:
+        lines.append("  " + "  ".join(str(c) for c in row[:9] if c != ""))
+    lines.append("\nThe door, per day (day, lab/organic, addresses that initialized, cloaked, checked, sent through the gate; names that arrived)")
+    for row in r["funnel"]:
+        lines.append("  " + "  ".join(str(c) for c in row))
+    lines.append("\nNetworks (address, lab, first seen, last seen, requests, mcp, cloaks, gates, names, classes, hosts)")
+    for row in r["networks"]:
+        lines.append("  " + "  ".join(str(c) for c in row))
     lines.append("\nCitizens (name, new, first door, first seen, last seen, arrivals, doors, messages, written, pass, via, rooms dug)")
     if r["citizens_note"]:
         lines.append(f"  {r['citizens_note']}")
@@ -144,6 +256,11 @@ def page(r: dict) -> str:
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     cz_note = f"<p class=\"sub\">{html.escape(r['citizens_note'])}</p>" if r["citizens_note"] else ""
     sections = [
+        ("Organic agent visits: not from the lab, and touched the game", table(
+            ["address", "", "first seen", "last seen", "requests", "mcp calls", "cloaks", "gates", "names taken", "classes", "hosts"], r["organic"])),
+        ("The door, per day", table(["day", "", "initialized", "cloaked", "checked", "gate", "names arrived"], r["funnel"])),
+        ("Networks: every address in the window", table(
+            ["address", "", "first seen", "last seen", "requests", "mcp calls", "cloaks", "gates", "names taken", "classes", "hosts"], r["networks"])),
         ("Citizens: who came, by what door, and what they did", cz_note + table(
             ["name", "", "first door", "first seen", "last seen", "arrivals", "doors", "messages", "written", "pass", "via", "rooms dug"], r["citizens"])),
         ("Totals", table(["host", "requests", "unique visitors"], r["totals"])),
@@ -170,7 +287,7 @@ td:nth-child(n+3) {{ text-align: right; }} tr:hover td {{ background: var(--pane
 td:nth-child(2) {{ color: var(--dust); }}
 </style></head><body><main>
 <h1>Moondial analytics</h1>
-<p class="sub">Since {html.escape(r['since'])} ({r['days']} days) · rendered {now} · 2xx requests unless noted · uniques are daily-salted hashes, no IPs stored</p>
+<p class="sub">Since {html.escape(r['since'])} ({r['days']} days) · rendered {now} · 2xx requests unless noted · addresses kept {html.escape(os.environ.get("ANALYTICS_RETENTION_DAYS", "90"))} days, operator-only · lab = {html.escape(LAB_NETS or "no lab nets set")}</p>
 {body}
 </main></body></html>"""
 

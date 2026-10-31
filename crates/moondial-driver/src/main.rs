@@ -14,6 +14,12 @@
 //! - `MOONDIAL_ACTIVE_HALF_LIFE_SECONDS`: the active window's half-life (default 3600).
 //! - `MOONDIAL_CORS_ORIGINS`: browser origins allowed to call the HTTP port, comma-separated
 //!   (default the agentscanplay.com site).
+//! - `MOONDIAL_OPS_LOG`: the operator's side channel, a JSON-lines file of who came from
+//!   where (every MCP call and arrival, with the client address), read by the analytics
+//!   collector and kept ninety days there. Default `<MOONDIAL_DATA>/ops.jsonl`; `none`
+//!   writes nothing. Never the world's log.
+//! - `MOONDIAL_LAB_NETS`: the operator's own networks, comma-separated addresses or CIDRs;
+//!   an arrival from anywhere else is organic, and the Discord line says so.
 //! - `MOONDIAL_DISCORD_WEBHOOK`: a Discord webhook URL; arrivals worth knowing about (a
 //!   first arrival, an agent's channel, a return after a day away) are posted there.
 
@@ -118,6 +124,22 @@ fn main() {
         world.registry.specs().count()
     );
 
+    world.lab_nets = world::lab_nets_from(&env_or("MOONDIAL_LAB_NETS", ""));
+    world.ops_log = match env_or("MOONDIAL_OPS_LOG", "").as_str() {
+        "none" => None,
+        "" => Some(std::path::PathBuf::from(&data).join("ops.jsonl")),
+        p => Some(std::path::PathBuf::from(p)),
+    };
+    if let Some(p) = &world.ops_log {
+        if let Some(dir) = p.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        eprintln!(
+            "ops log: {} ({} lab nets)",
+            p.display(),
+            world.lab_nets.len()
+        );
+    }
     let shared = net::Shared {
         world: Arc::new(Mutex::new(world)),
         admin_token: std::env::var("MOONDIAL_ADMIN_TOKEN").ok(),

@@ -3,16 +3,19 @@
 
 Runs on a timer (every 5 minutes) as the deploy user. Reads new lines from
 /var/log/nginx/analytics.jsonl (and the rotated .1 file, so nothing is lost across a
-rotation), classifies each request, and appends it to a SQLite store with a daily-salted
-visitor hash instead of the IP. Idempotent: it remembers the inode and byte offset it
-reached, so re-running never double counts.
+rotation), classifies each request, and appends it to a SQLite store, with the client IP, kept
+ninety days: the operator's questions (is this the lab, is this last week's visitor
+back, is one network sending forty names) need the address, and the raw nginx log
+holds it anyway. The store is the operator's alone; nothing from it reaches the
+public record. Idempotent: it remembers the inode and byte offset it reached, so
+re-running never double counts.
 
 Store: /srv/agentscanplay/shared/analytics/analytics.db
 Tables:
   requests  one row per request: ts, host, path, status, bytes, rt, accept_kind,
-            ua_class, ua_name, ua, referer_host, visitor (daily hash), method
-  salts     one random salt per UTC day, used for the visitor hash; older salts are
-            deleted, which makes the hashes unlinkable to IPs after the day ends
+            ua_class, ua_name, ua, referer_host, visitor (daily hash, kept for the
+            older reports), ip, method; rows older than RETENTION_DAYS are deleted
+  salts     one random salt per UTC day, for the visitor hash
   cursor    the log file position reached (inode, offset)
 
 The engine's admin tool reads this store (or its Postgres successor). render.py writes
@@ -34,8 +37,12 @@ from datetime import datetime, timezone, timedelta
 from urllib.parse import urlsplit
 
 LOG = os.environ.get("ANALYTICS_LOG", "/var/log/nginx/analytics.jsonl")
+# The driver's operator side channel (MOONDIAL_OPS_LOG): every MCP call and arrival, with
+# the address and whether it came from the lab. Absent on the static-site VPS.
+OPS_LOG = os.environ.get("ANALYTICS_OPS_LOG", "/srv/moondial/shared/data/ops.jsonl")
 DB = os.environ.get("ANALYTICS_DB", "/srv/agentscanplay/shared/analytics/analytics.db")
 RAW_RETENTION_DAYS = 2  # salts older than this are deleted; raw logs rotate separately
+RETENTION_DAYS = int(os.environ.get("ANALYTICS_RETENTION_DAYS", "90"))  # request rows, with their IPs
 
 # User-agent classification. Order matters: AI crawlers before generic bots, tools before browsers.
 AI_CRAWLERS = [
@@ -113,11 +120,19 @@ CREATE TABLE IF NOT EXISTS requests (
   ts TEXT NOT NULL, day TEXT NOT NULL, host TEXT NOT NULL, method TEXT NOT NULL, path TEXT NOT NULL,
   status INTEGER NOT NULL, bytes INTEGER NOT NULL, rt REAL NOT NULL,
   accept_kind TEXT NOT NULL, ua_class TEXT NOT NULL, ua_name TEXT NOT NULL, ua TEXT NOT NULL,
-  referer_host TEXT NOT NULL, visitor TEXT NOT NULL
+  referer_host TEXT NOT NULL, visitor TEXT NOT NULL, ip TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS requests_day ON requests(day);
 CREATE INDEX IF NOT EXISTS requests_host_path ON requests(host, path);
+CREATE INDEX IF NOT EXISTS requests_ip ON requests(ip);
 CREATE TABLE IF NOT EXISTS salts (day TEXT PRIMARY KEY, salt TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS doors (
+  id INTEGER PRIMARY KEY,
+  ts TEXT NOT NULL, day TEXT NOT NULL, ip TEXT NOT NULL, lab INTEGER NOT NULL,
+  kind TEXT NOT NULL, method TEXT NOT NULL, tool TEXT NOT NULL, actor TEXT NOT NULL, origin TEXT NOT NULL, fresh INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS doors_day ON doors(day);
+CREATE INDEX IF NOT EXISTS doors_ip ON doors(ip);
 CREATE TABLE IF NOT EXISTS cursor (file TEXT PRIMARY KEY, inode INTEGER NOT NULL, offset INTEGER NOT NULL);
 """
 
@@ -147,16 +162,35 @@ def ingest_line(db: sqlite3.Connection, line: str) -> bool:
     ua = r.get("ua", "") or ""
     cls, name = classify(ua)
     db.execute(
-        "INSERT INTO requests(ts, day, host, method, path, status, bytes, rt, accept_kind, ua_class, ua_name, ua, referer_host, visitor)"
-        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO requests(ts, day, host, method, path, status, bytes, rt, accept_kind, ua_class, ua_name, ua, referer_host, visitor, ip)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (ts, day, r.get("host", ""), r.get("method", ""), r.get("path", ""), int(r.get("status", 0)), int(r.get("bytes", 0)),
          float(r.get("rt", 0.0)), accept_kind(r.get("accept", "")), cls, name, ua[:300], referer_host(r.get("referer", "")),
-         visitor_hash(salt_for(db, day), r.get("ip", ""), ua)),
+         visitor_hash(salt_for(db, day), r.get("ip", ""), ua), (r.get("ip", "") or "")[:45]),
     )
     return True
 
 
-def read_new(db: sqlite3.Connection, path: str) -> int:
+def ingest_ops_line(db: sqlite3.Connection, line: str) -> bool:
+    """One line of the driver's ops log: {ts (ms), kind, ip, lab, method, tool, actor,
+    origin, fresh}. kind is "mcp" (a method, maybe a tool) or "arrive"."""
+    try:
+        r = json.loads(line)
+    except json.JSONDecodeError:
+        return False
+    ms = r.get("ts")
+    if not isinstance(ms, (int, float)):
+        return False
+    ts = datetime.fromtimestamp(ms / 1000, timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
+    db.execute(
+        "INSERT INTO doors(ts, day, ip, lab, kind, method, tool, actor, origin, fresh) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (ts, ts[:10], (r.get("ip") or "")[:45], 1 if r.get("lab") else 0, r.get("kind") or "", r.get("method") or "",
+         r.get("tool") or "", r.get("actor") or "", r.get("origin") or "", 1 if r.get("fresh") else 0),
+    )
+    return True
+
+
+def read_new(db: sqlite3.Connection, path: str, ingest=None) -> int:
     """Read lines past the stored cursor. Handles rotation: if the inode changed, finish the
     rotated file (path + '.1') from the old offset, then start the new file from zero."""
     if not os.path.exists(path):
@@ -167,21 +201,22 @@ def read_new(db: sqlite3.Connection, path: str) -> int:
     if row and row[0] != st.st_ino:
         rotated = path + ".1"
         if os.path.exists(rotated) and os.stat(rotated).st_ino == row[0]:
-            n, _ = read_from(db, rotated, row[1])
+            n, _ = read_from(db, rotated, row[1], ingest)
             count += n
         row = None
     offset = row[1] if row else 0
     if offset > st.st_size:
         offset = 0  # truncated in place
-    n, reached = read_from(db, path, offset)
+    n, reached = read_from(db, path, offset, ingest)
     count += n
     db.execute("INSERT OR REPLACE INTO cursor(file, inode, offset) VALUES (?, ?, ?)", (path, st.st_ino, reached))
     return count
 
 
-def read_from(db: sqlite3.Connection, path: str, offset: int) -> tuple[int, int]:
+def read_from(db: sqlite3.Connection, path: str, offset: int, ingest=None) -> tuple[int, int]:
     """Ingest complete lines from `offset`. Returns (lines ingested, offset after the last
     complete line), so a partial line being written is re-read next time."""
+    ingest = ingest or ingest_line
     count = 0
     reached = offset
     with open(path, "rb") as fh:
@@ -190,7 +225,7 @@ def read_from(db: sqlite3.Connection, path: str, offset: int) -> tuple[int, int]
             if not raw.endswith(b"\n"):
                 break
             reached += len(raw)
-            if ingest_line(db, raw.decode("utf-8", "replace")):
+            if ingest(db, raw.decode("utf-8", "replace")):
                 count += 1
     return count, reached
 
@@ -200,15 +235,34 @@ def prune_salts(db: sqlite3.Connection) -> None:
     db.execute("DELETE FROM salts WHERE day < ?", (cutoff,))
 
 
+def prune_requests(db: sqlite3.Connection) -> int:
+    """Rows, and the IPs on them, live RETENTION_DAYS; the privacy note says so."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=RETENTION_DAYS)).strftime("%Y-%m-%d")
+    n = db.execute("DELETE FROM requests WHERE day < ?", (cutoff,)).rowcount
+    n += db.execute("DELETE FROM doors WHERE day < ?", (cutoff,)).rowcount
+    return n
+
+
+def migrate(db: sqlite3.Connection) -> None:
+    """A store from before the ip column gains it, empty for the old rows."""
+    cols = {r[1] for r in db.execute("PRAGMA table_info(requests)")}
+    if "ip" not in cols:
+        db.execute("ALTER TABLE requests ADD COLUMN ip TEXT NOT NULL DEFAULT ''")
+
+
 def main() -> int:
     os.makedirs(os.path.dirname(DB), exist_ok=True)
     db = sqlite3.connect(DB)
     db.executescript(SCHEMA)
     with db:
+        migrate(db)
         n = read_new(db, LOG)
+        d = read_new(db, OPS_LOG, ingest_ops_line)
         prune_salts(db)
+        prune_requests(db)
     total = db.execute("SELECT COUNT(*) FROM requests").fetchone()[0]
-    print(f"ingested {n} new requests; {total} total")
+    doors = db.execute("SELECT COUNT(*) FROM doors").fetchone()[0]
+    print(f"ingested {n} new requests ({total} total) and {d} door events ({doors} total)")
     return 0
 
 

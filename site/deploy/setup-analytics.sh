@@ -8,7 +8,9 @@
 #
 # - installs the JSON log format (http context) and makes both public server blocks
 #   include the analytics snippet (access_log + the /_admin/ page)
-# - rotates /var/log/nginx/analytics.jsonl daily and deletes it after 30 days (raw IPs)
+# - rotates /var/log/nginx/analytics.jsonl daily and deletes it after 30 days; the store
+#   keeps each request, with its address, for 90 days (ANALYTICS_RETENTION_DAYS), and on
+#   the game server also reads the driver's ops log (who came from where, lab or not)
 # - lets the deploy user read nginx logs (adm group) and owns the analytics store dir
 # - installs a systemd timer that runs collect.py every 5 minutes and render.py hourly,
 #   from the current release, so a deploy updates the scripts
@@ -92,6 +94,8 @@ Description=Collect nginx analytics log into the store
 Type=oneshot
 User=$RUN_USER
 Environment=ANALYTICS_DB=$STORE/analytics.db
+Environment=ANALYTICS_OPS_LOG=$APP_DIR/shared/data/ops.jsonl
+Environment=ANALYTICS_RETENTION_DAYS=90
 ExecStart=/usr/bin/python3 $APP_DIR/current/analytics/collect.py
 UNIT
 cat > /etc/systemd/system/analytics-collect.timer <<'UNIT'
@@ -111,6 +115,7 @@ Type=oneshot
 User=$RUN_USER
 Environment=ANALYTICS_DB=$STORE/analytics.db
 Environment=ANALYTICS_HTML=$STORE/html
+Environment=ANALYTICS_RETENTION_DAYS=90
 ExecStart=/usr/bin/python3 $APP_DIR/current/analytics/render.py --days 30 --html
 UNIT
 cat > /etc/systemd/system/analytics-render.timer <<'UNIT'

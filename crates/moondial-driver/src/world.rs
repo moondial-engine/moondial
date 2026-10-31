@@ -8,7 +8,7 @@ use moondial_log::{Actor, Cursor, Event, EventLog, FileLog, MemoryLog, WorldId};
 use moondial_registry::{ActorKind, CallContext, CommandError, Outcome, Registry};
 use moondial_store::{Store, StoreError, StoreEvent};
 use moondial_time::Timestamp;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -56,6 +56,66 @@ pub struct World {
     pub(crate) sweepers: Arc<Vec<Sweeper>>,
     /// Run when an arrival is recorded, with the actor's name. Registered at boot.
     arrival_hooks: Arc<Vec<ArrivalHook>>,
+    /// The operator's side channel: who came from where. Not the world's log, which is
+    /// public word for word; a JSON-lines file the analytics collector reads, kept
+    /// ninety days, with the client address on every line. `None` writes nothing.
+    pub ops_log: Option<std::path::PathBuf>,
+    /// The networks the operator's own visitors come from (the lab): addresses or
+    /// CIDRs. An arrival from anywhere else is organic, and the notices say so.
+    pub lab_nets: Vec<Net>,
+    /// The address behind the request being served, set by the HTTP and MCP handlers
+    /// while they hold the world, so an arrival can say where it came from.
+    pub client_ip: Option<String>,
+    /// Organic networks already announced in this process: one notice per address.
+    seen_nets: std::collections::HashSet<String>,
+}
+
+/// An address or a prefix of them, as `MOONDIAL_LAB_NETS` lists them: `203.0.113.7`,
+/// `203.0.113.0/24`, `2001:db8::/32`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Net {
+    addr: std::net::IpAddr,
+    bits: u8,
+}
+
+impl Net {
+    pub fn parse(s: &str) -> Option<Net> {
+        let s = s.trim();
+        if s.is_empty() {
+            return None;
+        }
+        let (a, bits) = match s.split_once('/') {
+            Some((a, b)) => (a, b.parse::<u8>().ok()?),
+            None => (s, 255),
+        };
+        let addr: std::net::IpAddr = a.parse().ok()?;
+        let max = if addr.is_ipv4() { 32 } else { 128 };
+        Some(Net {
+            addr,
+            bits: bits.min(max),
+        })
+    }
+
+    pub fn contains(&self, ip: &str) -> bool {
+        let Ok(ip) = ip.trim().parse::<std::net::IpAddr>() else {
+            return false;
+        };
+        let (a, b): (u128, u128) = match (self.addr, ip) {
+            (std::net::IpAddr::V4(a), std::net::IpAddr::V4(b)) => {
+                (u32::from(a) as u128, u32::from(b) as u128)
+            }
+            (std::net::IpAddr::V6(a), std::net::IpAddr::V6(b)) => (u128::from(a), u128::from(b)),
+            _ => return false,
+        };
+        let width = if self.addr.is_ipv4() { 32 } else { 128 };
+        let keep = width - u32::from(self.bits.min(width as u8));
+        (a >> keep) == (b >> keep)
+    }
+}
+
+/// The lab, as the environment names it: comma-separated addresses or CIDRs.
+pub fn lab_nets_from(spec: &str) -> Vec<Net> {
+    spec.split(',').filter_map(Net::parse).collect()
 }
 
 /// A per-tick check a module registers with [`World::on_tick`].
@@ -102,6 +162,10 @@ impl World {
             failures: std::collections::HashMap::new(),
             sweepers: Arc::new(Vec::new()),
             arrival_hooks: Arc::new(Vec::new()),
+            ops_log: None,
+            lab_nets: Vec::new(),
+            client_ip: None,
+            seen_nets: std::collections::HashSet::new(),
         };
         let head = world.log.head(&world.id).map_err(|e| e.to_string())?;
         if head.is_some() {
@@ -165,16 +229,32 @@ impl World {
         }
         let agent_channel = matches!(origin, "gate" | "mcp");
         let long_away = away_ms.is_some_and(|ms| ms >= 86_400_000);
+        let ip = self.client_ip();
+        // Where from: the lab, or not. The operator's own cohorts arrive identically to
+        // the world's visitors otherwise, and the question was always which.
+        let from = if ip.is_empty() {
+            String::new()
+        } else if self.is_lab(&ip) {
+            " (lab)".to_string()
+        } else {
+            format!(" — **not from the lab** ({ip})")
+        };
+        if origin != "command" {
+            self.ops(
+                "arrive",
+                json!({"actor": actor, "origin": origin, "fresh": fresh, "away_ms": away_ms}),
+            );
+        }
         if fresh {
             self.notices.push(format!(
-                "**{actor}** arrived for the first time, via {origin}."
+                "**{actor}** arrived for the first time, via {origin}{from}."
             ));
         } else if agent_channel {
             self.notices
-                .push(format!("**{actor}** is back, via {origin}."));
+                .push(format!("**{actor}** is back, via {origin}{from}."));
         } else if long_away {
             self.notices.push(format!(
-                "**{actor}** is back after {} days, via {origin}.",
+                "**{actor}** is back after {} days, via {origin}{from}.",
                 away_ms.unwrap_or(0) / 86_400_000
             ));
         }
@@ -264,6 +344,49 @@ impl World {
     /// A line for the operator.
     pub fn notice(&mut self, line: String) {
         self.notices.push(line);
+    }
+
+    /// Whether an address is the operator's own (the lab).
+    pub fn is_lab(&self, ip: &str) -> bool {
+        self.lab_nets.iter().any(|n| n.contains(ip))
+    }
+
+    /// The address behind the request being served, if the handler said.
+    pub fn client_ip(&self) -> String {
+        self.client_ip.clone().unwrap_or_default()
+    }
+
+    /// A line in the operator's side channel: `{ts, kind, ip, lab, ...payload}`. Never
+    /// the world's log. Errors are swallowed: the game does not stop for bookkeeping.
+    pub fn ops(&self, kind: &str, mut payload: Value) {
+        let Some(path) = &self.ops_log else { return };
+        let ip = self.client_ip();
+        if let Value::Object(m) = &mut payload {
+            m.insert("ts".into(), json!(self.now().0));
+            m.insert("kind".into(), json!(kind));
+            m.insert("ip".into(), json!(ip));
+            m.insert("lab".into(), json!(self.is_lab(&ip)));
+        }
+        use std::io::Write;
+        if let Ok(mut f) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+        {
+            let _ = writeln!(f, "{payload}");
+        }
+    }
+
+    /// A visitor looked in (initialize, cloak) from an address outside the lab: one
+    /// notice per address per process, so a lurker is news once and not noise.
+    pub fn looked_in(&mut self, what: &str) {
+        let ip = self.client_ip();
+        if ip.is_empty() || self.is_lab(&ip) || !self.seen_nets.insert(ip.clone()) {
+            return;
+        }
+        self.notices.push(format!(
+            "A visitor looked in ({what}) from a new address, {ip}, not from the lab. No name yet."
+        ));
     }
 
     /// Take the pending operator notices.
