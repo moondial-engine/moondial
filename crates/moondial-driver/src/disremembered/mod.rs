@@ -14,7 +14,7 @@ mod combat;
 pub mod errand;
 pub mod exchange;
 mod identity;
-mod memory;
+pub mod memory;
 pub mod mind;
 pub mod presence;
 pub mod rooms;

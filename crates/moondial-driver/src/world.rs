@@ -68,6 +68,8 @@ pub struct World {
     pub client_ip: Option<String>,
     /// Organic networks already announced in this process: one notice per address.
     seen_nets: std::collections::HashSet<String>,
+    /// The minute the faded-chunk sweep last ran.
+    last_forget_minute: i64,
 }
 
 /// An address or a prefix of them, as `MOONDIAL_LAB_NETS` lists them: `203.0.113.7`,
@@ -180,6 +182,7 @@ impl World {
             lab_nets: Vec::new(),
             client_ip: None,
             seen_nets: std::collections::HashSet::new(),
+            last_forget_minute: -1,
         };
         let head = world.log.head(&world.id).map_err(|e| e.to_string())?;
         if head.is_some() {
@@ -358,6 +361,14 @@ impl World {
     /// A line for the operator.
     pub fn notice(&mut self, line: String) {
         self.notices.push(line);
+    }
+
+    pub fn last_forget_minute(&self) -> i64 {
+        self.last_forget_minute
+    }
+
+    pub fn set_last_forget_minute(&mut self, m: i64) {
+        self.last_forget_minute = m;
     }
 
     /// Whether an address is the operator's own (the lab).

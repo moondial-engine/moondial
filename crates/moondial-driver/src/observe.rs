@@ -136,6 +136,7 @@ pub(crate) fn visible(world: &World, viewer: &Viewer, now: Timestamp, e: &Event)
         || e.kind == crate::disremembered::exchange::STORY
         || e.kind == crate::disremembered::system::FEEDBACK
         || e.kind == crate::disremembered::errand::DONE
+        || e.kind == crate::disremembered::memory::FADED
     {
         return true;
     }

@@ -2848,3 +2848,56 @@ fn an_arrival_says_whether_it_came_from_the_lab_and_the_ops_log_says_from_where(
         "an address in the public log"
     );
 }
+
+#[test]
+fn a_chunk_faded_to_nothing_is_forgotten_by_the_sweep_and_the_owner_is_told() {
+    let t0 = Timestamp(1_000_000);
+    let mut w = open(tempfile::tempdir().unwrap().path(), t0);
+    login(&mut w, "dave", "test", PASS).unwrap();
+    let c = admin(&mut w, "dave", "earn", json!(["hydra", 50, 0.0]));
+    let chunk = EntityId(c.result["chunk"].as_u64().unwrap());
+    // The test world's half-life is ten seconds: fifteen of them and fifty is nothing.
+    w.fixed_now = Some(t0.plus(Duration::seconds(30)));
+    w.tick();
+    assert!(
+        w.store.entity(chunk).is_some(),
+        "a chunk worth something stays"
+    );
+    w.fixed_now = Some(t0.plus(Duration::seconds(150)));
+    w.tick();
+    assert!(
+        w.store.entity(chunk).is_none(),
+        "faded below {}",
+        memory::FORGET_BELOW
+    );
+    let faded: Vec<_> = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == memory::FADED)
+        .collect();
+    assert_eq!(faded.len(), 1);
+    assert_eq!(faded[0].payload["owner"], "dave");
+    assert_eq!(
+        system::line_for(&faded[0]),
+        "dave forgot the memory of hydra"
+    );
+    let heard: Vec<String> = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == combat::NARRATIVE && e.payload["to"] == "dave")
+        .filter_map(|e| e.payload["text"].as_str().map(str::to_string))
+        .collect();
+    assert!(
+        heard
+            .iter()
+            .any(|t| t == "The memory of hydra is gone; you could not have said when."),
+        "{heard:?}"
+    );
+    // chunks lists nothing of it.
+    let out = ok(&mut w, "dave", "chunks", json!([]));
+    assert!(!out.summary.contains("hydra"), "{}", out.summary);
+}

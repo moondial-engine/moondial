@@ -27,6 +27,10 @@ pub(crate) fn line_for(e: &moondial_log::Event) -> String {
             Some(t) => format!("{} carried {}'s word to {t}", s("from"), s("name")),
             None => format!("{} told {} the story it wanted", s("from"), s("name")),
         },
+        "disremembered.faded" => match p["owner"].as_str() {
+            Some(o) => format!("{o} forgot the memory of {}", s("source")),
+            None => format!("a creature forgot the memory of {}", s("source")),
+        },
         "disremembered.story" => format!(
             "{} told {} the {} a story of {} words",
             s("from"),

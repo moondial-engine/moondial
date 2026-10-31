@@ -152,7 +152,65 @@ pub(crate) fn resolve_chunk(
     Ok(id)
 }
 
+/// A chunk worth less than this is forgotten outright: a halving never reaches zero,
+/// and a window full of ten-thousandths is a list nobody wants to read.
+pub const FORGET_BELOW: f64 = 0.05;
+/// A chunk faded to nothing and was removed: `{owner, chunk, source, container}`.
+pub const FADED: &str = "disremembered.faded";
+
+/// Forget the chunks that have faded to nothing, wherever they lie: a citizen's
+/// window or palace, a creature's window. Once a minute is plenty; the value is read
+/// at the world's clock, so a paused owner's chunks are never touched.
+pub fn sweep(world: &mut World) -> Result<(), String> {
+    let now = world.now();
+    if now.0 / 60_000 == world.last_forget_minute() {
+        return Ok(());
+    }
+    world.set_last_forget_minute(now.0 / 60_000);
+    let gone: Vec<(EntityId, Option<String>, Option<EntityId>, String)> = world
+        .store
+        .entities()
+        .filter(|e| e.kind == "chunk")
+        .filter_map(|e| {
+            let v = world
+                .store
+                .read_field(e.id, CHUNK, "value", now)
+                .ok()?
+                .as_f64()?;
+            (v < FORGET_BELOW).then(|| {
+                (
+                    e.id,
+                    e.owner.clone(),
+                    e.parent,
+                    super::plain_str(world, e.id, CHUNK, "source")
+                        .unwrap_or("something")
+                        .to_string(),
+                )
+            })
+        })
+        .collect();
+    for (id, owner, container, source) in gone {
+        world
+            .record(Actor::Driver, StoreEvent::EntityRemoved { id })
+            .map_err(|e| e.to_string())?;
+        let _ = world.note(
+            Actor::Driver,
+            FADED,
+            json!({"owner": owner, "chunk": id.0, "source": source, "container": container.map(|c| c.0)}),
+        );
+        if let Some(who) = owner {
+            super::combat::narrate(
+                world,
+                &who,
+                format!("The memory of {source} is gone; you could not have said when."),
+            );
+        }
+    }
+    Ok(())
+}
+
 pub fn register(world: &mut World, curves: Curves) {
+    world.on_tick(Box::new(sweep));
     let active_hl_ms = curves.active_half_life.0;
     world.register(
         CommandSpec::new(
