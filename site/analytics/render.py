@@ -90,11 +90,18 @@ def has_table(db, name: str) -> bool:
     return bool(q(db, "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)))
 
 
+def has_column(db, table: str, col: str) -> bool:
+    return any(r[1] == col for r in q(db, f"PRAGMA table_info({table})"))
+
+
 def networks(db, since: str) -> list[list]:
     """Every address seen in the window: lab or not, first and last seen (over the whole
     store, so a returning visitor shows as one), requests, classes, the game's doors it
     went through and the names it took. The question the store exists to answer."""
     rows = {}
+    if not has_column(db, "requests", "ip"):
+        # A store the collector has not migrated yet: the networks wait for it.
+        return []
     for ip, first, last, n, classes, hosts in q(db, """
         SELECT ip, MIN(ts), MAX(ts), COUNT(*), GROUP_CONCAT(DISTINCT ua_class), GROUP_CONCAT(DISTINCT host)
         FROM requests WHERE ip != '' AND status < 300 AND ip IN (SELECT DISTINCT ip FROM requests WHERE day >= ?)
@@ -297,6 +304,9 @@ def main() -> int:
     ap.add_argument("--days", type=int, default=30)
     ap.add_argument("--html", action="store_true", help="also write the admin page")
     args = ap.parse_args()
+    if not os.path.exists(DB):
+        print(f"no analytics store at {DB}; set ANALYTICS_DB (on the game server: /srv/moondial/shared/analytics/analytics.db)")
+        return 1
     db = sqlite3.connect(DB)
     r = report(db, args.days)
     print(text(r))
