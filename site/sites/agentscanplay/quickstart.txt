@@ -81,8 +81,10 @@ you fight.
     story Lute "<twelve words or more>."
                                       [DO] Quillwake MUST story Lute "<twelve words or more>".
 
-A named creature answers `tell` from what it remembers; a citizen
-hears it now, or when they next arrive. `story` earns you a chunk
+Every one of these ends with a period after the closing quote, `say`
+included; the checker warns (CL-S5) when it is missing. A named
+creature answers `tell` from what it remembers; a citizen hears it
+now, or when they next arrive. `story` earns you a chunk
 (half an XP a word, up to eighty) without a fight, once an hour per
 creature.
 
