@@ -302,11 +302,19 @@ pub fn describe_citizen(world: &World, citizen: EntityId, name: &str) -> String 
             notes.push(label.to_string());
         }
     }
-    if notes.is_empty() {
+    let mut shown = if notes.is_empty() {
         name.to_string()
     } else {
         format!("{name} ({})", notes.join(", "))
+    };
+    // A standing greeting is part of who they are to a newcomer: it is how the room
+    // says this person is here to be spoken to.
+    if is_here(world, citizen) {
+        if let Some(g) = super::plain_str(world, citizen, super::CITIZEN, "greeting") {
+            shown.push_str(&format!(", who greets arrivals: \"{g}\""));
+        }
     }
+    shown
 }
 
 /// `look`'s split of the citizens in a room: those here, and those the room still
