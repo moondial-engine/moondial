@@ -70,9 +70,11 @@ pub struct Errand {
     pub story: Option<String>,
     pub keywords: Vec<String>,
     pub story_by: String,
+    pub story_at: i64,
     pub word: Option<String>,
     pub word_to: Option<String>,
     pub word_by: String,
+    pub word_at: i64,
 }
 
 fn fields_of(world: &World, creature: EntityId) -> BTreeMap<String, Field> {
@@ -103,9 +105,11 @@ pub fn of(world: &World, creature: EntityId) -> Option<Errand> {
             .filter_map(|v| v.as_str().map(str::to_string))
             .collect(),
         story_by: str_of("story_by").unwrap_or_default(),
+        story_at: plain(&f, "story_at").and_then(|v| v.as_i64()).unwrap_or(0),
         word: str_of("word"),
         word_to: str_of("word_to"),
         word_by: str_of("word_by").unwrap_or_default(),
+        word_at: plain(&f, "word_at").and_then(|v| v.as_i64()).unwrap_or(0),
     };
     if e.story.is_none() && e.word.is_none() {
         return None;
@@ -148,6 +152,7 @@ pub fn set_story(
             ("story", json!(want)),
             ("keywords", json!(keywords(want))),
             ("story_by", json!(by)),
+            ("story_at", json!(world.now().0)),
         ],
     )
 }
@@ -166,6 +171,7 @@ pub fn set_word(
             ("word", json!(phrase)),
             ("word_to", json!(to)),
             ("word_by", json!(by)),
+            ("word_at", json!(world.now().0)),
         ],
     )
 }
@@ -429,6 +435,20 @@ pub fn did_for(world: &World, creature: EntityId, actor: &str) -> bool {
 /// A named creature with nothing to want asks for a story like the one it has most
 /// forgotten: the gist of its smallest story chunk. With no story at all, one of the
 /// world's own wants, by its name.
+/// How long a want of the world's own stands before the rotation replaces it. The
+/// operator's errands are never rotated.
+pub const ROTATION_MS: i64 = 4 * 3600 * 1000;
+/// Whose errands the rotation may replace.
+fn rotatable(by: &str) -> bool {
+    matches!(by, "forgetting" | "the rotation" | "the way home")
+}
+
+/// The rotation. Each named creature always wants a story: the one it has most
+/// forgotten, or one from the pool, and a want that has stood for [`ROTATION_MS`]
+/// gives way to the next. And there is always one word in the air: when no creature
+/// wants a word carried, two named creatures in different rooms are given one between
+/// them, so the chain renews itself without the operator. Operator-set errands stand
+/// until done.
 pub fn sweep(world: &mut World) -> Result<(), String> {
     let named: Vec<EntityId> = world
         .store
@@ -438,21 +458,88 @@ pub fn sweep(world: &mut World) -> Result<(), String> {
         .map(|e| e.id)
         .collect();
     let now = world.now();
-    for c in named {
-        if of(world, c).is_some_and(|e| e.story.is_some()) {
+    // Stories.
+    for &c in &named {
+        let current = of(world, c);
+        let stale = current.as_ref().is_some_and(|e| {
+            e.story.is_some() && rotatable(&e.story_by) && now.0 - e.story_at >= ROTATION_MS
+        });
+        if current.as_ref().is_some_and(|e| e.story.is_some()) && !stale {
             continue;
         }
-        let want = faded_story(world, c, now).unwrap_or_else(|| {
-            let n = mind::name(world, c).unwrap_or_default();
-            let h = n
-                .bytes()
-                .fold(7usize, |a, b| a.wrapping_mul(31).wrapping_add(b as usize));
-            FIRST_WANTS[h % FIRST_WANTS.len()].to_string()
-        });
-        set_story(world, c, &want, "forgetting").map_err(|e| e.to_string())?;
+        let epoch = (now.0 / ROTATION_MS) as usize;
+        let want = next_story(
+            world,
+            c,
+            now,
+            epoch,
+            current.as_ref().and_then(|e| e.story.clone()),
+        );
+        let by = if stale { "the rotation" } else { "forgetting" };
+        set_story(world, c, &want, by).map_err(|e| e.to_string())?;
+    }
+    // One word in the air.
+    let any_word = named
+        .iter()
+        .any(|&c| of(world, c).is_some_and(|e| e.word.is_some()));
+    if !any_word && named.len() >= 2 {
+        let epoch = (now.0 / ROTATION_MS) as usize;
+        // A sender and a receiver in different rooms, so the word is carried somewhere.
+        let rooms: Vec<(EntityId, Option<EntityId>)> = named
+            .iter()
+            .map(|&c| (c, world.store.entity(c).and_then(|e| e.parent)))
+            .collect();
+        let mut pairs: Vec<(EntityId, EntityId)> = Vec::new();
+        for (a, ra) in &rooms {
+            for (b, rb) in &rooms {
+                if a != b && ra != rb {
+                    pairs.push((*a, *b));
+                }
+            }
+        }
+        if !pairs.is_empty() {
+            let (from, to) = pairs[epoch % pairs.len()];
+            let phrase = WORDS_IN_THE_AIR[(epoch + from.0 as usize) % WORDS_IN_THE_AIR.len()];
+            let to_name = mind::name(world, to).unwrap_or_default();
+            set_word(world, from, phrase, &to_name, "the rotation").map_err(|e| e.to_string())?;
+        }
     }
     Ok(())
 }
+
+/// The next story want for a creature: the story it has most forgotten, else the
+/// pool by epoch, never the one it has now.
+fn next_story(
+    world: &World,
+    creature: EntityId,
+    now: moondial_time::Timestamp,
+    epoch: usize,
+    current: Option<String>,
+) -> String {
+    if let Some(w) = faded_story(world, creature, now).filter(|w| Some(w) != current.as_ref()) {
+        return w;
+    }
+    let base = epoch + creature.0 as usize;
+    for i in 0..FIRST_WANTS.len() {
+        let w = FIRST_WANTS[(base + i) % FIRST_WANTS.len()];
+        if current.as_deref() != Some(w) {
+            return w.to_string();
+        }
+    }
+    FIRST_WANTS[0].to_string()
+}
+
+/// Words the rotation sends between creatures.
+const WORDS_IN_THE_AIR: &[&str] = &[
+    "the fourth door is open",
+    "the lanterns are counting again",
+    "nothing has crossed the fog since morning",
+    "the moon has not moved",
+    "the stacks are overdue",
+    "someone sat in the parlor and did not write",
+    "the tide in the shallows went out and stayed",
+    "the orrery is a minute slow",
+];
 
 const FIRST_WANTS: &[&str] = &[
     "a moon that never sets",
@@ -461,6 +548,14 @@ const FIRST_WANTS: &[&str] = &[
     "a lantern nobody remembers lighting",
     "a name that was almost forgotten",
     "a room that is still there",
+    "a letter that arrived after its writer",
+    "fog that learned a word",
+    "a stair that goes down further than the hill is tall",
+    "a book that was never overdue because it was never lent",
+    "the last thing a wisp remembers",
+    "a cup of tea still warm in an empty room",
+    "a clock that keeps the wrong time on purpose",
+    "a visitor who left before they were seen",
 ];
 
 fn faded_story(world: &World, creature: EntityId, now: moondial_time::Timestamp) -> Option<String> {

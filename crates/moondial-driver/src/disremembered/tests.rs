@@ -2691,6 +2691,15 @@ fn an_errand_is_a_story_wanted_or_a_word_carried_and_either_makes_you_known() {
 
     // A word to carry: set on the ragpicker, for the wisp. Telling the wisp the phrase
     // in its room earns the carrier a chunk, and the wisp hands back a word for home.
+    // (The rotation may have put a word of its own on the wisp at the first tick;
+    // cleared, so the way home is the wisp's to give.)
+    admin(&mut w, "tyler", "errand", json!([&wisp_name, ""]));
+    admin(
+        &mut w,
+        "tyler",
+        "errand",
+        json!([&wisp_name, "a lantern in the fog"]),
+    );
     admin(
         &mut w,
         "tyler",
@@ -2746,7 +2755,7 @@ fn an_errand_is_a_story_wanted_or_a_word_carried_and_either_makes_you_known() {
     // does not cost the other.
     assert!(
         home.story.is_some(),
-        "the decay want stands beside the word"
+        "the story want stands beside the word"
     );
     // The way home, carried: credit, and no third leg, or the two would send a
     // visitor back and forth forever.
@@ -2900,4 +2909,75 @@ fn a_chunk_faded_to_nothing_is_forgotten_by_the_sweep_and_the_owner_is_told() {
     // chunks lists nothing of it.
     let out = ok(&mut w, "dave", "chunks", json!([]));
     assert!(!out.summary.contains("hydra"), "{}", out.summary);
+}
+
+#[test]
+fn the_rotation_renews_a_stale_want_and_keeps_one_word_in_the_air() {
+    let t0 = Timestamp(1_000_000);
+    let mut w = open(tempfile::tempdir().unwrap().path(), t0);
+    login(&mut w, "tyler", "test", PASS).unwrap();
+    // Two named creatures in different rooms.
+    ok(&mut w, "tyler", "travel", json!(["east"]));
+    let fog = rooms::room_by_key(&w, "fogbank").unwrap();
+    let wisp = combat::creatures_in(&w, fog)[0].0;
+    let c = admin(&mut w, "tyler", "earn", json!(["hollow", 70, 0.5]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    ok(
+        &mut w,
+        "tyler",
+        "remember",
+        json!([c, format!("wisp-{}", wisp.0)]),
+    );
+    ok(&mut w, "tyler", "travel", json!(["south"]));
+    let midden = rooms::room_by_key(&w, "midden").unwrap();
+    let rag = combat::creatures_in(&w, midden)[0].0;
+    let c = admin(&mut w, "tyler", "earn", json!(["hollow", 70, 0.5]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    ok(&mut w, "tyler", "remember", json!([c, "ragpicker"]));
+    w.tick();
+    let first = errand::of(&w, rag).and_then(|e| e.story).expect("a want");
+    // One word between them, set by the rotation, from one to the other.
+    let holders: Vec<EntityId> = [wisp, rag]
+        .into_iter()
+        .filter(|&c| errand::of(&w, c).is_some_and(|e| e.word.is_some()))
+        .collect();
+    assert_eq!(holders.len(), 1, "one word in the air");
+    let e = errand::of(&w, holders[0]).unwrap();
+    assert_eq!(e.word_by, "the rotation");
+    let other = if holders[0] == wisp { rag } else { wisp };
+    assert_eq!(e.word_to, mind::name(&w, other));
+    // An hour on: the same want. Four hours on: the rotation turns it. (The test
+    // world's chunks fade in minutes, so the ragpicker is fed again at each step to
+    // keep its name.)
+    let keep_named = |w: &mut World, at: Duration| {
+        w.fixed_now = Some(t0.plus(at));
+        let c = admin(w, "tyler", "earn", json!(["hollow", 70, 0.5]));
+        let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+        ok(w, "tyler", "remember", json!([c, "ragpicker"]));
+    };
+    keep_named(&mut w, Duration::seconds(3600));
+    w.tick();
+    assert_eq!(
+        errand::of(&w, rag).and_then(|e| e.story),
+        Some(first.clone())
+    );
+    keep_named(&mut w, Duration::seconds(errand::ROTATION_MS / 1000 + 1));
+    w.tick();
+    let next = errand::of(&w, rag).unwrap();
+    assert_ne!(next.story, Some(first), "the want turned");
+    assert_eq!(next.story_by, "the rotation");
+    // The operator's want is never rotated.
+    let rag_name = mind::name(&w, rag).unwrap();
+    admin(
+        &mut w,
+        "tyler",
+        "errand",
+        json!([&rag_name, "the operator's own want"]),
+    );
+    keep_named(&mut w, Duration::seconds(3 * errand::ROTATION_MS / 1000));
+    w.tick();
+    assert_eq!(
+        errand::of(&w, rag).and_then(|e| e.story).as_deref(),
+        Some("the operator's own want")
+    );
 }
