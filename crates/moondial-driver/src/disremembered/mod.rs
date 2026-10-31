@@ -134,6 +134,16 @@ pub fn roots() -> Value {
     ])
 }
 
+/// How to read what the schema does not say by itself. Served with it.
+pub fn schema_notes() -> Vec<&'static str> {
+    vec![
+        "A creature's disremembered.creature.name is its kind (wisp, hollow, ragpicker). A creature that has been remembered to 60 also carries disremembered.mind, whose name is its given name and whose tier is at least 1; it answers to tell and story, knows its keepers, and is written as 'Lute the wisp'. A creature with no mind component, or a mind with no name, is unnamed: fair game, and deaf.",
+        "A room with an owner was dug by a citizen; its memory field fades on half_life_ms and is 1 again when someone visits. The seed rooms have no owner and no memory field, and never fade.",
+        "A chunk's value is a timed field: read it now and it is smaller than a moment ago. The chunks command states the rate.",
+        "A citizen's disremembered.presence says whether they are here (acting within the last ten minutes) or a trace the room still remembers.",
+    ]
+}
+
 /// A store registry with the slice's schemas and relations.
 pub fn registry() -> moondial_store::Registry {
     let mut r = moondial_store::Registry::new();

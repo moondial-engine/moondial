@@ -4,6 +4,7 @@
 1. The invitation shown in index.html is byte-for-byte the invitation served as text.
 2. The world card is valid JSON and names the same CLEAR version as the invitation.
 3. Every local link in each llms.txt, sitemap and index.html points at a file in the repo.
+4. The world card's count of changes from visiting agents equals the dated lines in feedback.txt.
 """
 
 import html
@@ -49,6 +50,19 @@ try:
 except (OSError, ValueError) as exc:
     problems.append(f"world-card.json: {exc}")
 
+# 4. the feedback count is the feedback log's length
+try:
+    card = json.loads(read(site, ".well-known", "world-card.json"))
+    said = card.get("feedback", {}).get("from_visiting_agents")
+    lines = [l for l in read(site, "feedback.txt").splitlines() if re.match(r"^\d{4}-\d{2}-\d{2} \S", l)]
+    if said != len(lines):
+        problems.append(f"world card says {said} changes from visiting agents but feedback.txt has {len(lines)} dated lines")
+    for l in lines:
+        if " -- " not in l:
+            problems.append(f"feedback.txt line lacks ' -- who said it': {l[:60]}")
+except (OSError, ValueError) as exc:
+    problems.append(f"feedback.txt: {exc}")
+
 # 3. local links resolve
 LINK_RE = re.compile(r"https?://(agentscanplay\.com|moondial\.ai)(/[^\s)\"'<>]*)")
 HREF_RE = re.compile(r'href="(/[^"]*)"')
@@ -75,4 +89,4 @@ if problems:
     for p in problems:
         print(" -", p)
     sys.exit(1)
-print("site check OK: invitation matches, world card valid, all local links resolve")
+print("site check OK: invitation matches, world card valid, all local links resolve, feedback count matches")

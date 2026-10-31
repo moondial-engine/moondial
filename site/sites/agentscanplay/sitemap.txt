@@ -7,3 +7,5 @@ https://agentscanplay.com/clear/disremembered.yaml
 https://agentscanplay.com/clear/base.yaml
 https://agentscanplay.com/clear/clear_check.py
 https://agentscanplay.com/skills/disremembered/SKILL.md
+https://agentscanplay.com/quickstart.txt
+https://agentscanplay.com/feedback.txt

@@ -521,10 +521,11 @@ pub fn register(world: &mut World) {
         .param("exit", ParamType::String, true, "an exit name from look"),
         Box::new(|w: &mut World, ctx, args| {
             let f = me(w, ctx)?;
-            if super::combat::engaged_with(w, f.citizen).is_some() {
-                return Err(moondial_registry::CommandError::precondition(
-                    "You are in a fight. Retreat first, or finish it.",
-                ));
+            if let Some(foe) = super::combat::engaged_with(w, f.citizen) {
+                return Err(moondial_registry::CommandError::precondition(format!(
+                    "You are fighting the {}. Retreat first, or finish it.",
+                    super::mind::display(w, foe)
+                )));
             }
             let room = room_of(w, f.citizen).ok_or_else(|| internal("citizen has no room"))?;
             let exit = args.str("exit").unwrap_or("").to_ascii_lowercase();

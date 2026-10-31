@@ -9,7 +9,7 @@
       "rule": "CL-I6",
       "severity": "error",
       "where": "statement 2",
-      "message": "'shelve' takes at most 1 argument (chunk); the DO gives 2.",
+      "message": "'shelve' takes at most 1 argument, positional and unlabeled (chunk); the DO gives 2.",
       "excerpt": "chunk-5 into the palace"
     },
     {

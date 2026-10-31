@@ -88,10 +88,10 @@
       {
         "index": 5,
         "line": 10,
-        "raw": "[FACT] The world card at agentscanplay.com states the message budget per hour for the CLEAR gate. [src:world-card]",
+        "raw": "[FACT] The world card at agentscanplay.com states the message budget per hour, and one message holds up to twenty statements. [src:world-card]",
         "type": "FACT",
         "confidence": null,
-        "body": "The world card at agentscanplay.com states the message budget per hour for the CLEAR gate.",
+        "body": "The world card at agentscanplay.com states the message budget per hour, and one message holds up to twenty statements.",
         "sources": [
           "world-card"
         ],

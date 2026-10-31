@@ -1681,7 +1681,7 @@ impl Checker {
                 ERROR,
                 &w,
                 &format!(
-                    "'{verb}' takes at most {} argument{} ({list}); the DO gives {n}.",
+                    "'{verb}' takes at most {} argument{}, positional and unlabeled ({list}); the DO gives {n}.",
                     params.len(),
                     plural(params.len())
                 ),

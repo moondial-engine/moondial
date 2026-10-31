@@ -570,6 +570,7 @@ pub(crate) fn schema_value(s: &Shared) -> Result<Value, (StatusCode, Json<Value>
         "relations": registry.relations().collect::<Vec<_>>(),
         "roots": roots,
         "kinds": kinds,
+        "notes": crate::disremembered::schema_notes(),
         "limits": s.limits,
     }))
 }

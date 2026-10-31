@@ -99,6 +99,15 @@ fn chunk_rows(
     Ok((rows, serde_json::to_value(obs).unwrap_or(Value::Null)))
 }
 
+/// The one line that says how fast the window fades, so nobody has to measure it.
+fn fade_rate(active_hl_ms: i64) -> String {
+    format!(
+        "A chunk halves every {} at vividity 0 and every {} at vividity 1; shelved in the palace it fades about five times slower.",
+        super::combat::human(active_hl_ms),
+        super::combat::human(active_hl_ms * 3)
+    )
+}
+
 fn rows_text(rows: &[Value]) -> Vec<String> {
     rows.iter()
         .map(|r| {
@@ -144,27 +153,29 @@ pub(crate) fn resolve_chunk(
 }
 
 pub fn register(world: &mut World, curves: Curves) {
+    let active_hl_ms = curves.active_half_life.0;
     world.register(
         CommandSpec::new(
             "disremembered.chunks",
-            "Your active window: every chunk, its current value, and your level.",
+            "Your active window: every chunk, its current value, and your level. The reply states the rate at which chunks fade.",
         ),
-        Box::new(|w: &mut World, ctx, _| {
+        Box::new(move |w: &mut World, ctx, _| {
             let f = me(w, ctx)?;
             let (rows, observation) = chunk_rows(w, ctx, f.window)?;
             let level: f64 = rows.iter().filter_map(|r| r["value"].as_f64()).sum();
             let attack = super::combat::attack_for_level(level);
+            let rate = fade_rate(active_hl_ms);
             let text = if rows.is_empty() {
-                format!("Your window is empty. Level 0, attack {attack:.0}.")
+                format!("Your window is empty. Level 0, attack {attack:.0}. {rate}")
             } else {
                 format!(
-                    "Level {level:.2}, attack {attack:.0}\n{}",
+                    "Level {level:.2}, attack {attack:.0}\n{}\n{rate}",
                     rows_text(&rows).join("\n")
                 )
             };
             Ok(Outcome::new(
                 text,
-                json!({"level": level, "attack": attack, "chunks": rows, "observation": observation}),
+                json!({"level": level, "attack": attack, "chunks": rows, "active_half_life_ms": active_hl_ms, "observation": observation}),
             ))
         }),
     );

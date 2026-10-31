@@ -755,7 +755,7 @@ class Checker:
             self.add("CL-I6", ERROR, w, f"'{verb}' needs {len(required)} argument{'s' if len(required) != 1 else ''} ({need}); the DO gives {n}.", st.arguments or "")
             return
         if n > len(params):
-            self.add("CL-I6", ERROR, w, f"'{verb}' takes at most {len(params)} argument{'s' if len(params) != 1 else ''} ({names or 'none'}); the DO gives {n}.", st.arguments or "")
+            self.add("CL-I6", ERROR, w, f"'{verb}' takes at most {len(params)} argument{'s' if len(params) != 1 else ''}, positional and unlabeled ({names or 'none'}); the DO gives {n}.", st.arguments or "")
             return
         for arg, p in zip(st.args, params):
             t = (p.get("type") or "string").lower()
