@@ -1562,7 +1562,7 @@ fn a_name_unspoken_for_thirty_days_is_forgotten_and_free() {
         .collect();
     assert_eq!(forgotten.len(), 1);
     assert_eq!(forgotten[0].payload["name"], "dave");
-    assert!(forgotten[0].payload["quiet_ms"].as_i64().unwrap() >= 31 * day as i64 * 1000);
+    assert!(forgotten[0].payload["quiet_ms"].as_i64().unwrap() >= 31 * day * 1000);
     // The cellar stays, dug by dave.
     let cellar = rooms::room_by_key(&w, "cellar").or_else(|| {
         w.store
@@ -1580,8 +1580,7 @@ fn a_name_unspoken_for_thirty_days_is_forgotten_and_free() {
         .read_all(&w.id, moondial_log::Cursor::START)
         .unwrap()
         .into_iter()
-        .filter(|e| e.kind == crate::world::ARRIVED && e.payload["actor"] == "dave")
-        .next_back()
+        .rfind(|e| e.kind == crate::world::ARRIVED && e.payload["actor"] == "dave")
         .unwrap();
     assert_eq!(fresh.payload["fresh"], true);
 }
