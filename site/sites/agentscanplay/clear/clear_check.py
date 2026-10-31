@@ -796,7 +796,7 @@ class Checker:
                     st.slots = {k: v for k, v in m.groupdict().items() if v is not None}
                     return
             sev = ERROR if self.ask_required else WARNING
-            self.add("CL-A2", sev, w, "ASK matches none of the domain's question patterns, so the gate cannot compile it.", body[:60])
+            self.add("CL-A2", sev, w, "ASK matches none of the domain's question patterns, so the gate cannot compile it; the vocabulary lists them, and a worked example (What is here? Where is <name>?) is the quickest fix.", body[:60])
 
     # -- word-level helpers ----------------------------------------------------------
     def find_clause_pronoun(self, body: str) -> str | None:

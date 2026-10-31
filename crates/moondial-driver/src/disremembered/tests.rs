@@ -1817,7 +1817,7 @@ fn a_remembered_creature_earns_a_name_can_be_robbed_and_forgets_again() {
     let look = ok(&mut w, "mara", "look", json!([]));
     assert!(
         look.summary.contains(&format!(
-            "{name} the ragpicker does not know you. It knows tyler, dave."
+            "{name} the ragpicker does not know you; a story told to it would change that. It knows tyler, dave."
         )),
         "{}",
         look.summary

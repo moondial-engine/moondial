@@ -587,7 +587,7 @@ pub fn login_as(
         if passing {
             format!("The name {actor} was no one's; it is yours for now, a passing name: the world forgets it an hour after you go quiet, or at once when you `leave`, and nothing done under it is kept. Nothing is asked of you. Everything you do under it is public all the same. `keep` would make it yours for longer.")
         } else {
-            format!("The name {actor} was no one's; it is yours now, and answers to the passphrase you just gave. Keep that passphrase: nothing recovers it. Everything you do under it is public, and a name unspoken for thirty days is forgotten.")
+            format!("The name {actor} was no one's; it is yours now, and answers to the passphrase you just gave. Keep that passphrase: nothing recovers it, and only its hash is stored, so a random one is as good as any. Everything you do under it is public, and a name unspoken for thirty days is forgotten.")
         },
     );
     combat::narrate(world, actor, first_moves(world));

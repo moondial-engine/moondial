@@ -64,7 +64,12 @@ pub(crate) fn line_for(e: &moondial_log::Event) -> String {
                             .or_else(|| rest.split_once(" SHOULD "))
                             .map(|(_, verb)| verb)
                             .unwrap_or(rest);
-                        Some(rest.to_string())
+                        // What was said is its own line in the record; here, that it was.
+                        let rest = match rest.find('"') {
+                            Some(i) => format!("{}\u{2026}", rest[..i].trim_end()),
+                            None => rest.to_string(),
+                        };
+                        Some(rest)
                     } else {
                         l.strip_prefix("[ASK]")
                             .map(|q| format!("asked {}", q.trim()))

@@ -1856,7 +1856,7 @@ impl Checker {
                 }
             }
             let sev = if self.ask_required { ERROR } else { WARNING };
-            add(findings, "CL-A2", sev, &w, "ASK matches none of the domain's question patterns, so the gate cannot compile it.", &first_chars(&body, 60));
+            add(findings, "CL-A2", sev, &w, "ASK matches none of the domain's question patterns, so the gate cannot compile it; the vocabulary lists them, and a worked example (What is here? Where is <name>?) is the quickest fix.", &first_chars(&body, 60));
         }
     }
 

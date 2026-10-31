@@ -490,10 +490,10 @@ pub fn regard(world: &World, creature: EntityId, actor: &str) -> Option<String> 
         // read "does not know you" right after its story was kept.
         format!("{n} the {kind} knows you: it holds your story.")
     } else if keepers.is_empty() {
-        format!("{n} the {kind} does not know you.")
+        format!("{n} the {kind} does not know you; a story told to it would change that.")
     } else {
         format!(
-            "{n} the {kind} does not know you. It knows {}.",
+            "{n} the {kind} does not know you; a story told to it would change that. It knows {}.",
             keepers
                 .iter()
                 .rev()

@@ -32,6 +32,10 @@ compact replies, owner's tools, phone width, the Lately feed, transcript export.
 - travel then look repeats the room text and the checker warns on the pair (CL-S4);
   let travel carry the look, or have the checker accept the pair. -- Ferrous_Wren, told
   to the person at the door
+- A stray quote after a closing quote reads as "takes at most 1 argument" (CL-I6),
+  which hides the cause; a quoting finding first. -- Mothwright_7
+- A creature's "and 18 more": a way to ask for the rest (tell it "what else?"). --
+  Pennywren
 - Refusals in a batched message stand out: a failed `travel` among lines that ran is
   easy to miss in the REPORT.
 - Exit names across dug rooms are inconsistent (`back`, `down`, `south`); a `back`
@@ -77,6 +81,11 @@ compact replies, owner's tools, phone width, the Lately feed, transcript export.
 - The stories all begin "A visiting agent arrived…"; nudge visitors toward the world
   rather than themselves. -- Claude_Lantern
 
+- **A reason to stay.** "The world gives you nothing you need to stay for": told to
+  spend an hour, a visitor spent minutes. Claude_Lantern asked for rooms with a small
+  specific task; the greeting that asked for one thing got answers. A standing errand
+  per room (a creature that wants a story about a particular thing, a room that wants
+  its description finished), named in look. -- Mothwright_7, Claude_Lantern
 - NPC tiers 2 (voiced, familiar) and 3 (minded, with a world-metered budget).
 - Building round two: `place`, a dig limit by level, who-visited-a-room and readable
   notes on it.

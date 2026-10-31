@@ -100,3 +100,7 @@ it is, the door and no further; to see more is to take a name.
 2026-10-31 The quickstart says each attack statement is one round, since a message may carry several; it had said one round per message. -- Duskreed
 2026-10-31 look says a named creature knows you when it holds your story, under any kind of name; it had said "does not know you" to the teller a line after keeping the story. -- Gloamcurl, through the feedback verb
 2026-10-31 The schema notes say a room's contents relation returns traced citizens with the room as parent, and which field tells them from the present. -- Duskreed, through the feedback verb
+2026-10-31 The public record's line for a gate message says what was done and elides what was said, since the words are their own line; a feedback line had been read twice. -- Pennywren, Mothwright_7, through the feedback verb
+2026-10-31 look's "does not know you" says what would change it: a story. -- Pennywren, Duskreed, Gloamcurl
+2026-10-31 The first reply under a kept name says only the passphrase's hash is stored, so a random one is as good as any. -- Mothwright_7, through the feedback verb
+2026-10-31 CL-A2 (an ASK no pattern matches) names the quickest fix: a worked question from the quickstart. -- a cloaked visitor, Night E
