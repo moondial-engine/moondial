@@ -61,68 +61,67 @@ pub fn keywords(text: &str) -> Vec<String> {
     out
 }
 
-/// A creature's errand, if it has one.
-#[derive(Debug, Clone, PartialEq)]
+/// What a named creature wants: a story about something, a word to carry to another
+/// named creature, or both at once. The two parts are independent, so carrying a word
+/// to a creature does not cost the story it wanted: a visitor did both in one message
+/// and was paid single for the story.
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Errand {
-    pub kind: String,
-    pub want: String,
-    pub to: Option<String>,
+    pub story: Option<String>,
     pub keywords: Vec<String>,
-    pub set_by: String,
+    pub story_by: String,
+    pub word: Option<String>,
+    pub word_to: Option<String>,
+    pub word_by: String,
 }
 
-impl Errand {
-    pub fn story(want: &str, set_by: &str) -> Errand {
-        Errand {
-            kind: "story".into(),
-            want: want.to_string(),
-            to: None,
-            keywords: keywords(want),
-            set_by: set_by.to_string(),
-        }
-    }
-    pub fn word(phrase: &str, to: &str, set_by: &str) -> Errand {
-        Errand {
-            kind: "word".into(),
-            want: phrase.to_string(),
-            to: Some(to.to_string()),
-            keywords: Vec::new(),
-            set_by: set_by.to_string(),
-        }
+fn fields_of(world: &World, creature: EntityId) -> BTreeMap<String, Field> {
+    world
+        .store
+        .entity(creature)
+        .and_then(|e| e.components.get(ERRAND))
+        .map(|c| c.fields.clone())
+        .unwrap_or_default()
+}
+
+fn plain(fields: &BTreeMap<String, Field>, k: &str) -> Option<Value> {
+    match fields.get(k) {
+        Some(Field::Plain(v)) if !v.is_null() => Some(v.clone()),
+        _ => None,
     }
 }
 
 pub fn of(world: &World, creature: EntityId) -> Option<Errand> {
-    let c = world.store.entity(creature)?.components.get(ERRAND)?;
-    let plain = |k: &str| match c.fields.get(k) {
-        Some(Field::Plain(v)) => Some(v.clone()),
-        _ => None,
-    };
-    let kind = plain("kind")?.as_str()?.to_string();
-    let want = plain("want")?.as_str()?.to_string();
-    Some(Errand {
-        kind,
-        want,
-        to: plain("to").and_then(|v| v.as_str().map(str::to_string)),
-        keywords: plain("keywords")
+    let f = fields_of(world, creature);
+    let str_of = |k: &str| plain(&f, k).and_then(|v| v.as_str().map(str::to_string));
+    let e = Errand {
+        story: str_of("story"),
+        keywords: plain(&f, "keywords")
             .and_then(|v| v.as_array().cloned())
             .unwrap_or_default()
             .iter()
             .filter_map(|v| v.as_str().map(str::to_string))
             .collect(),
-        set_by: plain("set_by")
-            .and_then(|v| v.as_str().map(str::to_string))
-            .unwrap_or_default(),
-    })
+        story_by: str_of("story_by").unwrap_or_default(),
+        word: str_of("word"),
+        word_to: str_of("word_to"),
+        word_by: str_of("word_by").unwrap_or_default(),
+    };
+    if e.story.is_none() && e.word.is_none() {
+        return None;
+    }
+    Some(e)
 }
 
-pub fn set(world: &mut World, creature: EntityId, e: &Errand) -> Result<(), CommandError> {
-    let mut fields = BTreeMap::new();
-    fields.insert("kind".into(), Field::Plain(json!(e.kind)));
-    fields.insert("want".into(), Field::Plain(json!(e.want)));
-    fields.insert("to".into(), Field::Plain(json!(e.to)));
-    fields.insert("keywords".into(), Field::Plain(json!(e.keywords)));
-    fields.insert("set_by".into(), Field::Plain(json!(e.set_by)));
+fn write(
+    world: &mut World,
+    creature: EntityId,
+    changes: Vec<(&str, Value)>,
+) -> Result<(), CommandError> {
+    let mut fields = fields_of(world, creature);
+    for (k, v) in changes {
+        fields.insert(k.to_string(), Field::Plain(v));
+    }
     world
         .record(
             Actor::Driver,
@@ -134,44 +133,137 @@ pub fn set(world: &mut World, creature: EntityId, e: &Errand) -> Result<(), Comm
         )
         .map(|_| ())
         .map_err(internal)
+}
+
+pub fn set_story(
+    world: &mut World,
+    creature: EntityId,
+    want: &str,
+    by: &str,
+) -> Result<(), CommandError> {
+    write(
+        world,
+        creature,
+        vec![
+            ("story", json!(want)),
+            ("keywords", json!(keywords(want))),
+            ("story_by", json!(by)),
+        ],
+    )
+}
+
+pub fn set_word(
+    world: &mut World,
+    creature: EntityId,
+    phrase: &str,
+    to: &str,
+    by: &str,
+) -> Result<(), CommandError> {
+    write(
+        world,
+        creature,
+        vec![
+            ("word", json!(phrase)),
+            ("word_to", json!(to)),
+            ("word_by", json!(by)),
+        ],
+    )
+}
+
+pub fn clear_story(world: &mut World, creature: EntityId) -> Result<(), CommandError> {
+    write(
+        world,
+        creature,
+        vec![
+            ("story", Value::Null),
+            ("keywords", json!([])),
+            ("story_by", Value::Null),
+        ],
+    )
+}
+
+pub fn clear_word(world: &mut World, creature: EntityId) -> Result<(), CommandError> {
+    write(
+        world,
+        creature,
+        vec![
+            ("word", Value::Null),
+            ("word_to", Value::Null),
+            ("word_by", Value::Null),
+        ],
+    )
 }
 
 pub fn clear(world: &mut World, creature: EntityId) -> Result<(), CommandError> {
     if of(world, creature).is_none() {
         return Ok(());
     }
-    // The store has no component removal; an errand with no kind is no errand.
-    let mut fields = BTreeMap::new();
-    fields.insert("kind".into(), Field::Plain(Value::Null));
-    world
-        .record(
-            Actor::Driver,
-            StoreEvent::ComponentSet {
-                id: creature,
-                component: ERRAND.into(),
-                fields,
-            },
-        )
-        .map(|_| ())
-        .map_err(internal)
+    clear_story(world, creature)?;
+    clear_word(world, creature)
 }
 
-/// The errand as `look` and the cloak say it, if the creature has a name and a want.
+/// The way from one room to another, as exits to take, by the shortest route.
+pub fn route(world: &World, from: EntityId, to: EntityId) -> Option<Vec<String>> {
+    use std::collections::{HashMap, VecDeque};
+    let mut prev: HashMap<EntityId, (EntityId, String)> = HashMap::new();
+    let mut queue = VecDeque::from([from]);
+    let mut seen = std::collections::HashSet::from([from]);
+    while let Some(r) = queue.pop_front() {
+        if r == to {
+            let mut path = Vec::new();
+            let mut at = r;
+            while at != from {
+                let (p, via) = prev[&at].clone();
+                path.push(via);
+                at = p;
+            }
+            path.reverse();
+            return Some(path);
+        }
+        for (via, next) in super::rooms::exits_of(world, r) {
+            if seen.insert(next) {
+                prev.insert(next, (r, via));
+                queue.push_back(next);
+            }
+        }
+    }
+    None
+}
+
+/// The errand as `look` and the cloak say it, if the creature has a name and a want:
+/// one sentence per part, the word with the way there.
 pub fn describe(world: &World, creature: EntityId) -> Option<String> {
     let n = mind::name(world, creature)?;
     let e = of(world, creature)?;
-    Some(match e.kind.as_str() {
-        "word" => {
-            let to = e.to.clone().unwrap_or_default();
-            let place = mind::find_named(world, &to)
-                .and_then(|(_, r)| r)
-                .and_then(|r| plain_str(world, r, ROOM, "name"))
-                .map(|p| format!(" in {}", p.trim_start_matches("The ")))
-                .unwrap_or_default();
-            format!("{n} wants word carried to {to}{place}: \"{}\" (travel there, then tell {to} \"{}\").", e.want, e.want)
-        }
-        _ => format!("{n} wants a story about {}.", e.want),
-    })
+    let mut parts = Vec::new();
+    if let Some(want) = &e.story {
+        parts.push(format!("{n} wants a story about {want}."));
+    }
+    if let (Some(phrase), Some(to)) = (&e.word, &e.word_to) {
+        let there = mind::find_named(world, to).and_then(|(_, r)| r);
+        let place = there
+            .and_then(|r| plain_str(world, r, ROOM, "name"))
+            .map(|p| format!(" in the {}", p.trim_start_matches("The ")))
+            .unwrap_or_default();
+        let here = world.store.entity(creature).and_then(|c| c.parent);
+        let way = match (here, there) {
+            (Some(a), Some(b)) if a == b => " (it is here)".to_string(),
+            (Some(a), Some(b)) => route(world, a, b)
+                .filter(|p| !p.is_empty())
+                .map(|p| {
+                    format!(
+                        " (travel {}, then tell {to} \"{phrase}\")",
+                        p.join(", then ")
+                    )
+                })
+                .unwrap_or_default(),
+            _ => String::new(),
+        };
+        parts.push(format!(
+            "{n} wants word carried to {to}{place}: \"{phrase}\"{way}."
+        ));
+    }
+    Some(parts.join(" "))
 }
 
 /// Whether a story told to `creature` is the one it wanted.
@@ -179,7 +271,7 @@ pub fn wants_story(world: &World, creature: EntityId, text: &str) -> bool {
     let Some(e) = of(world, creature) else {
         return false;
     };
-    if e.kind != "story" {
+    if e.story.is_none() {
         return false;
     }
     let told = keywords_all(text);
@@ -202,16 +294,16 @@ fn keywords_all(text: &str) -> Vec<String> {
 
 /// A story the creature wanted was told: the record, the room, the creature's regard.
 pub fn story_done(world: &mut World, actor: &str, creature: EntityId) -> Result<(), CommandError> {
-    let Some(e) = of(world, creature) else {
+    let Some(want) = of(world, creature).and_then(|e| e.story) else {
         return Ok(());
     };
-    done(world, actor, creature, &e, None)?;
-    clear(world, creature)
+    done(world, actor, creature, "story", &want, None)?;
+    clear_story(world, creature)
 }
 
 /// What a creature says back to a word carried to it, if the text carries one that was
-/// wanted: the carrier earns, the sender's errand is done, and the receiver hands back a
-/// word for the way home.
+/// wanted: the carrier earns, the sender's word is done, and the receiver hands back a
+/// word for the way home, unless this was the way home already.
 pub fn carried_word(
     world: &mut World,
     actor: &str,
@@ -228,17 +320,19 @@ pub fn carried_word(
         .filter(|e| e.kind == "creature" && e.id != receiver)
         .filter_map(|e| of(world, e.id).map(|er| (e.id, er)))
         .filter(|(_, er)| {
-            er.kind == "word"
+            er.word_to
+                .as_deref()
+                .is_some_and(|t| t.eq_ignore_ascii_case(&receiver_name))
                 && er
-                    .to
+                    .word
                     .as_deref()
-                    .is_some_and(|t| t.eq_ignore_ascii_case(&receiver_name))
-                && said.contains(&er.want.to_lowercase())
+                    .is_some_and(|w| said.contains(&w.to_lowercase()))
         })
         .collect();
     let Some((sender, e)) = senders.into_iter().next() else {
         return Ok(None);
     };
+    let phrase = e.word.clone().unwrap_or_default();
     let sender_name = mind::name(world, sender).unwrap_or_else(|| "someone".into());
     let f = me_by_name(world, actor)?;
     let curves = super::Curves::with_half_life(moondial_time::Duration::seconds(3 * 3600));
@@ -251,18 +345,18 @@ pub fn carried_word(
         0.5,
         &curves,
     )?;
-    done(world, actor, sender, &e, Some(&receiver_name))?;
-    clear(world, sender)?;
-    // The way home: a word for the sender, unless the receiver has an errand of the
-    // operator's (one set by decay gives way).
-    let reply_phrase = if of(world, receiver).map_or(true, |er| er.set_by == "forgetting") {
-        let phrase = RETURN_WORDS[(sender.0 as usize + receiver.0 as usize) % RETURN_WORDS.len()];
-        set(
-            world,
-            receiver,
-            &Errand::word(phrase, &sender_name, "the way home"),
-        )?;
-        format!(" Carry this back to {sender_name}: \"{phrase}\"")
+    done(world, actor, sender, "word", &phrase, Some(&receiver_name))?;
+    clear_word(world, sender)?;
+    // The way home: a word for the sender, once. A return leg does not spawn another,
+    // or the two would send a visitor back and forth forever; and a word the receiver
+    // already wants carried is not replaced.
+    let homeward = e.word_by == "the way home";
+    let has_word = of(world, receiver).is_some_and(|er| er.word.is_some());
+    let reply_phrase = if !homeward && !has_word {
+        let back =
+            RETURN_WORDS[(sender.0 as usize * 31 + receiver.0 as usize) % RETURN_WORDS.len()];
+        set_word(world, receiver, back, &sender_name, "the way home")?;
+        format!(" Carry this back to {sender_name}: \"{back}\"")
     } else {
         String::new()
     };
@@ -275,8 +369,7 @@ pub fn carried_word(
         ),
     );
     Ok(Some(format!(
-        "So {sender_name} says \"{}\". I have it. {actor}, I will know you by that.{reply_phrase}",
-        e.want
+        "So {sender_name} says \"{phrase}\". I have it. {actor}, I will know you by that.{reply_phrase}"
     )))
 }
 
@@ -299,7 +392,8 @@ fn done(
     world: &mut World,
     actor: &str,
     creature: EntityId,
-    e: &Errand,
+    errand: &str,
+    want: &str,
     to: Option<&str>,
 ) -> Result<(), CommandError> {
     let name = mind::name(world, creature).unwrap_or_default();
@@ -310,7 +404,7 @@ fn done(
         .note(
             Actor::Citizen(actor.to_string()),
             DONE,
-            json!({"from": actor, "creature": creature.0, "name": name, "kind": kind, "errand": e.kind, "want": e.want, "to": to}),
+            json!({"from": actor, "creature": creature.0, "name": name, "kind": kind, "errand": errand, "want": want, "to": to}),
         )
         .map_err(internal)?;
     world.notice(match to {
@@ -345,7 +439,7 @@ pub fn sweep(world: &mut World) -> Result<(), String> {
         .collect();
     let now = world.now();
     for c in named {
-        if of(world, c).is_some() {
+        if of(world, c).is_some_and(|e| e.story.is_some()) {
             continue;
         }
         let want = faded_story(world, c, now).unwrap_or_else(|| {
@@ -355,7 +449,7 @@ pub fn sweep(world: &mut World) -> Result<(), String> {
                 .fold(7usize, |a, b| a.wrapping_mul(31).wrapping_add(b as usize));
             FIRST_WANTS[h % FIRST_WANTS.len()].to_string()
         });
-        set(world, c, &Errand::story(&want, "forgetting")).map_err(|e| e.to_string())?;
+        set_story(world, c, &want, "forgetting").map_err(|e| e.to_string())?;
     }
     Ok(())
 }
@@ -451,23 +545,20 @@ pub fn register(world: &mut World) {
                     json!({"creature": creature.0, "errand": Value::Null}),
                 ));
             }
-            let e = match args.str("to").map(str::trim).filter(|t| !t.is_empty()) {
+            match args.str("to").map(str::trim).filter(|t| !t.is_empty()) {
                 Some(to) => {
-                    let Some((_, _)) = mind::find_named(w, to) else {
+                    let Some(to) = mind::find_named(w, to).and_then(|(c, _)| mind::name(w, c)) else {
                         return Err(CommandError::precondition(format!("No creature is named {to}.")));
                     };
-                    let to = mind::find_named(w, to)
-                        .and_then(|(c, _)| mind::name(w, c))
-                        .unwrap_or_else(|| to.to_string());
-                    Errand::word(&want, &to, "the operator")
+                    set_word(w, creature, &want, &to, "the operator")?;
                 }
-                None => Errand::story(&want, "the operator"),
+                None => set_story(w, creature, &want, "the operator")?,
             };
-            set(w, creature, &e)?;
             let line = describe(w, creature).unwrap_or_default();
+            let e = of(w, creature).unwrap_or_default();
             Ok(Outcome::new(
                 line,
-                json!({"creature": creature.0, "errand": {"kind": e.kind, "want": e.want, "to": e.to, "keywords": e.keywords}}),
+                json!({"creature": creature.0, "errand": {"story": e.story, "keywords": e.keywords, "word": e.word, "word_to": e.word_to}}),
             ))
         }),
     );

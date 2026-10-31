@@ -500,7 +500,7 @@
         if (f.type === "welcome") {
           wsReady = true; cursor = f.cursor; settled = true; resolve(true);
           subscribe("room", { root: "here", select: { "disremembered.room": ["name", "description", "permits", "welcomes", "half_life_ms", "memory"], "disremembered.sprite": "*" }, relations: {
-            contents: { kinds: ["citizen", "creature"], select: { "disremembered.citizen": ["name", "passing", "greeting"], "disremembered.creature": ["name", "hp", "max_hp"], "disremembered.sprite": "*", "disremembered.presence": ["here", "trace", "door"], "disremembered.mind": ["name", "tier"], "disremembered.errand": ["kind", "want", "to"] } },
+            contents: { kinds: ["citizen", "creature"], select: { "disremembered.citizen": ["name", "passing", "greeting"], "disremembered.creature": ["name", "hp", "max_hp"], "disremembered.sprite": "*", "disremembered.presence": ["here", "trace", "door"], "disremembered.mind": ["name", "tier"], "disremembered.errand": ["story", "word", "word_to"] } },
             exits: { select: { "disremembered.room": ["name"], "disremembered.sprite": "*" } } }, timed: "curve", commands: false });
           subscribe("me", { root: "self", select: { "disremembered.body": ["hp", "max_hp"], "disremembered.sprite": "*", "disremembered.citizen": ["name", "passing", "greeting"] }, timed: "curve", commands: false });
           subscribe("window", { root: "window", select: {}, relations: { contents: { kinds: ["chunk"], select: { "disremembered.chunk": "*" } } }, timed: "curve", commands: false });
@@ -781,10 +781,12 @@
         r.querySelector(".nm").append(Object.assign(document.createElement("span"), { className: "sub", textContent: named ? "named; answers to tell, takes a story" : "unnamed" }));
         // What it wants, if anything: the errand is the click.
         const er = named && n.components["disremembered.errand"];
-        if (er && er.kind) {
-          const want = er.kind === "word" ? "wants word carried to " + er.to + ": \u201c" + er.want + "\u201d" : "wants a story about " + er.want;
-          r.querySelector(".nm").append(Object.assign(document.createElement("span"), { className: "sub want", textContent: want }));
-          r.title = er.kind === "word" ? "travel to " + er.to + ", then tell " + er.to + " \u201c" + er.want + "\u201d" : "story " + mind.name + " \u201c<a dozen words about " + er.want + ">\u201d (click)";
+        if (er && (er.story || er.word)) {
+          const wants = [];
+          if (er.story) wants.push("wants a story about " + er.story);
+          if (er.word) wants.push("wants word carried to " + er.word_to + ": \u201c" + er.word + "\u201d");
+          r.querySelector(".nm").append(Object.assign(document.createElement("span"), { className: "sub want", textContent: wants.join("; ") }));
+          r.title = (er.story ? "story " + mind.name + " \u201c<a dozen words about " + er.story + ">\u201d (click)" : "") + (er.word ? (er.story ? "; " : "") + "travel to " + er.word_to + ", then tell " + er.word_to + " \u201c" + er.word + "\u201d" : "");
         }
         r.addEventListener("click", (ev) => prefill(named ? (ev.shiftKey ? 'tell ' + mind.name + ' "' : 'story ' + mind.name + ' "') : "attack " + c.name));
         here.append(r);

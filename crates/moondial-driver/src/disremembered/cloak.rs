@@ -127,9 +127,15 @@ pub fn view(
                     .and_then(|r| super::plain_str(world, r, ROOM, "name"))
                     .unwrap_or("nowhere");
                 let want = super::errand::of(world, e.id)
-                    .map(|er| match er.kind.as_str() {
-                        "word" => format!(", wants word carried to {}", er.to.unwrap_or_default()),
-                        _ => format!(", wants a story about {}", er.want),
+                    .map(|er| {
+                        let mut w = String::new();
+                        if let Some(s) = er.story {
+                            w.push_str(&format!(", wants a story about {s}"));
+                        }
+                        if let Some(to) = er.word_to {
+                            w.push_str(&format!(", wants word carried to {to}"));
+                        }
+                        w
                     })
                     .unwrap_or_default();
                 format!(

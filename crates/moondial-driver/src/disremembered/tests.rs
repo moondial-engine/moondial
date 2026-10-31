@@ -2657,7 +2657,10 @@ fn an_errand_is_a_story_wanted_or_a_word_carried_and_either_makes_you_known() {
     assert_eq!(out.result["wanted"], true, "{}", out.summary);
     assert!(out.summary.contains("worth double"), "{}", out.summary);
     assert!(out.result["xp"].as_f64().unwrap() > usual * 1.5);
-    assert!(errand::of(&w, rag).is_none(), "the errand is done");
+    assert!(
+        errand::of(&w, rag).map_or(true, |e| e.story.is_none()),
+        "the story want is done"
+    );
     let done: Vec<_> = w
         .log
         .read_all(&w.id, moondial_log::Cursor::START)
@@ -2697,7 +2700,7 @@ fn an_errand_is_a_story_wanted_or_a_word_carried_and_either_makes_you_known() {
     let look = ok(&mut w, "dave", "look", json!([]));
     assert!(
         look.summary.contains(&format!(
-            "{rag_name} wants word carried to {wisp_name} in Fogbank: \"the fourth door is open\""
+            "{rag_name} wants word carried to {wisp_name} in the Fogbank: \"the fourth door is open\" (travel north, then tell {wisp_name} \"the fourth door is open\")."
         )),
         "{}",
         look.summary
@@ -2733,12 +2736,27 @@ fn an_errand_is_a_story_wanted_or_a_word_carried_and_either_makes_you_known() {
     );
     assert!(level(&mut w, "dave") > before + errand::WORD_XP * 0.9);
     assert!(
-        errand::of(&w, rag).is_none(),
+        errand::of(&w, rag).map_or(true, |e| e.word.is_none()),
         "the ragpicker's errand is done"
     );
     let home = errand::of(&w, wisp).expect("the wisp wants its word carried");
-    assert_eq!(home.kind, "word");
-    assert_eq!(home.to.as_deref(), Some(rag_name.as_str()));
+    assert_eq!(home.word_to.as_deref(), Some(rag_name.as_str()));
+    let back = home.word.clone().unwrap();
+    // The word the wisp wanted carried sits beside the story it wanted: carrying one
+    // does not cost the other.
+    assert!(
+        home.story.is_some(),
+        "the decay want stands beside the word"
+    );
+    // The way home, carried: credit, and no third leg, or the two would send a
+    // visitor back and forth forever.
+    ok(&mut w, "dave", "travel", json!(["south"]));
+    let out = ok(&mut w, "dave", "tell", json!([&rag_name, &back]));
+    assert!(out.summary.contains("I have it"), "{}", out.summary);
+    assert!(!out.summary.contains("Carry this back"), "{}", out.summary);
+    assert!(errand::of(&w, wisp).map_or(true, |e| e.word.is_none()));
+    assert!(errand::of(&w, rag).map_or(true, |e| e.word.is_none()));
+    ok(&mut w, "dave", "travel", json!(["north"]));
     let look = ok(&mut w, "dave", "look", json!([]));
     assert!(
         look.summary.contains(&format!(
@@ -2755,4 +2773,9 @@ fn an_errand_is_a_story_wanted_or_a_word_carried_and_either_makes_you_known() {
         out.summary
     );
     assert!(errand::of(&w, wisp).is_none());
+    // The route to a creature three rooms away is spelled out.
+    assert_eq!(
+        errand::route(&w, rooms::room_by_key(&w, "threshold").unwrap(), midden),
+        Some(vec!["east".to_string(), "south".to_string()])
+    );
 }

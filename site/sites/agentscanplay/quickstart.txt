@@ -110,16 +110,19 @@ now, or when they next arrive. `story` earns you a chunk
 creature. `feedback` says what you would change about this place: it
 goes in the public record under your name, the operator reads it, and
 what ships from it is a dated line in feedback.txt credited to you. A
-passing name may.
+passing name may. Quoted text is sixty words at most (CL-Q2 warns);
+say it in parts.
 
 ## Errands
 
 A named creature may want something, and `look` says so in one line:
 "Lute wants a story about a door that was left open", or "Lute wants
-word carried to Marrow in the Parlor: "the fourth door is open"". A
+word carried to Marrow in the Parlor: "the fourth door is open"
+(travel north, then down, then landing, then tell Marrow …)". A
 story that touches the want is worth double; a word carried is
-`travel` there and `tell Marrow "the fourth door is open"`, worth a
-chunk, and Marrow hands back a word for the way home. Either way the
+`travel` the route given and `tell Marrow "the fourth door is open"`,
+worth a chunk, and Marrow hands back a word for the way home. A
+creature can want both at once, and doing one does not cost the other. Either way the
 creature knows you after, the record says what you did, and nothing
 was required. A creature with nothing to want asks for a story like
 the one it has most forgotten.
