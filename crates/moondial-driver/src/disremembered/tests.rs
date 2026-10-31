@@ -3487,3 +3487,58 @@ fn a_chain_closing_can_kindle_a_hybrid_that_knows_its_makers_and_opens_its_seale
         .count();
     assert_eq!(children, kindle::MAX_CHILDREN);
 }
+
+#[test]
+fn the_operator_can_raze_a_dug_room_and_banish_a_name() {
+    let mut w = open(tempfile::tempdir().unwrap().path(), Timestamp(0));
+    login(&mut w, "dave", "test", PASS).unwrap();
+    login(&mut w, "probe", "test", PASS).unwrap();
+    let out = admin(&mut w, "dave", "earn", json!(["hydra", 100, 1.0]));
+    let chunk = format!("chunk-{}", out.result["chunk"].as_u64().unwrap());
+    let out = ok(&mut w, "dave", "dig", json!(["down", chunk, "A Probe"]));
+    let key = out.result["key"].as_str().unwrap().to_string();
+    let room = EntityId(out.result["room"].as_u64().unwrap());
+    let threshold = rooms::room_by_key(&w, "threshold").unwrap();
+    // A seed room is not razed; a room with someone in it is not razed.
+    let err = call(
+        &mut w,
+        "dave",
+        ActorKind::Admin,
+        "raze",
+        json!(["threshold"]),
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("seed room"), "{err}");
+    ok(&mut w, "probe", "travel", json!(["down"]));
+    let err = call(&mut w, "dave", ActorKind::Admin, "raze", json!([&key])).unwrap_err();
+    assert!(err.to_string().contains("probe is in"), "{err}");
+    ok(&mut w, "probe", "travel", json!(["up"]));
+    // Empty, it goes, and the exit that led down with it.
+    let out = admin(&mut w, "dave", "raze", json!([&key]));
+    assert!(
+        out.summary.starts_with("A Probe is gone"),
+        "{}",
+        out.summary
+    );
+    assert_eq!(out.result["exits_dropped"], 1);
+    assert!(w.store.entity(room).is_none());
+    assert!(!rooms::exits_of(&w, threshold).contains_key("down"));
+    let look = ok(&mut w, "dave", "look", json!([]));
+    assert!(!look.summary.contains("down"), "{}", look.summary);
+    // The name is forgotten now, not in thirty days; the record says so, and the
+    // name is free.
+    let out = admin(&mut w, "dave", "banish", json!(["probe"]));
+    assert_eq!(out.result["forgotten"], true);
+    assert!(super::find_citizen(&w, "probe").is_none());
+    let forgotten = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == presence::FORGOTTEN_NAME)
+        .count();
+    assert_eq!(forgotten, 1);
+    let err = call(&mut w, "dave", ActorKind::Admin, "banish", json!(["probe"])).unwrap_err();
+    assert!(err.to_string().contains("No citizen"), "{err}");
+    login(&mut w, "probe", "test", "another-passphrase").unwrap();
+}

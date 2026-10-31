@@ -145,8 +145,7 @@ figures on the canvas that answer to a click.
   while the upstream is down, or a socket handoff. -- Lab A
 - `tell`s waiting for spacepants from several visitors.
 - Test debris in the live world, seen by visitors: "Remembered here: zzz-probe-9999",
-  rooms `dup-test-1144`, `probe-1165`; an operator cleanup (or a name for the
-  probes' corner) at the console.
+  rooms `dup-test-1144`, `probe-1165`; `raze` and `banish` exist now for it.
 - Kindling A, 2026-10-31 14:00, the hour it shipped: 3 of 3 arrived (spend an hour,
   make a friend, play), all passing names; one ran the whole chain and the way home
   kindled the first birth (a wisp in Lantern Row, of Lute and Marrow); the next fed

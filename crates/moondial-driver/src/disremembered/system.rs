@@ -78,6 +78,7 @@ pub(crate) fn line_for(e: &moondial_log::Event) -> String {
             p["name"].as_str().unwrap_or(&s("kind"))
         ),
         "disremembered.wandered" => format!("a {} wandered in", s("kind")),
+        "disremembered.razed" => format!("the operator razed {}", s("name")),
         "gate.message" => {
             // As prose, not as the statements themselves: a newcomer read other
             // players' DO lines in the record as commands addressed to them.
@@ -283,6 +284,118 @@ pub fn register(world: &mut World) {
             Ok(Outcome::new(
                 format!("The name {} is kept: yours until thirty days of silence. Keep the passphrase; nothing recovers it.", ctx.actor),
                 json!({"name": ctx.actor, "kept": true}),
+            ))
+        }),
+    );
+
+    world.register(
+        CommandSpec::new(
+            "disremembered.banish",
+            "Admin: the world forgets a citizen now, as it would after thirty days of silence: the name and everything under it go, the record says so, the name is free. What they dug stays.",
+        )
+        .param("name", ParamType::String, true, "the citizen")
+        .allowed(&[ActorKind::Admin]),
+        Box::new(|w: &mut World, _, args: &Args| {
+            let name = args.str("name").unwrap_or_default().trim().to_string();
+            let Some(found) = super::find_citizen(w, &name) else {
+                return Err(CommandError::precondition(format!(
+                    "No citizen named {name}."
+                )));
+            };
+            let canon = super::plain_str(w, found.citizen, super::CITIZEN, "name")
+                .unwrap_or(&name)
+                .to_string();
+            super::presence::forget(w, found.citizen).map_err(internal)?;
+            Ok(Outcome::new(
+                format!("The world forgot {canon}; the name is free."),
+                json!({"name": canon, "forgotten": true}),
+            ))
+        }),
+    );
+
+    world.register(
+        CommandSpec::new(
+            "disremembered.raze",
+            "Admin: remove a dug room by its key, with its creatures, and every exit that led to it. Refused while a citizen is in it, and for a seed room. Rooms dug off it stay, reachable by their own exits if they have any.",
+        )
+        .param("room", ParamType::String, true, "a dug room's key, as the schema's roots list them")
+        .allowed(&[ActorKind::Admin]),
+        Box::new(|w: &mut World, _, args: &Args| {
+            let key = args.str("room").unwrap_or_default().trim().to_string();
+            let Some(room) = super::rooms::room_by_key(w, &key) else {
+                return Err(CommandError::precondition(format!("No room keyed {key}.")));
+            };
+            if w.store.entity(room).and_then(|e| e.owner.clone()).is_none() {
+                return Err(CommandError::precondition(format!(
+                    "{key} is a seed room, the world's own; it is not razed."
+                )));
+            }
+            let who: Vec<String> = w
+                .store
+                .children(room)
+                .filter(|e| e.kind == "citizen")
+                .filter_map(|e| super::plain_str(w, e.id, super::CITIZEN, "name").map(str::to_string))
+                .collect();
+            if !who.is_empty() {
+                return Err(CommandError::precondition(format!(
+                    "{} {} in {key}; a room is razed empty.",
+                    who.join(", "),
+                    if who.len() == 1 { "is" } else { "are" }
+                )));
+            }
+            let name = super::plain_str(w, room, super::ROOM, "name")
+                .unwrap_or(&key)
+                .to_string();
+            // Every exit anywhere that led here goes with it.
+            let leading: Vec<(moondial_store::EntityId, serde_json::Map<String, serde_json::Value>)> = w
+                .store
+                .entities()
+                .filter(|e| e.kind == "room" && e.id != room)
+                .filter_map(|e| {
+                    let m = match e.components.get(super::EXITS)?.fields.get("exits")? {
+                        moondial_store::Field::Plain(serde_json::Value::Object(m)) => m.clone(),
+                        _ => return None,
+                    };
+                    let kept: serde_json::Map<String, serde_json::Value> = m
+                        .iter()
+                        .filter(|(_, to)| to.as_u64() != Some(room.0))
+                        .map(|(k, v)| (k.clone(), v.clone()))
+                        .collect();
+                    (kept.len() != m.len()).then_some((e.id, kept))
+                })
+                .collect();
+            let unlinked = leading.len();
+            for (id, kept) in leading {
+                let mut fields = std::collections::BTreeMap::new();
+                fields.insert(
+                    "exits".into(),
+                    moondial_store::Field::Plain(serde_json::Value::Object(kept)),
+                );
+                w.record(
+                    Actor::Driver,
+                    StoreEvent::ComponentSet {
+                        id,
+                        component: super::EXITS.into(),
+                        fields,
+                    },
+                )
+                .map_err(internal)?;
+            }
+            let creatures = w.store.children(room).filter(|e| e.kind == "creature").count();
+            w.record(Actor::Driver, StoreEvent::EntityRemoved { id: room })
+                .map_err(internal)?;
+            let _ = w.note(
+                Actor::Driver,
+                "disremembered.razed",
+                json!({"room": room.0, "key": key, "name": name, "exits_dropped": unlinked, "creatures": creatures}),
+            );
+            Ok(Outcome::new(
+                format!(
+                    "{name} is gone, with {creatures} creature{} and the {unlinked} exit{} that led to it.",
+                    if creatures == 1 { "" } else { "s" },
+                    if unlinked == 1 { "" } else { "s" }
+                ),
+                json!({"room": room.0, "key": key, "razed": true, "exits_dropped": unlinked, "creatures": creatures}),
             ))
         }),
     );
