@@ -1924,3 +1924,146 @@ fn names_match_in_any_case_and_a_kind_never_means_a_named_creature() {
         .unwrap()
         .contains("passphrase_hash"));
 }
+
+#[test]
+fn memory_moves_by_gift_and_by_story() {
+    let t0 = Timestamp(1_000_000);
+    let mut w = open(tempfile::tempdir().unwrap().path(), t0);
+    login(&mut w, "dave", "test", PASS).unwrap();
+    login(&mut w, "tyler", "test", PASS).unwrap();
+    // A gift is hand to hand.
+    let c = admin(&mut w, "dave", "earn", json!(["hydra", 50, 0.5]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    ok(&mut w, "tyler", "travel", json!(["east"]));
+    let err = call(
+        &mut w,
+        "dave",
+        ActorKind::Citizen,
+        "give",
+        json!([&c, "tyler"]),
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("not here"), "{err}");
+    ok(&mut w, "tyler", "travel", json!(["west"]));
+    let out = ok(&mut w, "dave", "give", json!([&c, "Tyler"]));
+    assert!(
+        out.summary
+            .starts_with("You give tyler the memory of hydra."),
+        "{}",
+        out.summary
+    );
+    assert!(level(&mut w, "dave") < 1.0);
+    assert!(level(&mut w, "tyler") > 49.0);
+    let given: Vec<_> = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == exchange::GIVEN)
+        .collect();
+    assert_eq!(given.len(), 1);
+    assert_eq!(given[0].payload["to"], "tyler");
+    // Tyler can spend what he was given.
+    let theirs = ok(&mut w, "tyler", "chunks", json!([])).result["chunks"][0]["id"]
+        .as_u64()
+        .unwrap();
+    ok(
+        &mut w,
+        "tyler",
+        "shelve",
+        json!([format!("chunk-{theirs}")]),
+    );
+
+    // A story needs a named listener.
+    for who in ["dave", "tyler"] {
+        ok(&mut w, who, "travel", json!(["east"]));
+        ok(&mut w, who, "travel", json!(["south"]));
+    }
+    let tale = "Once there was a lantern that would not go out, though every hand that carried it forgot why they had picked it up.";
+    let out = ok(&mut w, "dave", "story", json!(["ragpicker", tale]));
+    assert!(
+        out.summary.contains("has no name to listen with"),
+        "{}",
+        out.summary
+    );
+    assert_eq!(level(&mut w, "dave").round(), 0.0);
+    let c = admin(&mut w, "tyler", "earn", json!(["hollow", 70, 0.5]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    ok(&mut w, "tyler", "remember", json!([c, "ragpicker"]));
+    let midden = rooms::room_by_key(&w, "midden").unwrap();
+    let rag = combat::creatures_in(&w, midden)[0].0;
+    let name = mind::name(&w, rag).unwrap();
+    // Too short.
+    let err = call(
+        &mut w,
+        "dave",
+        ActorKind::Citizen,
+        "story",
+        json!([&name, "too short a tale"]),
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("at least 12 words"), "{err}");
+    // Told: the teller earns, the creature keeps, both on the record.
+    let out = ok(&mut w, "dave", "story", json!([&name, tale]));
+    assert!(
+        out.summary.contains(&format!(
+            "You tell {name} the ragpicker a story of 23 words."
+        )),
+        "{}",
+        out.summary
+    );
+    assert!(out.summary.contains("I will keep that."), "{}", out.summary);
+    assert!(level(&mut w, "dave") > 10.0, "{}", level(&mut w, "dave"));
+    assert!(mind::level(&w, rag) > 70.0);
+    let look = ok(&mut w, "dave", "look", json!([]));
+    assert!(look.summary.contains("holding 7"), "{}", look.summary);
+    // One an hour.
+    let err = call(
+        &mut w,
+        "dave",
+        ActorKind::Citizen,
+        "story",
+        json!([&name, tale]),
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("One an hour"), "{err}");
+    w.fixed_now = Some(t0.plus(Duration::seconds(3601)));
+    // An hour on, the test world's chunks have faded; keep it named for the rest.
+    let c = admin(&mut w, "tyler", "earn", json!(["hollow", 70, 0.5]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    ok(&mut w, "tyler", "remember", json!([c, &name]));
+    assert!(
+        ok(&mut w, "dave", "story", json!([&name, tale])).result["xp"]
+            .as_f64()
+            .unwrap()
+            > 0.0
+    );
+    // It remembers the story when asked.
+    let out = ok(
+        &mut w,
+        "dave",
+        "tell",
+        json!([&name, "what do you remember?"]),
+    );
+    assert!(out.summary.contains("a story:"), "{}", out.summary);
+    // The creature's story-chunks are not the teller's to spend.
+    let kept = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == exchange::STORY)
+        .last()
+        .unwrap()
+        .payload["kept"]
+        .as_u64()
+        .unwrap();
+    assert!(call(
+        &mut w,
+        "dave",
+        ActorKind::Citizen,
+        "shelve",
+        json!([format!("chunk-{kept}")])
+    )
+    .is_err());
+}

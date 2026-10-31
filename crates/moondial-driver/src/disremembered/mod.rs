@@ -10,6 +10,7 @@
 pub mod ask;
 pub mod building;
 mod combat;
+pub mod exchange;
 mod identity;
 mod memory;
 pub mod mind;
@@ -616,10 +617,11 @@ pub fn register(world: &mut World, curves: Curves) {
     rooms::register(world);
     combat::register(world, curves.clone());
     memory::register(world, curves.clone());
-    presence::register(world, curves);
+    presence::register(world, curves.clone());
     mind::register(world);
     speech::register(world);
     talk::register(world);
+    exchange::register(world, curves.clone());
     building::register(world);
     system::register(world);
 }

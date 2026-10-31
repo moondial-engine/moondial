@@ -178,7 +178,7 @@ fn set_mind(
 }
 
 /// Copy a chunk into another window under another owner; the original is spent.
-fn move_chunk(
+pub(crate) fn move_chunk(
     world: &mut World,
     actor: &str,
     chunk: EntityId,
@@ -222,6 +222,18 @@ fn move_chunk(
         )
         .map_err(internal)?;
     Ok((id, source))
+}
+
+/// A chunk just minted into a creature's window belongs to no one: re-created without
+/// an owner, so it is the creature's, not resolvable by the citizen who caused it.
+pub(crate) fn disown(world: &mut World, chunk: EntityId) -> Result<EntityId, CommandError> {
+    let window = world
+        .store
+        .entity(chunk)
+        .and_then(|e| e.parent)
+        .ok_or_else(|| internal("chunk has no window"))?;
+    let (id, _) = move_chunk(world, "nobody", chunk, window, None)?;
+    Ok(id)
 }
 
 /// `actor` gives a creature one of their chunks. Returns what the memory was of and the

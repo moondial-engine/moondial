@@ -68,7 +68,6 @@ approved_verbs:
   buy:
   sell:
   trade:
-  give:
   offer:
   accept:
   decline:
@@ -92,6 +91,8 @@ approved_verbs:
   # social
   say: {params: [{name: text, type: text, required: true}]}
   tell: {params: [{name: who, type: entity, required: true}, {name: text, type: text, required: true}]}
+  give: {params: [{name: chunk, type: entity, required: true}, {name: citizen, type: entity, required: true}]}
+  story: {params: [{name: creature, type: entity, required: true}, {name: text, type: text, required: true}]}
   ally:
   join:
   invite:
