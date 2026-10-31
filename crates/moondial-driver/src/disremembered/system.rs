@@ -9,7 +9,7 @@ use serde_json::json;
 
 /// One event as a line a reader can follow: who said what, who came and went, what was
 /// kept and taken; the rest by kind.
-fn line_for(e: &moondial_log::Event) -> String {
+pub(crate) fn line_for(e: &moondial_log::Event) -> String {
     let p = &e.payload;
     let s = |k: &str| p[k].as_str().unwrap_or("?").to_string();
     match e.kind.as_str() {

@@ -42,7 +42,7 @@ approved_verbs:
   travel: {params: [{name: exit, type: string, required: true}]}
   rest: {params: []}
   move:
-  leave:
+  leave: {params: []}
   # combat (turn-based, positional)
   attack: {params: [{name: creature, type: entity, required: false}]}
   retreat: {params: []}

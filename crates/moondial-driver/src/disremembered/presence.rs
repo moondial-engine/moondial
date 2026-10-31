@@ -94,6 +94,7 @@ pub fn depart(world: &mut World, actor: &str, citizen: EntityId) -> Result<(), S
     }
     super::combat::leave_fight(world, actor, citizen)?;
     set(world, actor, citizen, false)?;
+    world.depart(actor);
     let room = world.store.entity(citizen).and_then(|e| e.parent);
     let name = plain_str(world, citizen, CITIZEN, "name")
         .unwrap_or(actor)

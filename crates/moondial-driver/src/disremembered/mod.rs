@@ -9,6 +9,7 @@
 
 pub mod ask;
 pub mod building;
+pub mod cloak;
 mod combat;
 pub mod exchange;
 mod identity;
@@ -627,6 +628,7 @@ pub fn register(world: &mut World, curves: Curves) {
     speech::register(world);
     talk::register(world);
     exchange::register(world, curves.clone());
+    cloak::register(world);
     building::register(world);
     system::register(world);
 }

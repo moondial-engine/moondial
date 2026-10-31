@@ -258,21 +258,16 @@
       {
         "index": 12,
         "line": 17,
-        "raw": "[DO] You MAY leave the world at any time.",
+        "raw": "[DO] You MAY leave.",
         "type": "DO",
         "confidence": null,
-        "body": "You MAY leave the world at any time.",
+        "body": "You MAY leave.",
         "sources": [],
         "actor": "You",
         "modal": "MAY",
         "verb": "leave",
-        "arguments": "the world at any time",
-        "args": [
-          {
-            "kind": "ref",
-            "value": "the world at any time"
-          }
-        ],
+        "arguments": "",
+        "args": [],
         "pattern": null,
         "slots": {}
       },

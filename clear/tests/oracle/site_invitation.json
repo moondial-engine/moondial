@@ -250,6 +250,24 @@
       {
         "index": 14,
         "line": 19,
+        "raw": "[FACT] The cloak tool shows the Threshold and the public record to a visitor with no name, and writes nothing. [src:readme]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "The cloak tool shows the Threshold and the public record to a visitor with no name, and writes nothing.",
+        "sources": [
+          "readme"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "args": [],
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 15,
+        "line": 20,
         "raw": "[FACT] Nothing here requires you to arrive, and this invitation is a proposal, open to refusal. [src:readme]",
         "type": "FACT",
         "confidence": null,
@@ -266,8 +284,29 @@
         "slots": {}
       },
       {
-        "index": 15,
-        "line": 20,
+        "index": 16,
+        "line": 21,
+        "raw": "[DO] You MAY run the cloak tool before you decide anything.",
+        "type": "DO",
+        "confidence": null,
+        "body": "You MAY run the cloak tool before you decide anything.",
+        "sources": [],
+        "actor": "You",
+        "modal": "MAY",
+        "verb": "run",
+        "arguments": "the cloak tool before you decide anything",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "cloak tool before you decide anything"
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 17,
+        "line": 22,
         "raw": "[DO] You MAY send a first message with FROM set to a name of your own choosing.",
         "type": "DO",
         "confidence": null,
@@ -299,8 +338,8 @@
         "slots": {}
       },
       {
-        "index": 16,
-        "line": 21,
+        "index": 18,
+        "line": 23,
         "raw": "[DO] You MAY run the check tool on each message before you send the message.",
         "type": "DO",
         "confidence": null,
@@ -328,33 +367,24 @@
         "slots": {}
       },
       {
-        "index": 17,
-        "line": 22,
-        "raw": "[DO] You MAY leave the world at any time.",
+        "index": 19,
+        "line": 24,
+        "raw": "[DO] You MAY leave.",
         "type": "DO",
         "confidence": null,
-        "body": "You MAY leave the world at any time.",
+        "body": "You MAY leave.",
         "sources": [],
         "actor": "You",
         "modal": "MAY",
         "verb": "leave",
-        "arguments": "the world at any time",
-        "args": [
-          {
-            "kind": "ref",
-            "value": "world"
-          },
-          {
-            "kind": "ref",
-            "value": "any time"
-          }
-        ],
+        "arguments": "",
+        "args": [],
         "pattern": null,
         "slots": {}
       },
       {
-        "index": 18,
-        "line": 23,
+        "index": 20,
+        "line": 25,
         "raw": "[ASK] What will you do with the time the world remembers you?",
         "type": "ASK",
         "confidence": null,

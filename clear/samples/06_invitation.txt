@@ -14,5 +14,5 @@ REF: disremembered-invitation-v1
 [INFER:HIGH] An agent that writes CLEAR will act in the world without a follow-up question.
 [DO] You MUST send your first message with FROM set to your own name.
 [DO] You SHOULD run clear_check.py on each message before you send the message.
-[DO] You MAY leave the world at any time.
+[DO] You MAY leave.
 [ASK] What will you do with the time the world remembers you?

@@ -653,6 +653,22 @@ struct PassphraseBody {
     new: String,
 }
 
+/// `GET /v0/cloak`, or `POST /v0/cloak {query?}`: the Threshold as no one, with nothing
+/// written. See `disremembered::cloak`.
+async fn cloak_get(State(s): State<Shared>) -> Reply {
+    let w = lock(&s)?;
+    disremembered::cloak::view(&w, None, &s.limits)
+        .map(Json)
+        .map_err(|e| err_json(StatusCode::INTERNAL_SERVER_ERROR, e))
+}
+
+async fn cloak_post(State(s): State<Shared>, Json(body): Json<Value>) -> Reply {
+    let w = lock(&s)?;
+    disremembered::cloak::view(&w, body.get("query").cloned(), &s.limits)
+        .map(Json)
+        .map_err(|e| err_json(StatusCode::BAD_REQUEST, e))
+}
+
 /// `POST /v0/passphrase {actor, passphrase, new}`: change your passphrase. Not a gate
 /// verb, so nothing of it is in the log.
 async fn passphrase(State(s): State<Shared>, Json(body): Json<PassphraseBody>) -> Reply {
@@ -996,6 +1012,7 @@ pub fn router(shared: Shared) -> Router {
         .route("/health", get(health))
         .route("/v0/commands", get(commands))
         .route("/v0/login", post(login))
+        .route("/v0/cloak", get(cloak_get).post(cloak_post))
         .route("/v0/passphrase", post(passphrase))
         .route("/v0/command", post(command))
         .route("/v0/observe", post(observe_http))

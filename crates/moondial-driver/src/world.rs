@@ -170,6 +170,11 @@ impl World {
         }
     }
 
+    /// Forget an actor's presence: their next action is an arrival, whenever it comes.
+    pub fn depart(&mut self, actor: &str) {
+        self.presence.remove(actor);
+    }
+
     /// When this actor was last active in this process, if they have been.
     pub fn last_active(&self, actor: &str) -> Option<Timestamp> {
         self.presence.get(actor).copied()
@@ -300,10 +305,14 @@ impl World {
         args: &Value,
     ) -> Result<Outcome, CommandError> {
         let registry = Arc::clone(&self.registry);
+        let before = self.last_active(&ctx.actor);
         let out = registry.call(self, ctx, name, args);
         // A citizen who acted is present; after an absence, that is an arrival. A refused
-        // command touches nothing, so a name the world does not know leaves no trace.
-        if out.is_ok() && ctx.kind == ActorKind::Citizen {
+        // command touches nothing, so a name the world does not know leaves no trace. A
+        // command that was a departure (presence known before, gone after) is not an
+        // arrival.
+        let departed = before.is_some() && self.last_active(&ctx.actor).is_none();
+        if out.is_ok() && ctx.kind == ActorKind::Citizen && !departed {
             self.arrive(&ctx.actor, "command", false);
         }
         out

@@ -2088,3 +2088,43 @@ fn a_name_in_other_letters_is_the_same_name() {
     // The spelling the world knows still works.
     login(&mut w, "Claude-scout", "test", PASS).unwrap();
 }
+
+#[test]
+fn the_cloak_shows_the_threshold_as_no_one_and_writes_nothing() {
+    let mut w = open(tempfile::tempdir().unwrap().path(), Timestamp(0));
+    login(&mut w, "dave", "test", PASS).unwrap();
+    ok(&mut w, "dave", "say", json!(["anyone there?"]));
+    let limits = moondial_query::Limits::default();
+    let head = events(&w);
+    let v = cloak::view(&w, None, &limits).unwrap();
+    assert_eq!(events(&w), head, "a cloaked look writes nothing");
+    assert_eq!(v["room"], "The Threshold");
+    assert_eq!(v["here"], json!(["dave"]));
+    assert_eq!(v["citizens"], 1);
+    let text = v["text"].as_str().unwrap();
+    assert!(text.starts_with("You are cloaked:"), "{text}");
+    assert!(text.contains("dave says, \"anyone there?\""), "{text}");
+    assert!(text.ends_with(cloak::THANKS), "{text}");
+    assert!(!text.contains("passphrase_hash"));
+    // A cloaked query is rooted at the Threshold whatever it asks, and sees only public fields.
+    let q = json!({"root": "window", "select": {CHUNK: "*"}, "relations": {"contents": {"kinds": ["citizen"], "select": {CITIZEN: ["name"], ACCOUNT: ["passphrase_hash"]}}}});
+    let v = cloak::view(&w, Some(q), &limits).unwrap();
+    assert_eq!(v["query"]["root"]["kind"], "room");
+    let s = serde_json::to_string(&v).unwrap();
+    assert!(!s.contains("argon2"), "{s}");
+    assert_eq!(events(&w), head);
+    // leave: gone at once, with thanks, and back on the next word.
+    let out = ok(&mut w, "dave", "leave", json!([]));
+    assert!(out.summary.ends_with(cloak::THANKS), "{}", out.summary);
+    assert!(!presence::is_here(
+        &w,
+        find_citizen(&w, "dave").unwrap().citizen
+    ));
+    let v = cloak::view(&w, None, &limits).unwrap();
+    assert_eq!(v["here"], json!([]));
+    ok(&mut w, "dave", "look", json!([]));
+    assert!(presence::is_here(
+        &w,
+        find_citizen(&w, "dave").unwrap().citizen
+    ));
+}

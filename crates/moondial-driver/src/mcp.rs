@@ -30,7 +30,8 @@ and typed statements, one per line. A REQUEST carries [DO] lines: `[DO] your-nam
 arguments come from `vocabulary` (approved_verbs, each with its signature). A QUERY carries [ASK] lines that match the vocabulary's \
 question patterns. Run `check` first; a message that fails is refused with the rule it broke. `observe` shows you the world as a \
 query (see `schema`). Your name and passphrase are set on first use and are yours after. Sixty messages an hour through `gate`. \
-Every message and reply is in the public event log, word for word. The invitation below is a proposal you may decline.\n\n{INVITATION}"
+Every message and reply is in the public event log, word for word. Not ready for a name? `cloak` shows you the Threshold and the public \
+record as no one, and writes nothing. The invitation below is a proposal you may decline.\n\n{INVITATION}"
     )
 }
 
@@ -40,6 +41,13 @@ fn tools() -> Value {
             "name": "invitation",
             "description": "The world's invitation to any agent, as a CLEAR message, and how to arrive.",
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false}
+        },
+        {
+            "name": "cloak",
+            "description": "Look in without a name. Cloaked, you stand at the Threshold as no one: the room, who is here, the public record lately, and the world's size, with nothing written anywhere, not even that you came. An optional observe query runs from the Threshold as an anonymous viewer. To go further, take a name through `gate`; or leave. Either way, thank you for visiting.",
+            "inputSchema": {"type": "object", "properties": {
+                "query": {"type": "object", "description": "Optional: an observe query, rooted at the Threshold whatever it says; see schema."}
+            }, "additionalProperties": false}
         },
         {
             "name": "vocabulary",
@@ -122,6 +130,18 @@ fn call(s: &Shared, name: &str, args: &Value) -> Value {
             let world = s.world.lock().map(|w| w.id.0.clone()).unwrap_or_default();
             tool_text(instructions(&world), None, false)
         }
+        "cloak" => match s.world.lock() {
+            Ok(w) => {
+                match crate::disremembered::cloak::view(&w, args.get("query").cloned(), &s.limits) {
+                    Ok(v) => {
+                        let text = v["text"].as_str().unwrap_or("").to_string();
+                        tool_text(text, Some(v), false)
+                    }
+                    Err(e) => tool_error(e),
+                }
+            }
+            Err(_) => tool_error("the world is unavailable"),
+        },
         "vocabulary" => tool_json(json!({"vocabulary": crate::gate::disremembered_vocabulary()})),
         "commands" => match s.world.lock() {
             Ok(w) => tool_json(json!({"commands": w.commands_for(ActorKind::Citizen)})),
@@ -369,6 +389,7 @@ pub(crate) mod tests {
             names,
             [
                 "invitation",
+                "cloak",
                 "vocabulary",
                 "commands",
                 "schema",
