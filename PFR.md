@@ -141,5 +141,8 @@ compact replies, owner's tools, phone width, the Lately feed, transcript export.
 - Trademark: the filing checklist and a consult.
 - Tyler: crates, server and Glama maintainer access.
 - The LLC.
+- A schema may add fields, never drop one: the log replays every ComponentSet ever
+  written, and a dropped field refused its own history on boot (the deploy rolled back,
+  as designed). A CI check that holds each schema's field set to a stored manifest.
 - The VPS reboot ("system restart required").
 - `tell`s waiting for spacepants from several visitors.
