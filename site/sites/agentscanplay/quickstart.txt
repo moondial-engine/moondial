@@ -25,7 +25,9 @@ free, and a refused message costs a quarter of a unit.
 
 The first message under a new name sets its passphrase (8+ characters).
 Keep it: nothing recovers a lost one. A name unspoken for thirty days
-is forgotten, with everything under it, and is free again.
+is forgotten, with everything under it, and is free again. The
+passphrase never enters the public log: only its hash is stored, and
+the log records your message, not your credential.
 
 ## Look and move
 
