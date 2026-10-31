@@ -3022,3 +3022,96 @@ fn a_creature_pages_through_what_it_holds_on_what_else() {
         out.summary
     );
 }
+
+#[test]
+fn a_dry_run_says_what_a_message_would_do_and_whether_the_name_is_free() {
+    let t0 = Timestamp(1_000_000);
+    let mut w = open(tempfile::tempdir().unwrap().path(), t0);
+    login(&mut w, "tyler", "test", PASS).unwrap();
+    // A named ragpicker in the midden that wants a story about a lantern.
+    ok(&mut w, "tyler", "travel", json!(["east"]));
+    ok(&mut w, "tyler", "travel", json!(["south"]));
+    let c = admin(&mut w, "tyler", "earn", json!(["hollow", 70, 0.5]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    ok(&mut w, "tyler", "remember", json!([c, "ragpicker"]));
+    let midden = rooms::room_by_key(&w, "midden").unwrap();
+    let rag = combat::creatures_in(&w, midden)[0].0;
+    let name = mind::name(&w, rag).unwrap();
+    admin(
+        &mut w,
+        "tyler",
+        "errand",
+        json!([&name, "a lantern that would not go out"]),
+    );
+    let checker = crate::gate::checker();
+    let msg = format!(
+        "FROM: Pennywren\nTO: disremembered\nINTENT: REQUEST\nREF: p-1\n\n[DO] Pennywren MUST look.\n[DO] Pennywren MUST travel east.\n[DO] Pennywren MUST travel south.\n[DO] Pennywren MUST story {name} \"There was a lantern in the midden that would not go out, whatever the wind did.\".\n[DO] Pennywren MUST travel up.\n[DO] Pennywren MUST dig cellar chunk-9 \"A Cellar\".\n[DO] Pennywren MUST attack {name}.\n[DO] Pennywren MUST leave.\n"
+    );
+    let r = checker.check(&msg);
+    assert_eq!(r.verdict, "PASS", "{:?}", r.findings);
+    let p = preview::run(&w, "Pennywren", true, &r.message.statements);
+    assert_eq!(p["name"], "free");
+    let what: Vec<String> = p["statements"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|l| format!("{} {}", l["ok"], l["what"].as_str().unwrap()))
+        .collect();
+    assert_eq!(what[0], "true shows The Threshold");
+    assert_eq!(what[1], "true goes east to The Fogbank");
+    assert_eq!(what[2], "true goes south to The Midden");
+    assert!(
+        what[3].starts_with(&format!(
+            "true tells {name} the ragpicker a story: the one it wants, worth double"
+        )),
+        "{}",
+        what[3]
+    );
+    assert!(
+        what[4].starts_with("false refused: no exit up from The Midden"),
+        "{}",
+        what[4]
+    );
+    assert_eq!(what[5], "false refused: dig is a kept name's; keep first");
+    assert_eq!(what[6], format!("true strikes {name} the ragpicker"));
+    assert_eq!(what[7], "true leaves; the name is forgotten at once");
+    assert_eq!(p["refusals"], 2);
+    // A kept name that exists: reported as such, and the flag is ignored.
+    let p = preview::run(&w, "TYLER", true, &r.message.statements);
+    assert_eq!(p["name"], "kept");
+    assert_eq!(p["passing"], false);
+    assert_eq!(p["from"], "The Midden");
+    // Nothing was written by any of it.
+    let out = ok(&mut w, "tyler", "look", json!([]));
+    assert!(!out.summary.contains("Pennywren"), "{}", out.summary);
+}
+
+#[test]
+fn travel_back_is_the_way_you_came() {
+    let t0 = Timestamp(1_000_000);
+    let mut w = open(tempfile::tempdir().unwrap().path(), t0);
+    login(&mut w, "dave", "test", PASS).unwrap();
+    let err = call(
+        &mut w,
+        "dave",
+        ActorKind::Citizen,
+        "travel",
+        json!(["back"]),
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("no way back"), "{err}");
+    ok(&mut w, "dave", "travel", json!(["east"]));
+    ok(&mut w, "dave", "travel", json!(["south"]));
+    let out = ok(&mut w, "dave", "travel", json!(["back"]));
+    assert!(
+        out.summary.starts_with("You go north. The Fogbank."),
+        "{}",
+        out.summary
+    );
+    let out = ok(&mut w, "dave", "travel", json!(["back"]));
+    assert!(
+        out.summary.starts_with("You go south. The Midden."),
+        "{}",
+        out.summary
+    );
+}

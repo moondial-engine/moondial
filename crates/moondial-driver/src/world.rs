@@ -70,6 +70,9 @@ pub struct World {
     seen_nets: std::collections::HashSet<String>,
     /// The minute the faded-chunk sweep last ran.
     last_forget_minute: i64,
+    /// The room each actor last traveled from, so `travel back` means the way you
+    /// came. In this process only.
+    came_from: std::collections::HashMap<String, moondial_store::EntityId>,
 }
 
 /// An address or a prefix of them, as `MOONDIAL_LAB_NETS` lists them: `203.0.113.7`,
@@ -183,6 +186,7 @@ impl World {
             client_ip: None,
             seen_nets: std::collections::HashSet::new(),
             last_forget_minute: -1,
+            came_from: std::collections::HashMap::new(),
         };
         let head = world.log.head(&world.id).map_err(|e| e.to_string())?;
         if head.is_some() {
@@ -361,6 +365,14 @@ impl World {
     /// A line for the operator.
     pub fn notice(&mut self, line: String) {
         self.notices.push(line);
+    }
+
+    pub fn came_from(&self, actor: &str) -> Option<moondial_store::EntityId> {
+        self.came_from.get(actor).copied()
+    }
+
+    pub fn set_came_from(&mut self, actor: &str, room: moondial_store::EntityId) {
+        self.came_from.insert(actor.to_string(), room);
     }
 
     pub fn last_forget_minute(&self) -> i64 {

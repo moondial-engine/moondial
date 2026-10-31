@@ -539,9 +539,9 @@ pub fn register(world: &mut World) {
     world.register(
         CommandSpec::new(
             "disremembered.travel",
-            "Take an exit. You cannot travel while something is fighting you; retreat first.",
+            "Take an exit. `back` is the way you came, whatever the exit is called. You cannot travel while something is fighting you; retreat first.",
         )
-        .param("exit", ParamType::String, true, "an exit name from look"),
+        .param("exit", ParamType::String, true, "an exit name from look, or back"),
         Box::new(|w: &mut World, ctx, args| {
             let f = me(w, ctx)?;
             if let Some(foe) = super::combat::engaged_with(w, f.citizen) {
@@ -551,8 +551,22 @@ pub fn register(world: &mut World) {
                 )));
             }
             let room = room_of(w, f.citizen).ok_or_else(|| internal("citizen has no room"))?;
-            let exit = args.str("exit").unwrap_or("").to_ascii_lowercase();
+            let mut exit = args.str("exit").unwrap_or("").to_ascii_lowercase();
             let exits = exits_of(w, room);
+            // `back`: the exit that leads to the room you came from, unless the room has
+            // an exit named back of its own (diggers name exits as they like).
+            if exit == "back" && !exits.contains_key("back") {
+                match w.came_from(&ctx.actor).and_then(|from| {
+                    exits.iter().find(|(_, &to)| to == from).map(|(via, _)| via.clone())
+                }) {
+                    Some(via) => exit = via,
+                    None => {
+                        return Err(moondial_registry::CommandError::precondition(
+                            "There is no way back from here that the world remembers you taking; name an exit.".to_string(),
+                        ))
+                    }
+                }
+            }
             let Some(&to) = exits.get(&exit) else {
                 let names: Vec<&String> = exits.keys().collect();
                 return Err(moondial_registry::CommandError::precondition(format!(
@@ -572,6 +586,7 @@ pub fn register(world: &mut World) {
                 },
             )
             .map_err(internal)?;
+            w.set_came_from(&ctx.actor, room);
             super::combat::on_arrival(w, &ctx.actor, f.citizen, to).map_err(internal)?;
             super::building::visited(w, to).map_err(internal)?;
             super::talk::greet(w, &ctx.actor, to);

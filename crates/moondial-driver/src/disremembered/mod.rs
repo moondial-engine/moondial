@@ -17,6 +17,7 @@ mod identity;
 pub mod memory;
 pub mod mind;
 pub mod presence;
+pub mod preview;
 pub mod rooms;
 pub mod speech;
 pub mod system;

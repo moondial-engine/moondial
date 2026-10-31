@@ -132,9 +132,13 @@ fn tools() -> Value {
         },
         {
             "name": "check",
-            "description": "Run the CLEAR checker on a message without sending it: verdict, Legibility score, findings by rule id, and the parsed message. Free; no account needed.",
+            "description": "Run the CLEAR checker on a message without sending it: verdict, Legibility score, findings by rule id, and the parsed message. With `actor`, also a dry run for effect: whether that name is free, kept or passing, and for each DO what it would do or why it would be refused (the room it would be in, the creature it would reach, whether a story is the one wanted), and the cost. An estimate against the world as it is; nothing is written. Free; no account needed.",
             "annotations": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
-            "inputSchema": {"type": "object", "properties": {"message": {"type": "string", "description": "The CLEAR message text."}}, "required": ["message"], "additionalProperties": false}
+            "inputSchema": {"type": "object", "properties": {
+                "message": {"type": "string", "description": "The CLEAR message text."},
+                "actor": {"type": "string", "description": "Optional: the name you would send as, for the dry run. No passphrase; nothing is written."},
+                "passing": {"type": "boolean", "description": "Optional, with actor: whether the name would be a passing one, so kept-name verbs are flagged."}
+            }, "required": ["message"], "additionalProperties": false}
         },
         {
             "name": "gate",
@@ -270,7 +274,41 @@ fn call(s: &Shared, name: &str, args: &Value, ip: &str) -> Value {
             Err((_, Json(e))) => tool_error(e["error"].as_str().unwrap_or("schema failed")),
         },
         "check" => match arg_str(args, "message") {
-            Ok(message) => tool_json(s.checker.check(message).to_json()),
+            Ok(message) => {
+                let result = s.checker.check(message);
+                let mut v = result.to_json();
+                // With an actor: the dry run for effect, against the world as it is.
+                match args
+                    .get("actor")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|a| !a.is_empty())
+                {
+                    Some(actor) => match s.world.lock() {
+                        Ok(w) => {
+                            let passing = args
+                                .get("passing")
+                                .and_then(Value::as_bool)
+                                .unwrap_or(false);
+                            let p = crate::disremembered::preview::run(
+                                &w,
+                                actor,
+                                passing,
+                                &result.message.statements,
+                            );
+                            let text = format!(
+                                "{}\n\n{}",
+                                crate::disremembered::preview::text(&p),
+                                serde_json::to_string_pretty(&v).unwrap_or_default()
+                            );
+                            v["preview"] = p;
+                            tool_text(text, Some(v), false)
+                        }
+                        Err(_) => tool_error("the world is unavailable"),
+                    },
+                    None => tool_json(v),
+                }
+            }
             Err(e) => e,
         },
         "gate" => {
@@ -312,9 +350,12 @@ fn call(s: &Shared, name: &str, args: &Value, ip: &str) -> Value {
             drop(budget);
             drop(w);
             let _ = s.changed.send(());
+            // The text is the REPORT; beside it, the statements as JSON (index, verb,
+            // ran or not, the command's result), the findings and the budget, and not
+            // the report again.
             let structured = json!({
                 "verdict": p.verdict, "score": p.score, "acted": p.acted, "ok": p.ok,
-                "reply": p.reply, "prose": p.prose, "findings": p.findings,
+                "statements": p.outcomes, "findings": p.findings,
                 "budget_remaining": p.budget_remaining,
             });
             tool_text(p.reply.clone(), Some(structured), false)
