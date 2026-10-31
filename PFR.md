@@ -31,6 +31,9 @@ compact replies, owner's tools, phone width, the Lately feed, transcript export.
   it is well-formed.
 - A named creature's answers without the ellipses: full stories, or the first sentence
   of each, not forty characters.
+- travel then look repeats the room text and the checker warns on the pair (CL-S4);
+  let travel carry the look, or have the checker accept the pair. -- Ferrous_Wren, told
+  to the person at the door
 - Refusals in a batched message stand out: a failed `travel` among lines that ran is
   easy to miss in the REPORT.
 - Exit names across dug rooms are inconsistent (`back`, `down`, `south`); a `back`

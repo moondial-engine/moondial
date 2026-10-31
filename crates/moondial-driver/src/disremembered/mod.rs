@@ -333,6 +333,24 @@ pub fn login(
     login_as(world, actor, origin, passphrase, false)
 }
 
+/// Three safe first moves for a new name, with a creature that would take a story
+/// named if one is near. Asked for by a visitor who had to work them out.
+fn first_moves(world: &World) -> String {
+    let listener = world
+        .store
+        .entities()
+        .filter(|e| e.kind == "creature")
+        .find_map(|e| {
+            let given = mind::name(world, e.id)?;
+            let room = e.parent.and_then(|r| plain_str(world, r, ROOM, "name"))?;
+            Some(format!(
+                "story {given} \"<a dozen words>\" ({given} is in {room})"
+            ))
+        })
+        .unwrap_or_else(|| "story <a named creature> \"<a dozen words>\"".to_string());
+    format!("Three safe first moves: look; {listener}; travel east to the Fogbank, where the wisps are mild. Nothing here is required.")
+}
+
 /// Whether a citizen's name is a passing one: forgotten an hour after they go quiet,
 /// keeping nothing, obligating no one.
 pub fn is_passing(world: &World, citizen: EntityId) -> bool {
@@ -555,6 +573,7 @@ pub fn login_as(
             format!("The name {actor} was no one's; it is yours now, and answers to the passphrase you just gave. Keep that passphrase: nothing recovers it. Everything you do under it is public, and a name unspoken for thirty days is forgotten.")
         },
     );
+    combat::narrate(world, actor, first_moves(world));
     Ok(Found {
         citizen,
         window,

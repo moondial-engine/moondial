@@ -108,6 +108,8 @@ ask_patterns:
 units:
   - XP
   - gold
+  - event
+  - events
   - turn
   - turns
   - slot

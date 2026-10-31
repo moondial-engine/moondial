@@ -134,7 +134,7 @@ here, and at 60 it is named.
 ## Read
 
     log                               [DO] Quillwake MUST log.
-    log 40                            [DO] Quillwake MUST log 40.
+    log 40 events                     [DO] Quillwake MUST log 40 events.
 
 The `observe` tool (or POST /v0/observe) is the richer read: a query
 over any room, creature or citizen, free of the gate budget. The
