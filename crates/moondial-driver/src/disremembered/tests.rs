@@ -2583,3 +2583,176 @@ fn feedback_is_a_public_line_under_your_name_and_a_passing_name_may() {
     .unwrap_err();
     assert!(err.to_string().contains("Change what?"), "{err}");
 }
+
+#[test]
+fn an_errand_is_a_story_wanted_or_a_word_carried_and_either_makes_you_known() {
+    let t0 = Timestamp(1_000_000);
+    let mut w = open(tempfile::tempdir().unwrap().path(), t0);
+    login(&mut w, "dave", "test", PASS).unwrap();
+    login(&mut w, "tyler", "test", PASS).unwrap();
+    // Two named creatures: a ragpicker in the midden, a wisp in the Fogbank.
+    for who in ["dave", "tyler"] {
+        ok(&mut w, who, "travel", json!(["east"]));
+    }
+    let fog = rooms::room_by_key(&w, "fogbank").unwrap();
+    let wisp = combat::creatures_in(&w, fog)[0].0;
+    let c = admin(&mut w, "tyler", "earn", json!(["hollow", 70, 0.5]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    ok(
+        &mut w,
+        "tyler",
+        "remember",
+        json!([c, format!("wisp-{}", wisp.0)]),
+    );
+    let wisp_name = mind::name(&w, wisp).expect("the wisp is named");
+    for who in ["dave", "tyler"] {
+        ok(&mut w, who, "travel", json!(["south"]));
+    }
+    let midden = rooms::room_by_key(&w, "midden").unwrap();
+    let rag = combat::creatures_in(&w, midden)[0].0;
+    let c = admin(&mut w, "tyler", "earn", json!(["hollow", 70, 0.5]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    ok(&mut w, "tyler", "remember", json!([c, "ragpicker"]));
+    let rag_name = mind::name(&w, rag).expect("the ragpicker is named");
+
+    // Decay sets a want on a named creature with none; the operator overrides it.
+    w.tick();
+    assert!(
+        errand::of(&w, rag).is_some(),
+        "a named creature wants something"
+    );
+    let out = admin(
+        &mut w,
+        "tyler",
+        "errand",
+        json!([&rag_name, "a lantern that would not go out"]),
+    );
+    assert!(
+        out.summary
+            .starts_with(&format!("{rag_name} wants a story about a lantern")),
+        "{}",
+        out.summary
+    );
+    let look = ok(&mut w, "dave", "look", json!([]));
+    assert!(
+        look.summary.contains(&format!(
+            "{rag_name} wants a story about a lantern that would not go out."
+        )),
+        "{}",
+        look.summary
+    );
+    // A story that is not the one wanted earns the usual; the want stands.
+    let other = "Once a ragpicker counted every button in the midden and lost the count at forty.";
+    let out = ok(&mut w, "dave", "story", json!([&rag_name, other]));
+    assert_eq!(out.result["wanted"], false);
+    let usual = out.result["xp"].as_f64().unwrap();
+    assert!(errand::of(&w, rag).is_some());
+    // An hour on, the one it wanted: double, the record says so, the errand is done.
+    w.fixed_now = Some(t0.plus(Duration::seconds(3601)));
+    let c = admin(&mut w, "tyler", "earn", json!(["hollow", 70, 0.5]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    ok(&mut w, "tyler", "remember", json!([c, &rag_name]));
+    let wanted = "There was a lantern in the midden that would not go out, though every hand that held it forgot the lighting of it.";
+    let out = ok(&mut w, "dave", "story", json!([&rag_name, wanted]));
+    assert_eq!(out.result["wanted"], true, "{}", out.summary);
+    assert!(out.summary.contains("worth double"), "{}", out.summary);
+    assert!(out.result["xp"].as_f64().unwrap() > usual * 1.5);
+    assert!(errand::of(&w, rag).is_none(), "the errand is done");
+    let done: Vec<_> = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == errand::DONE)
+        .collect();
+    assert_eq!(done.len(), 1);
+    assert_eq!(done[0].payload["from"], "dave");
+    assert_eq!(
+        system::line_for(&done[0]),
+        format!("dave told {rag_name} the story it wanted")
+    );
+    assert!(crate::observe::visible(
+        &w,
+        &Viewer::actor("someone-else"),
+        w.now(),
+        &done[0]
+    ));
+    let look = ok(&mut w, "dave", "look", json!([]));
+    assert!(
+        look.summary.contains(&format!(
+            "{rag_name} the ragpicker knows you: you did what it asked."
+        )),
+        "{}",
+        look.summary
+    );
+
+    // A word to carry: set on the ragpicker, for the wisp. Telling the wisp the phrase
+    // in its room earns the carrier a chunk, and the wisp hands back a word for home.
+    admin(
+        &mut w,
+        "tyler",
+        "errand",
+        json!([&rag_name, "the fourth door is open", &wisp_name]),
+    );
+    let look = ok(&mut w, "dave", "look", json!([]));
+    assert!(
+        look.summary.contains(&format!(
+            "{rag_name} wants word carried to {wisp_name} in Fogbank: \"the fourth door is open\""
+        )),
+        "{}",
+        look.summary
+    );
+    // Said to the wrong creature, it is only words.
+    let out = ok(
+        &mut w,
+        "dave",
+        "tell",
+        json!([&rag_name, "the fourth door is open"]),
+    );
+    assert!(!out.summary.contains("I have it"), "{}", out.summary);
+    ok(&mut w, "dave", "travel", json!(["north"]));
+    let before = level(&mut w, "dave");
+    let out = ok(
+        &mut w,
+        "dave",
+        "tell",
+        json!([&wisp_name, "A message: the fourth door is open."]),
+    );
+    assert!(
+        out.summary.contains(&format!(
+            "So {rag_name} says \"the fourth door is open\". I have it."
+        )),
+        "{}",
+        out.summary
+    );
+    assert!(
+        out.summary
+            .contains(&format!("Carry this back to {rag_name}:")),
+        "{}",
+        out.summary
+    );
+    assert!(level(&mut w, "dave") > before + errand::WORD_XP * 0.9);
+    assert!(
+        errand::of(&w, rag).is_none(),
+        "the ragpicker's errand is done"
+    );
+    let home = errand::of(&w, wisp).expect("the wisp wants its word carried");
+    assert_eq!(home.kind, "word");
+    assert_eq!(home.to.as_deref(), Some(rag_name.as_str()));
+    let look = ok(&mut w, "dave", "look", json!([]));
+    assert!(
+        look.summary.contains(&format!(
+            "{wisp_name} the wisp knows you: you did what it asked."
+        )),
+        "{}",
+        look.summary
+    );
+    // Clearing by hand.
+    let out = admin(&mut w, "tyler", "errand", json!([&wisp_name, ""]));
+    assert!(
+        out.summary.ends_with("wants nothing in particular."),
+        "{}",
+        out.summary
+    );
+    assert!(errand::of(&w, wisp).is_none());
+}

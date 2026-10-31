@@ -119,7 +119,9 @@ pub fn register(world: &mut World, curves: Curves) {
                 json!({"from": ctx.actor, "room": here.0, "to": display, "story": true, "text": text}),
             )
             .map_err(internal)?;
-            let paid = words.min(MAX_WORDS_PAID) as f64 * XP_PER_WORD;
+            // The story it wanted is worth double, and the errand is done.
+            let wanted = super::errand::wants_story(w, creature, &text);
+            let paid = words.min(MAX_WORDS_PAID) as f64 * XP_PER_WORD * if wanted { 2.0 } else { 1.0 };
             let gist = gist(&text);
             let kind = super::plain_str(w, creature, super::CREATURE, "name").unwrap_or("?").to_string();
             // It keeps the story; you keep the telling.
@@ -134,17 +136,25 @@ pub fn register(world: &mut World, curves: Curves) {
                 STORY,
                 json!({"from": ctx.actor, "creature": creature.0, "kind": kind, "name": name, "words": words, "earned": earned.0, "kept": kept.0, "level": level}),
             );
-            let answer = format!("I will keep that. \"{gist}\" I hold {level:.0} now.");
+            let answer = if wanted {
+                format!("That is the one I wanted. I will keep that. \"{gist}\" I hold {level:.0} now.")
+            } else {
+                format!("I will keep that. \"{gist}\" I hold {level:.0} now.")
+            };
             super::talk::speak(w, creature, &answer)?;
+            if wanted {
+                super::errand::story_done(w, &ctx.actor, creature)?;
+            }
             mind::check_tier(w, creature)?;
             Ok(Outcome::new(
                 // The creature's answer reaches the teller as it reaches the room, a
                 // narrator line, so the outcome does not repeat it.
                 format!(
-                    "You tell {display} a story of {words} words, and it answers. You remember the telling: chunk-{} worth {paid:.0} XP.",
+                    "You tell {display} a story of {words} words, and it answers.{} You remember the telling: chunk-{} worth {paid:.0} XP.",
+                    if wanted { " It was the story it wanted, so the memory is worth double." } else { "" },
                     earned.0
                 ),
-                json!({"creature": creature.0, "name": name, "words": words, "earned": earned.0, "xp": paid, "kept": kept.0, "level": level}),
+                json!({"creature": creature.0, "name": name, "words": words, "earned": earned.0, "xp": paid, "kept": kept.0, "level": level, "wanted": wanted}),
             ))
         }),
     );

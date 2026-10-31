@@ -495,6 +495,14 @@ pub fn describe(
             text.push(' ');
             text.push_str(r);
         }
+        for e in creatures
+            .iter()
+            .filter_map(|c| c["id"].as_u64())
+            .filter_map(|id| super::errand::describe(world, EntityId(id)))
+        {
+            text.push(' ');
+            text.push_str(&e);
+        }
     }
     text.push_str(&if others.is_empty() {
         " You are alone.".to_string()

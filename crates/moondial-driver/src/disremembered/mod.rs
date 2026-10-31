@@ -11,6 +11,7 @@ pub mod ask;
 pub mod building;
 pub mod cloak;
 mod combat;
+pub mod errand;
 pub mod exchange;
 mod identity;
 mod memory;
@@ -184,6 +185,14 @@ pub fn schemas() -> Vec<ComponentSchema> {
         ComponentSchema::new(EXITS, 1).field("exits", FieldKind::Plain, Visibility::Public),
         // A creature that is remembered: its tier, its given name, who keeps it, and
         // whether a memory was just taken from it. Its level is its window's.
+        // What a named creature wants: a story about something, or a word carried to
+        // another named creature. look and the cloak say it in one line.
+        ComponentSchema::new(errand::ERRAND, 1)
+            .field("kind", FieldKind::Plain, Visibility::Public)
+            .field("want", FieldKind::Plain, Visibility::Public)
+            .field("to", FieldKind::Plain, Visibility::Public)
+            .field("keywords", FieldKind::Plain, Visibility::Public)
+            .field("set_by", FieldKind::Plain, Visibility::Public),
         ComponentSchema::new(mind::MIND, 1)
             .field("tier", FieldKind::Plain, Visibility::Public)
             .field("name", FieldKind::Plain, Visibility::Public)
@@ -339,29 +348,51 @@ fn first_moves(world: &World) -> String {
     // The nearest named creature: here, then one exit away (with the exit named), then
     // anywhere, with its room.
     let home = rooms::arrival(world);
-    let named: Vec<(Option<EntityId>, String)> = world
+    let named: Vec<(Option<EntityId>, String, Option<String>)> = world
         .store
         .entities()
         .filter(|e| e.kind == "creature")
-        .filter_map(|e| mind::name(world, e.id).map(|n| (e.parent, n)))
+        .filter_map(|e| {
+            mind::name(world, e.id).map(|n| {
+                // What it wants, if a story: the first move is then the errand.
+                let want = errand::of(world, e.id)
+                    .filter(|er| er.kind == "story")
+                    .map(|er| er.want);
+                (e.parent, n, want)
+            })
+        })
         .collect();
     let exits = home.map(|h| rooms::exits_of(world, h)).unwrap_or_default();
+    let ask = |n: &str, want: &Option<String>| match want {
+        Some(w) => format!("story {n} \"<a dozen words about {w}>\""),
+        None => format!("story {n} \"<a dozen words>\""),
+    };
     let listener = named
         .iter()
-        .find(|(room, _)| *room == home)
-        .map(|(_, n)| format!("story {n} \"<a dozen words>\" ({n} is here)"))
+        .find(|(room, _, _)| *room == home)
+        .map(|(_, n, want)| {
+            format!(
+                "{} ({n} is here{})",
+                ask(n, want),
+                if want.is_some() {
+                    ", and wants that"
+                } else {
+                    ""
+                }
+            )
+        })
         .or_else(|| {
-            named.iter().find_map(|(room, n)| {
+            named.iter().find_map(|(room, n, want)| {
                 let (via, _) = exits.iter().find(|(_, to)| Some(**to) == *room)?;
-                Some(format!("travel {via}, then story {n} \"<a dozen words>\""))
+                Some(format!("travel {via}, then {}", ask(n, want)))
             })
         })
         .or_else(|| {
-            named.first().map(|(room, n)| {
+            named.first().map(|(room, n, want)| {
                 let place = room
                     .and_then(|r| plain_str(world, r, ROOM, "name"))
                     .unwrap_or("?");
-                format!("story {n} \"<a dozen words>\" ({n} is in {place})")
+                format!("{} ({n} is in {place})", ask(n, want))
             })
         })
         .unwrap_or_else(|| "story <a named creature> \"<a dozen words>\"".to_string());
@@ -771,6 +802,7 @@ pub fn register(world: &mut World, curves: Curves) {
     speech::register(world);
     talk::register(world);
     exchange::register(world, curves.clone());
+    errand::register(world);
     cloak::register(world);
     building::register(world);
     system::register(world);

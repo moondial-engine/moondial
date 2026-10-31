@@ -91,7 +91,12 @@ pub fn register(world: &mut World) {
                 for other in others_here(w, room, &ctx.actor) {
                     narrate(w, &other, format!("{} says to {name}, \"{text}\"", ctx.actor));
                 }
-                let Some(answer) = reply(w, creature, &ctx.actor, &text) else {
+                // A word carried to it, if one was wanted, before anything it would say.
+                let answer = match super::errand::carried_word(w, &ctx.actor, creature, &text)? {
+                    Some(a) => Some(a),
+                    None => reply(w, creature, &ctx.actor, &text),
+                };
+                let Some(answer) = answer else {
                     return Ok(Outcome::new(
                         format!("You say to the {name}, \"{text}\" It does not understand you. It is only a {name}."),
                         json!({"to": name, "text": text, "answered": false}),
@@ -322,7 +327,8 @@ pub fn reply(world: &World, creature: EntityId, actor: &str, text: &str) -> Opti
     let keepers = mind::keepers(world, creature);
     // A creature knows whoever kept it, and whoever told it a story: a visitor who
     // told one and said thanks was asked "For what?", which is not how a story is received.
-    let told_me = mind::told_by(world, creature, actor);
+    let told_me =
+        mind::told_by(world, creature, actor) || super::errand::did_for(world, creature, actor);
     let knows_you = keepers.iter().any(|k| k == actor) || told_me;
     let level = mind::level(world, creature);
     let room = world.store.entity(creature).and_then(|e| e.parent);

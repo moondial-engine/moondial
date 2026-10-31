@@ -485,6 +485,8 @@ pub fn regard(world: &World, creature: EntityId, actor: &str) -> Option<String> 
     let keepers = keepers(world, creature);
     Some(if keepers.iter().any(|k| k == actor) {
         format!("{n} the {kind} knows you.")
+    } else if super::errand::did_for(world, creature, actor) {
+        format!("{n} the {kind} knows you: you did what it asked.")
     } else if told_by(world, creature, actor) {
         // A story is enough to be known, under any kind of name; a passing visitor
         // read "does not know you" right after its story was kept.

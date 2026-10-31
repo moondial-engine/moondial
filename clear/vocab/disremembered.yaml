@@ -78,6 +78,7 @@ approved_verbs:
   thaw: {params: []}
   forget: {params: [{name: name, type: string, required: true}]}
   bring: {params: [{name: creature, type: entity, required: true}, {name: room, type: string, required: true}]}
+  errand: {params: [{name: creature, type: entity, required: true}, {name: want, type: text, required: true}, {name: to, type: entity, required: false}]}
   # out-of-world actions an invitation may ask of an agent
   send:
   run:

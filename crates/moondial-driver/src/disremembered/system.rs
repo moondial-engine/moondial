@@ -19,6 +19,10 @@ pub(crate) fn line_for(e: &moondial_log::Event) -> String {
         },
         "disremembered.tell" => format!("{} left word for {}", s("from"), s("to")),
         FEEDBACK => format!("{} would change: \"{}\"", s("from"), s("text")),
+        "disremembered.errand_done" => match p["to"].as_str() {
+            Some(t) => format!("{} carried {}'s word to {t}", s("from"), s("name")),
+            None => format!("{} told {} the story it wanted", s("from"), s("name")),
+        },
         "disremembered.story" => format!(
             "{} told {} the {} a story of {} words",
             s("from"),
