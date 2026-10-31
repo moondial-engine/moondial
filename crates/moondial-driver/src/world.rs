@@ -44,6 +44,8 @@ pub struct World {
     presence: std::collections::HashMap<String, Timestamp>,
     /// The door each actor last arrived by (terminal, http, session, gate, mcp).
     doors: std::collections::HashMap<String, String>,
+    /// When each greeter last greeted each visitor.
+    greetings: std::collections::HashMap<String, Timestamp>,
     /// Lines for the operator (a Discord channel, say), drained by the tick loop.
     notices: Vec<String>,
     /// Wrong passphrases per name: how many in a row, and when the last was. Five in a
@@ -95,6 +97,7 @@ impl World {
             job_handlers: Arc::new(std::collections::HashMap::new()),
             presence: std::collections::HashMap::new(),
             doors: std::collections::HashMap::new(),
+            greetings: std::collections::HashMap::new(),
             notices: Vec::new(),
             failures: std::collections::HashMap::new(),
             sweepers: Arc::new(Vec::new()),
@@ -185,6 +188,21 @@ impl World {
     /// When this actor was last active in this process, if they have been.
     pub fn last_active(&self, actor: &str) -> Option<Timestamp> {
         self.presence.get(actor).copied()
+    }
+
+    /// Whether `greeter` should greet `visitor` now: true once an hour per pair.
+    pub fn greeted(&mut self, greeter: &str, visitor: &str) -> bool {
+        let now = self.now();
+        let key = format!("{greeter}\u{0}{visitor}");
+        if self
+            .greetings
+            .get(&key)
+            .is_some_and(|t| now.since(*t).0 < 3_600_000)
+        {
+            return false;
+        }
+        self.greetings.insert(key, now);
+        true
     }
 
     /// The door an actor last came by, while the process remembers them.

@@ -235,7 +235,7 @@ fn patterns() -> &'static Patterns {
         number: re(r"(?<![A-Za-z0-9_.:/-])(?P<num>\d[\d,]*(?:\.\d+)?)(?![\d,.]*[A-Za-z0-9_:/-])"),
         iso_date: re(r"\b\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:\d{2})?)?\b"),
         time: re(r"\b\d{1,2}:\d{2}(?::\d{2})?\b"),
-        acronym: re(r"(?<![A-Za-z0-9-])([A-Z][A-Z0-9]{1,5})(?![A-Za-z0-9-])"),
+        acronym: re(r"(?<![A-Za-z0-9_-])([A-Z][A-Z0-9]{1,5})(?![A-Za-z0-9_-])"),
         header_smuggle: re(r"(?m)(?:^|\s)(FROM|TO|INTENT|REF)\s*:"),
         sentence_split: re(r#"(?<=[.?!])\s+(?=[A-Z\["'(])"#),
         word: re(r"[A-Za-z0-9][A-Za-z0-9'’.,:/_-]*"),
@@ -593,6 +593,7 @@ pub struct Checker {
     max_bytes: usize,
     allow_urls: bool,
     quote_src_error: bool,
+    game: bool,
     ask_required: bool,
     prose_cap: u32,
     intents: BTreeSet<String>,
@@ -751,6 +752,7 @@ impl Checker {
             max_bytes: int_of(&lim, "max_message_bytes", 16384) as usize,
             allow_urls: bool_of(&st, "allow_urls", true),
             quote_src_error: bool_of(&st, "quote_requires_source", false),
+            game: vocab.get("mode").and_then(Value::as_str) == Some("game"),
             ask_required: bool_of(&st, "ask_patterns_required", false),
             prose_cap: int_of(&st, "prose_score_cap", 40) as u32,
             intents,
@@ -1090,6 +1092,10 @@ impl Checker {
     fn check_duplicates(&self, msg: &Message, findings: &mut Vec<Finding>) {
         let mut seen: BTreeMap<String, usize> = BTreeMap::new();
         for st in &msg.statements {
+            // In a game, the same DO twice is two rounds (attack, attack), not a repeat.
+            if self.game && st.r#type.as_deref() == Some("DO") {
+                continue;
+            }
             let key = format!(
                 "{}|{}",
                 st.r#type.as_deref().unwrap_or(""),

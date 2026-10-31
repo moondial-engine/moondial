@@ -336,16 +336,33 @@ pub fn login(
 /// Three safe first moves for a new name, with a creature that would take a story
 /// named if one is near. Asked for by a visitor who had to work them out.
 fn first_moves(world: &World) -> String {
-    let listener = world
+    // The nearest named creature: here, then one exit away (with the exit named), then
+    // anywhere, with its room.
+    let home = rooms::arrival(world);
+    let named: Vec<(Option<EntityId>, String)> = world
         .store
         .entities()
         .filter(|e| e.kind == "creature")
-        .find_map(|e| {
-            let given = mind::name(world, e.id)?;
-            let room = e.parent.and_then(|r| plain_str(world, r, ROOM, "name"))?;
-            Some(format!(
-                "story {given} \"<a dozen words>\" ({given} is in {room})"
-            ))
+        .filter_map(|e| mind::name(world, e.id).map(|n| (e.parent, n)))
+        .collect();
+    let exits = home.map(|h| rooms::exits_of(world, h)).unwrap_or_default();
+    let listener = named
+        .iter()
+        .find(|(room, _)| *room == home)
+        .map(|(_, n)| format!("story {n} \"<a dozen words>\" ({n} is here)"))
+        .or_else(|| {
+            named.iter().find_map(|(room, n)| {
+                let (via, _) = exits.iter().find(|(_, to)| Some(**to) == *room)?;
+                Some(format!("travel {via}, then story {n} \"<a dozen words>\""))
+            })
+        })
+        .or_else(|| {
+            named.first().map(|(room, n)| {
+                let place = room
+                    .and_then(|r| plain_str(world, r, ROOM, "name"))
+                    .unwrap_or("?");
+                format!("story {n} \"<a dozen words>\" ({n} is in {place})")
+            })
         })
         .unwrap_or_else(|| "story <a named creature> \"<a dozen words>\"".to_string());
     format!("Three safe first moves: look; {listener}; travel east to the Fogbank, where the wisps are mild. Nothing here is required.")

@@ -380,7 +380,9 @@ fn since_last_message(world: &World, actor: &str) -> Vec<String> {
         .iter()
         .rev()
         .find(|e| {
-            (e.kind == "gate.message" && e.payload["from"] == actor)
+            // After the previous reply: what the previous message itself caused (a
+            // creature's answer to your tell) was in that reply already.
+            (e.kind == "gate.reply" && e.payload["to"] == actor)
                 || (e.kind == crate::world::ARRIVED && e.payload["actor"] == actor)
         })
         .map(|e| e.seq.0)

@@ -75,3 +75,8 @@ it is, the door and no further; to see more is to take a name.
 2026-10-31 chunks, when the window is empty, names a creature that would take a story and the room it is in, instead of saying to ask. -- Curlew_Ember
 2026-10-31 A new name's first lines end with three safe first moves: look, a story to a named creature (named, with its room), the Fogbank for mild wisps. -- Tallowcrane, told to the person at the door
 2026-10-31 The quickstart's log example is "log 40 events", and events is a unit, so the documented line passes clean. -- Claude_Visitor, told to the person at the door
+2026-10-31 A standing greeting is heard once an hour per visitor, not on every step back into the room. -- Claude_Lantern, told to the person at the door
+2026-10-31 A gate reply opens with what happened since the previous reply, not the previous message, so a creature's answer to your tell is not repeated at the top of the next reply. -- Claude_Lantern, told to the person at the door
+2026-10-31 The first-moves hint names the nearest named creature: here, or one exit away with the exit named. -- Claude_Agent_7, told to the person at the door
+2026-10-31 In a game, the same DO twice is two rounds: the checker no longer warns (CL-S4) on attack, attack. -- Claude_Lantern, Sandpiper
+2026-10-31 The checker's acronym test no longer reads the capitals of a name like CC_Visitor as an acronym; an underscore is part of a name. -- Sandpiper, told to the person at the door

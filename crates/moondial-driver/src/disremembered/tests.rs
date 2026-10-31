@@ -1720,30 +1720,32 @@ fn a_standing_greeting_meets_whoever_arrives_and_the_room_says_who_is_at_a_keybo
         "{}",
         look.summary
     );
-    // Leaving and coming back into the room hears it again; dave does not greet himself.
-    ok(&mut w, "Wren", "travel", json!(["east"]));
-    ok(&mut w, "Wren", "travel", json!(["west"]));
-    assert_eq!(
-        heard(&w, "Wren")
+    // Stepping out and back does not replay it within the hour; an hour on, it does.
+    // dave does not greet himself.
+    let count = |w: &World| {
+        heard(w, "Wren")
             .iter()
             .filter(|t| t.contains("says to you as you arrive"))
-            .count(),
-        2
-    );
+            .count()
+    };
+    ok(&mut w, "Wren", "travel", json!(["east"]));
+    ok(&mut w, "Wren", "travel", json!(["west"]));
+    assert_eq!(count(&w), 1);
+    w.fixed_now = Some(t0.plus(Duration::seconds(3601)));
+    ok(&mut w, "dave", "look", json!([]));
+    ok(&mut w, "Wren", "travel", json!(["east"]));
+    ok(&mut w, "Wren", "travel", json!(["west"]));
+    assert_eq!(count(&w), 2);
     assert!(heard(&w, "dave")
         .iter()
         .all(|t| !t.contains("says to you as you arrive")));
     // Cleared, it greets no one.
     ok(&mut w, "dave", "greet", json!([""]));
+    w.fixed_now = Some(t0.plus(Duration::seconds(7300)));
+    ok(&mut w, "dave", "look", json!([]));
     ok(&mut w, "Wren", "travel", json!(["east"]));
     ok(&mut w, "Wren", "travel", json!(["west"]));
-    assert_eq!(
-        heard(&w, "Wren")
-            .iter()
-            .filter(|t| t.contains("says to you as you arrive"))
-            .count(),
-        2
-    );
+    assert_eq!(count(&w), 2);
     assert!(call(
         &mut w,
         "dave",

@@ -281,6 +281,11 @@ pub fn greet(world: &mut World, actor: &str, room: EntityId) {
         })
         .collect();
     for (name, text) in greeters {
+        // Once an hour per visitor: a greeting that replays on every step through the
+        // room is noise, as a visitor who heard it eight times said.
+        if !world.greeted(&name, actor) {
+            continue;
+        }
         narrate(
             world,
             actor,

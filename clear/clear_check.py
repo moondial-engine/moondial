@@ -212,7 +212,7 @@ URL_RE = re.compile(r"\b(?:https?://|www\.)\S+", re.IGNORECASE)
 NUMBER_RE = re.compile(r"(?<![A-Za-z0-9_.:/-])(?P<num>\d[\d,]*(?:\.\d+)?)(?![\d,.]*[A-Za-z0-9_:/-])")
 ISO_DATE_RE = re.compile(r"\b\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:\d{2})?)?\b")
 TIME_RE = re.compile(r"\b\d{1,2}:\d{2}(?::\d{2})?\b")
-ACRONYM_RE = re.compile(r"(?<![A-Za-z0-9-])([A-Z][A-Z0-9]{1,5})(?![A-Za-z0-9-])")
+ACRONYM_RE = re.compile(r"(?<![A-Za-z0-9_-])([A-Z][A-Z0-9]{1,5})(?![A-Za-z0-9_-])")
 HEADER_SMUGGLE_RE = re.compile(r"(?:^|\s)(FROM|TO|INTENT|REF)\s*:", re.MULTILINE)
 PRONOUNS_ALWAYS = ("it", "they", "them")
 PRONOUNS_DEMONSTRATIVE = ("this", "that", "these", "those")
@@ -400,6 +400,8 @@ class Checker:
         st = vocab.get("settings", {})
         self.allow_urls = bool(st.get("allow_urls", True))
         self.quote_src_error = bool(st.get("quote_requires_source", False))
+        # In a game, the same DO twice is two rounds (attack, attack), not a repeat.
+        self.game = (vocab.get("mode") == "game")
         self.ask_required = bool(st.get("ask_patterns_required", False))
         self.prose_cap = int(st.get("prose_score_cap", 40))
         self.intents = set(vocab.get("intents", []))
@@ -549,6 +551,8 @@ class Checker:
     def check_duplicates(self, msg: Message) -> None:
         seen: dict[str, int] = {}
         for st in msg.statements:
+            if self.game and st.type == "DO":
+                continue
             key = (st.type or "") + "|" + st.body.lower()
             if key in seen:
                 self.add("CL-S4", WARNING, self.where(st), f"Statement repeats statement {seen[key]}.", st.body)
