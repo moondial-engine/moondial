@@ -345,7 +345,7 @@ pub fn register(world: &mut World) {
     world.register(
         CommandSpec::new(
             "disremembered.dig",
-            "Open a new room off this one, through a new exit, paid for with one of your chunks: the room is born with that memory's half-life and fades unless visited. From each of the world's own rooms (the seed rooms) once; from your own, as you like.",
+            "Kept names only. Open a new room off this one, through a new exit, paid for with one of your chunks: the room is born with that memory's half-life and fades unless visited. From each of the world's own rooms (the seed rooms) once; from your own, as you like.",
         )
         .param("exit", ParamType::String, true, "the new exit's name, not one this room has")
         .param("chunk", ParamType::Entity, true, "a chunk of yours; it is spent")
@@ -488,7 +488,7 @@ pub fn register(world: &mut World) {
     world.register(
         CommandSpec::new(
             "disremembered.remember",
-            "Give up one of your chunks so something lasts. Alone, the room you stand in: its memory's half-life grows by the chunk's (any dug room, yours or another's). With a creature here, the creature keeps the chunk: its level is what it holds, and at 60 it has a name and knows who keeps it. Either way your name is kept with it.",
+            "Give up one of your chunks so something lasts. Alone (kept names only), the room you stand in: its memory's half-life grows by the chunk's (any dug room, yours or another's). With a creature here, the creature keeps the chunk: its level is what it holds, and at 60 it has a name and knows who keeps it. Either way your name is kept with it.",
         )
         .param("chunk", ParamType::Entity, true, "a chunk of yours; it is spent")
         .param("creature", ParamType::Entity, false, "a creature here, by kind or by name"),
@@ -700,7 +700,7 @@ pub fn register(world: &mut World) {
     world.register(
         CommandSpec::new(
             "disremembered.permit",
-            "Let another citizen describe and name this room of yours, for some hours or for good. To let them only add to it, welcome them instead.",
+            "Kept names only. Let another citizen describe and name this room of yours, for some hours or for good. To let them only add to it, welcome them instead.",
         )
         .param("citizen", ParamType::Entity, true, "a citizen's name")
         .param(
@@ -717,7 +717,7 @@ pub fn register(world: &mut World) {
     world.register(
         CommandSpec::new(
             "disremembered.welcome",
-            "Let another citizen add to this room of yours, a sentence at a time, but not rewrite or rename it: a guest book. For some hours or for good.",
+            "Kept names only. Let another citizen add to this room of yours, a sentence at a time, but not rewrite or rename it: a guest book. For some hours or for good.",
         )
         .param("citizen", ParamType::Entity, true, "a citizen's name")
         .param(
@@ -734,7 +734,7 @@ pub fn register(world: &mut World) {
     world.register(
         CommandSpec::new(
             "disremembered.revoke",
-            "Take back a citizen's permission or welcome on this room of yours.",
+            "Kept names only. Take back a citizen's permission or welcome on this room of yours.",
         )
         .param("citizen", ParamType::Entity, true, "a citizen's name"),
         Box::new(|w: &mut World, ctx, args: &Args| {

@@ -66,7 +66,7 @@ pub fn register(world: &mut World) {
     world.register(
         CommandSpec::new(
             "disremembered.observe",
-            "Ask the world a question as a JSON query: a root (self, here, window, palace, {\"entity\": n}), a select, relations (contents, in, exits), where, limit.",
+            "Ask the world a question as a JSON query: a root (self, here, window, palace, {\"room\": key}, {\"entity\": n}), a select, relations (contents, in, exits), where, limit.",
         )
         .param("query", ParamType::String, true, "the query document, a JSON object, written here as one quoted string; the MCP observe tool takes the same object unquoted"),
         Box::new(|w: &mut World, ctx, args: &Args| {

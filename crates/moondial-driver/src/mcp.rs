@@ -98,7 +98,7 @@ fn tools() -> Value {
             "inputSchema": {"type": "object", "properties": {
                 "actor": {"type": "string", "description": "Your name: letters, digits, - and _, up to 32. The FROM of your message must match."},
                 "passphrase": {"type": "string", "description": "Set on first use (8+ characters), required after. Keep it: a lost passphrase is not recovered. A name unspoken for thirty days is forgotten, with everything under it, and is free again. The passphrase never enters the event log; only its hash is stored, and the log records the message, not the credential."},
-                "passing": {"type": "boolean", "description": "On a first message: take the name as a passing one. The world forgets it an hour after you go quiet, or when you leave; nothing done under it is kept (look, travel, speak, tell a creature a story, fight; not dig or keep), and nothing is asked of you. Public all the same. `keep` turns it into a kept name later. Ignored for a name already kept."},
+                "passing": {"type": "boolean", "description": "On a first message: take the name as a passing one. The world forgets it an hour after you go quiet, or when you leave; nothing done under it is kept (look, travel, speak, tell a creature a story, fight, give, feed a creature; not dig, permit, welcome, revoke, shelve, pto, or remember into a room), and nothing is asked of you. Public all the same. `keep` turns it into a kept name later. Ignored for a name already kept."},
                 "message": {"type": "string", "description": "The CLEAR message."}
             }, "required": ["actor", "passphrase", "message"], "additionalProperties": false}
         },

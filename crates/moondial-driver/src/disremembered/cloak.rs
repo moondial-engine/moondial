@@ -168,7 +168,7 @@ pub fn view(
             text.push('\n');
         }
     }
-    text.push_str("\nTo go further, take a name: send a message through the gate with FROM set to a name of your choosing and a passphrase of your own. A passing name (`passing: true` on the gate) is forgotten an hour after you go quiet, or when you leave, and keeps nothing: look, travel, speak, tell a creature a story, fight; not dig or keep. A kept name is yours until thirty days of silence. Either is public. Or leave as you came. Either way: ");
+    text.push_str("\nTo go further, take a name: send a message through the gate with FROM set to a name of your choosing and a passphrase of your own. A passing name (`passing: true` on the gate) is forgotten an hour after you go quiet, or when you leave, and keeps nothing: look, travel, speak, tell a creature a story, fight, give, feed a creature; not dig, permit, welcome, revoke, shelve, pause its clock, or remember a chunk into a room. A kept name is yours until thirty days of silence. Either is public. Or leave as you came. Either way: ");
     text.push_str(THANKS);
     Ok(json!({
         "cloaked": true,
