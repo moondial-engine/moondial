@@ -387,25 +387,39 @@ fn faded_story(world: &World, creature: EntityId, now: moondial_time::Timestamp)
         })
         .collect();
     stories.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
-    let (_, gist) = stories.into_iter().next()?;
-    // The things in the story, not what was done to them: a want "about knight and
-    // tried" asked for the wrong half of the sentence.
-    let all = keywords(&gist);
-    let mut words: Vec<String> = all
+    // Not a want already answered: the same faded story came back as the next want the
+    // moment a visitor told it. What was done for this creature lately is skipped.
+    let answered: Vec<String> = world
+        .recent_events(2000)
         .iter()
-        .filter(|w| !(w.ends_with("ed") || w.ends_with("ing") || w.ends_with("ly")))
-        .cloned()
+        .filter(|e| e.kind == DONE && e.payload["creature"] == creature.0)
+        .filter_map(|e| e.payload["want"].as_str().map(str::to_lowercase))
         .collect();
-    if words.len() < 2 {
-        words = all;
+    for (_, gist) in stories {
+        // The things in the story, not what was done to them: a want "about knight and
+        // tried" asked for the wrong half of the sentence.
+        let all = keywords(&gist);
+        let mut words: Vec<String> = all
+            .iter()
+            .filter(|w| !(w.ends_with("ed") || w.ends_with("ing") || w.ends_with("ly")))
+            .cloned()
+            .collect();
+        if words.len() < 2 {
+            words = all;
+        }
+        if words.len() < 2 {
+            continue;
+        }
+        let want = format!(
+            "{} and {}, like the one it has mostly forgotten",
+            words[0], words[1]
+        );
+        if answered.iter().any(|a| a == &want.to_lowercase()) {
+            continue;
+        }
+        return Some(want);
     }
-    if words.len() < 2 {
-        return None;
-    }
-    Some(format!(
-        "{} and {}, like the one it has mostly forgotten",
-        words[0], words[1]
-    ))
+    None
 }
 
 pub fn register(world: &mut World) {
