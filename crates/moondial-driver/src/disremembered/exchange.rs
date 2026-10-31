@@ -120,11 +120,11 @@ pub fn register(world: &mut World, curves: Curves) {
             )
             .map_err(internal)?;
             let paid = words.min(MAX_WORDS_PAID) as f64 * XP_PER_WORD;
-            let gist: String = text.chars().take(48).collect::<String>().trim_end().to_string();
+            let gist = gist(&text);
             let kind = super::plain_str(w, creature, super::CREATURE, "name").unwrap_or("?").to_string();
             // It keeps the story; you keep the telling.
             let window = mind::window_of(w, creature).ok_or_else(|| internal("a named creature has a window"))?;
-            let kept = super::memory::earn_chunk(w, &ctx.actor, window, &format!("a story: \"{gist}\u{2026}\""), paid / 2.0, 0.6, &curves)?;
+            let kept = super::memory::earn_chunk(w, &ctx.actor, window, &format!("a story: \"{gist}\""), paid / 2.0, 0.6, &curves)?;
             // The creature's chunk is its own, not the teller's.
             let kept = mind::disown(w, kept)?;
             let earned = super::memory::earn_chunk(w, &ctx.actor, f.window, &format!("telling {name} a story"), paid, 0.4, &curves)?;
@@ -134,7 +134,7 @@ pub fn register(world: &mut World, curves: Curves) {
                 STORY,
                 json!({"from": ctx.actor, "creature": creature.0, "kind": kind, "name": name, "words": words, "earned": earned.0, "kept": kept.0, "level": level}),
             );
-            let answer = format!("I will keep that. \"{gist}\u{2026}\" I hold {level:.0} now.");
+            let answer = format!("I will keep that. \"{gist}\" I hold {level:.0} now.");
             super::talk::speak(w, creature, &answer)?;
             mind::check_tier(w, creature)?;
             Ok(Outcome::new(
@@ -148,4 +148,30 @@ pub fn register(world: &mut World, curves: Curves) {
             ))
         }),
     );
+}
+
+/// The first sentence of a story, or its first words up to a line's worth, ending on a
+/// word: a creature that repeats "memory of a story: \"Once there was a lant…\"" told a
+/// visitor nothing. The ellipsis marks a cut, and only a cut.
+fn gist(text: &str) -> String {
+    const LINE: usize = 56;
+    let first = text
+        .split_inclusive(['.', '!', '?'])
+        .next()
+        .unwrap_or(text)
+        .trim();
+    if first.chars().count() <= LINE {
+        return first.to_string();
+    }
+    let mut out = String::new();
+    for word in first.split_whitespace() {
+        if !out.is_empty() && out.chars().count() + 1 + word.chars().count() > LINE {
+            break;
+        }
+        if !out.is_empty() {
+            out.push(' ');
+        }
+        out.push_str(word);
+    }
+    format!("{}\u{2026}", out.trim_end_matches([',', ';', ':']))
 }

@@ -2528,3 +2528,40 @@ fn the_cloak_shows_the_threshold_as_no_one_and_writes_nothing() {
         find_citizen(&w, "dave").unwrap().citizen
     ));
 }
+
+#[test]
+fn feedback_is_a_public_line_under_your_name_and_a_passing_name_may() {
+    let t0 = Timestamp(1_000_000);
+    let mut w = open(tempfile::tempdir().unwrap().path(), t0);
+    login_as(&mut w, "Tallowvisitor", "test", PASS, true).unwrap();
+    let out = ok(
+        &mut w,
+        "Tallowvisitor",
+        "feedback",
+        json!(["  exits should say   where they lead "]),
+    );
+    assert!(out.summary.starts_with("Read."), "{}", out.summary);
+    let said: Vec<_> = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == system::FEEDBACK)
+        .collect();
+    assert_eq!(said.len(), 1);
+    assert_eq!(said[0].payload["from"], "Tallowvisitor");
+    assert_eq!(said[0].payload["text"], "exits should say where they lead");
+    assert_eq!(
+        system::line_for(&said[0]),
+        "Tallowvisitor would change: \"exits should say where they lead\""
+    );
+    let err = call(
+        &mut w,
+        "Tallowvisitor",
+        ActorKind::Citizen,
+        "feedback",
+        json!(["   "]),
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("Change what?"), "{err}");
+}

@@ -14,7 +14,7 @@ use rand_core::OsRng;
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum LoginError {
     /// Name exists and the passphrase does not match.
-    #[error("That is not {name}'s passphrase.")]
+    #[error("{name} is already someone's, and that is not its passphrase. If the name is yours, send the passphrase it was set with; if not, choose another name (a passing name can collide with a live one, so an uncommon one is safer).")]
     WrongPassphrase { name: String },
     /// First login with a passphrase that is too short.
     #[error("A passphrase is at least {min} characters; it is set the first time a name logs in.")]

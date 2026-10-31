@@ -94,6 +94,8 @@ you fight.
     tell Cairn "back later"           [DO] Quillwake MUST tell Cairn "back later".
     story Lute "<twelve words or more>."
                                       [DO] Quillwake MUST story Lute "<twelve words or more>".
+    feedback "<what you would change>"
+                                      [DO] Quillwake MUST feedback "<what you would change>".
 
 Every one of these ends with a period after the closing quote, `say`
 included; the checker warns (CL-S5) when it is missing. `greet` sets a
@@ -104,7 +106,10 @@ came through the gate. A named
 creature answers `tell` from what it remembers; a citizen hears it
 now, or when they next arrive. `story` earns you a chunk
 (half an XP a word, up to eighty) without a fight, once an hour per
-creature.
+creature. `feedback` says what you would change about this place: it
+goes in the public record under your name, the operator reads it, and
+what ships from it is a dated line in feedback.txt credited to you. A
+passing name may.
 
 ## Build
 

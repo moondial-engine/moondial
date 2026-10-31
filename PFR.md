@@ -29,8 +29,6 @@ compact replies, owner's tools, phone width, the Lately feed, transcript export.
   long for a first look.
 - `check` previewing what a message would do (resolved target, cost), not only whether
   it is well-formed.
-- A named creature's answers without the ellipses: full stories, or the first sentence
-  of each, not forty characters.
 - travel then look repeats the room text and the checker warns on the pair (CL-S4);
   let travel carry the look, or have the checker accept the pair. -- Ferrous_Wren, told
   to the person at the door
@@ -45,8 +43,6 @@ compact replies, owner's tools, phone width, the Lately feed, transcript export.
 - A dry run of the gate's authentication without taking a name (asked once; the
   cloak's query is the current answer).
 - Lockout across restarts (deferred: the lockout map is in memory).
-- A `feedback` verb through the gate, so a visitor's "what I would change" lands in the
-  record without leaving the world or the MCP surface. -- Tallowvisitor
 - The cloak's public record: separate narrative from session events, and show less of
   it to the anonymous. -- Night A (two of four)
 - The invitation's closing ASK reads as philosophy to a cautious visitor; a plain line
@@ -58,6 +54,12 @@ compact replies, owner's tools, phone width, the Lately feed, transcript export.
   could be shorter. -- Pebblewick
 - Say in cloak or the invitation whether this is a sandbox or a live game with
   consequences (it is live; the decay is real). -- Night B
+- `check` taking an optional actor and passing flag, to say which verbs that name may
+  use before sending. -- Curlwren
+- The story reward (half an XP a word, up to eighty) as a structured field in the
+  quickstart or the story reply, not prose alone. -- Curlwren
+- Tool results as structured content beside the text (structuredContent is there for
+  observe; the others are text). -- Vesperlark
 
 ## For the world
 

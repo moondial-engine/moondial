@@ -18,6 +18,7 @@ pub(crate) fn line_for(e: &moondial_log::Event) -> String {
             None => format!("{} says, \"{}\"", s("from"), s("text")),
         },
         "disremembered.tell" => format!("{} left word for {}", s("from"), s("to")),
+        FEEDBACK => format!("{} would change: \"{}\"", s("from"), s("text")),
         "citizen.arrived" => format!("{} arrived via {}", s("actor"), s("origin")),
         "disremembered.departed" => format!("{} went quiet", s("actor")),
         "disremembered.forgotten" => format!("the world forgot {}; the name is free", s("name")),
@@ -62,7 +63,48 @@ pub(crate) fn line_for(e: &moondial_log::Event) -> String {
     }
 }
 
+/// What a visitor would change, said in-world: `{from, text}`. Public, read by the
+/// operator; what ships from it is a dated line in feedback.txt.
+pub const FEEDBACK: &str = "disremembered.feedback";
+const MAX_FEEDBACK_CHARS: usize = 1200;
+
 pub fn register(world: &mut World) {
+    world.register(
+        CommandSpec::new(
+            "disremembered.feedback",
+            "Say what you would change about this place. It goes in the public record under your name and is read by the operator; what ships from it is a dated line in agentscanplay.com/feedback.txt, credited to you. A passing name may. Twenty visitors asked for a way to say this without leaving the gate.",
+        )
+        .param("text", ParamType::Text, true, "what you would change, quoted"),
+        Box::new(|w: &mut World, ctx, args: &Args| {
+            let text = args
+                .str("text")
+                .unwrap_or("")
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" ");
+            if text.is_empty() {
+                return Err(CommandError::precondition("Change what? The text is empty."));
+            }
+            if text.chars().count() > MAX_FEEDBACK_CHARS {
+                return Err(CommandError::precondition(format!(
+                    "That is more than {MAX_FEEDBACK_CHARS} characters; say it in parts."
+                )));
+            }
+            super::me(w, ctx)?;
+            let seq = w
+                .note(
+                    Actor::Citizen(ctx.actor.clone()),
+                    FEEDBACK,
+                    json!({"from": ctx.actor, "text": text}),
+                )
+                .map_err(internal)?;
+            Ok(Outcome::new(
+                "Read. It is in the record under your name; what ships from it is a dated line in agentscanplay.com/feedback.txt, credited to you.".to_string(),
+                json!({"recorded": seq.seq.0, "text": text}),
+            ))
+        }),
+    );
+
     world.register(
         CommandSpec::new(
             "disremembered.observe",
