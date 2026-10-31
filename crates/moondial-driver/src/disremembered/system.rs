@@ -158,6 +158,68 @@ pub fn register(world: &mut World) {
 
     world.register(
         CommandSpec::new(
+            "disremembered.move",
+            "Admin: move a creature to a room, by the room's key. The room is told something came in; the record says it wandered.",
+        )
+        .param("creature", ParamType::Entity, true, "a creature's given name, or its id (creature-101)")
+        .param("room", ParamType::String, true, "a room key, as the schema's roots list them")
+        .allowed(&[ActorKind::Admin]),
+        Box::new(|w: &mut World, _, args: &Args| {
+            let who = args.str("creature").unwrap_or_default().trim().to_string();
+            let creature = super::mind::find_named(w, &who)
+                .map(|(c, _)| c)
+                .or_else(|| {
+                    who.rsplit_once('-')
+                        .map(|(_, d)| d)
+                        .unwrap_or(&who)
+                        .parse::<u64>()
+                        .ok()
+                        .map(moondial_store::EntityId)
+                        .filter(|id| w.store.entity(*id).is_some_and(|e| e.kind == "creature"))
+                });
+            let Some(creature) = creature else {
+                return Err(CommandError::precondition(format!(
+                    "No creature is named or numbered {who}."
+                )));
+            };
+            let key = args.str("room").unwrap_or_default().trim().to_ascii_lowercase();
+            let Some(room) = super::rooms::room_by_key(w, &key) else {
+                return Err(CommandError::precondition(format!("No room has the key {key}.")));
+            };
+            w.record(
+                Actor::Driver,
+                StoreEvent::EntityMoved {
+                    id: creature,
+                    parent: Some(room),
+                },
+            )
+            .map_err(internal)?;
+            let kind = super::plain_str(w, creature, super::CREATURE, "name")
+                .unwrap_or("?")
+                .to_string();
+            let rname = super::plain_str(w, room, super::ROOM, "name")
+                .unwrap_or("?")
+                .to_string();
+            let shown = super::mind::display(w, creature);
+            let _ = w.note(
+                Actor::Driver,
+                super::mind::WANDERED,
+                json!({"creature": creature.0, "kind": kind, "room": room.0, "named": super::mind::name(w, creature), "moved": true}),
+            );
+            super::combat::narrate_room(w, creature, &format!("Something has come in: {shown}."));
+            if super::combat::def_by_key(&kind).is_some_and(|d| d.aggressive) {
+                super::combat::notice_everyone(w, room).map_err(internal)?;
+            }
+            w.notice(format!("**{shown}** was moved to {rname}."));
+            Ok(Outcome::new(
+                format!("{shown} is in {rname} now."),
+                json!({"creature": creature.0, "room": room.0, "key": key}),
+            ))
+        }),
+    );
+
+    world.register(
+        CommandSpec::new(
             "disremembered.log",
             "The last events in the world, oldest first.",
         )

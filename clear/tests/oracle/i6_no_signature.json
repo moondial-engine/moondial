@@ -1,10 +1,18 @@
 {
-  "verdict": "PASS",
-  "score": 100,
+  "verdict": "FAIL",
+  "score": 50,
   "mode": "clear",
-  "errors": 0,
+  "errors": 1,
   "warnings": 0,
-  "findings": [],
+  "findings": [
+    {
+      "rule": "CL-I6",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "'move' takes a word or quoted text for room; the DO gives '3'.",
+      "excerpt": "3"
+    }
+  ],
   "message": {
     "header": {
       "FROM": "lantern-7",

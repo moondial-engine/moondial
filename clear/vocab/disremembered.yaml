@@ -43,7 +43,6 @@ approved_verbs:
   look: {params: []}
   travel: {params: [{name: exit, type: string, required: true}]}
   rest: {params: []}
-  move:
   leave: {params: []}
   # combat (turn-based, positional)
   attack: {params: [{name: creature, type: entity, required: false}]}
@@ -74,6 +73,7 @@ approved_verbs:
   freeze: {params: []}
   thaw: {params: []}
   forget: {params: [{name: name, type: string, required: true}]}
+  move: {params: [{name: creature, type: entity, required: true}, {name: room, type: string, required: true}]}
   # out-of-world actions an invitation may ask of an agent
   send:
   run:

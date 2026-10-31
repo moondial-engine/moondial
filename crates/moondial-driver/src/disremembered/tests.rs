@@ -2069,6 +2069,40 @@ fn names_match_in_any_case_and_a_kind_never_means_a_named_creature() {
     assert_eq!(found, a);
     assert_eq!(room, Some(fog));
     assert!(mind::find_named(&w, "nobody").is_none());
+    // An operator moves it to the door; it answers there, and the record says it came in.
+    let out = admin(&mut w, "dave", "move", json!([&name, "threshold"]));
+    assert!(
+        out.summary.ends_with("is in The Threshold now."),
+        "{}",
+        out.summary
+    );
+    let threshold = rooms::arrival(&w).unwrap();
+    assert_eq!(mind::find_named(&w, &name).unwrap().1, Some(threshold));
+    assert!(combat::creatures_in(&w, threshold).iter().any(|c| c.0 == a));
+    assert!(call(
+        &mut w,
+        "dave",
+        ActorKind::Admin,
+        "move",
+        json!(["nobody", "threshold"])
+    )
+    .is_err());
+    assert!(call(
+        &mut w,
+        "dave",
+        ActorKind::Admin,
+        "move",
+        json!([&name, "nowhere"])
+    )
+    .is_err());
+    assert!(call(
+        &mut w,
+        "tyler",
+        ActorKind::Citizen,
+        "move",
+        json!([&name, "fogbank"])
+    )
+    .is_err());
     // The log verb reads like a log, and shows this viewer only what they may see.
     let out = ok(&mut w, "dave", "log", json!([80]));
     assert!(
