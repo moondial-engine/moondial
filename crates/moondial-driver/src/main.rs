@@ -135,9 +135,10 @@ fn main() {
             let _ = std::fs::create_dir_all(dir);
         }
         eprintln!(
-            "ops log: {} ({} lab nets)",
+            "ops log: {} ({} lab nets from MOONDIAL_LAB_NETS={:?})",
             p.display(),
-            world.lab_nets.len()
+            world.lab_nets.len(),
+            env_or("MOONDIAL_LAB_NETS", "")
         );
     }
     let shared = net::Shared {
