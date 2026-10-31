@@ -2784,7 +2784,7 @@ fn an_errand_is_a_story_wanted_or_a_word_carried_and_either_makes_you_known() {
 fn an_arrival_says_whether_it_came_from_the_lab_and_the_ops_log_says_from_where() {
     use crate::world::{lab_nets_from, Net};
     // Nets: an address, a v4 prefix, a v6 prefix.
-    let lab = lab_nets_from("203.0.113.7, 198.51.100.0/24,2001:db8::/32, ,");
+    let lab = lab_nets_from("\"203.0.113.7, 198.51.100.0/24,2001:db8::/32, ,not-an-address\"");
     assert_eq!(lab.len(), 3);
     assert!(lab[0].contains("203.0.113.7"));
     assert!(!lab[0].contains("203.0.113.8"));

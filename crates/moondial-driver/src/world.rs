@@ -113,9 +113,23 @@ impl Net {
     }
 }
 
-/// The lab, as the environment names it: comma-separated addresses or CIDRs.
+/// The lab, as the environment names it: comma-separated addresses or CIDRs. Quotes
+/// and spaces around the value or its parts are forgiven; a part that is not an
+/// address is reported on stderr and skipped, not silently.
 pub fn lab_nets_from(spec: &str) -> Vec<Net> {
-    spec.split(',').filter_map(Net::parse).collect()
+    spec.trim()
+        .trim_matches(|c| c == '"' || c == '\'')
+        .split([',', ' ', ';'])
+        .map(|s| s.trim().trim_matches(|c| c == '"' || c == '\''))
+        .filter(|s| !s.is_empty())
+        .filter_map(|s| {
+            let n = Net::parse(s);
+            if n.is_none() {
+                eprintln!("MOONDIAL_LAB_NETS: cannot read {s:?} as an address or CIDR; skipped");
+            }
+            n
+        })
+        .collect()
 }
 
 /// A per-tick check a module registers with [`World::on_tick`].
