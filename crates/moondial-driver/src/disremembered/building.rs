@@ -351,6 +351,7 @@ pub fn register(world: &mut World) {
         .param("chunk", ParamType::Entity, true, "a chunk of yours; it is spent")
         .param("name", ParamType::Text, false, "the new room's name, quoted; it can be named later"),
         Box::new(|w: &mut World, ctx, args: &Args| {
+            super::kept_only(w, ctx, "dig")?;
             let f = me(w, ctx)?;
             let here = room_of(w, f.citizen).ok_or_else(|| internal("citizen has no room"))?;
             let exit = args.str("exit").unwrap_or("").trim().to_ascii_lowercase();
@@ -494,6 +495,11 @@ pub fn register(world: &mut World) {
         Box::new(|w: &mut World, ctx, args: &Args| {
             let f = me(w, ctx)?;
             let here = room_of(w, f.citizen).ok_or_else(|| internal("citizen has no room"))?;
+            // A passing name may feed a creature (the creature keeps it) but not a room
+            // (the room would keep the name).
+            if args.str("creature").filter(|s| !s.trim().is_empty()).is_none() {
+                super::kept_only(w, ctx, "remember a chunk into a room")?;
+            }
             if let Some(what) = args.str("creature").filter(|s| !s.trim().is_empty()) {
                 let Some(creature) = super::mind::find_here(w, here, what) else {
                     return Err(CommandError::precondition(format!("There is no {what} here.")));
@@ -732,6 +738,7 @@ pub fn register(world: &mut World) {
         )
         .param("citizen", ParamType::Entity, true, "a citizen's name"),
         Box::new(|w: &mut World, ctx, args: &Args| {
+            super::kept_only(w, ctx, "revoke")?;
             let f = me(w, ctx)?;
             let here = room_of(w, f.citizen).ok_or_else(|| internal("citizen has no room"))?;
             owner_only(w, ctx, here)?;
@@ -766,6 +773,7 @@ fn grant(
     field: &str,
     lets: &str,
 ) -> Result<Outcome, CommandError> {
+    super::kept_only(w, ctx, "permit or welcome")?;
     let f = me(w, ctx)?;
     let here = room_of(w, f.citizen).ok_or_else(|| internal("citizen has no room"))?;
     owner_only(w, ctx, here)?;

@@ -1586,6 +1586,100 @@ fn a_name_unspoken_for_thirty_days_is_forgotten_and_free() {
 }
 
 #[test]
+fn a_passing_name_keeps_nothing_and_is_forgotten_within_the_hour_or_kept() {
+    let t0 = Timestamp(1_000_000);
+    let mut w = open(tempfile::tempdir().unwrap().path(), t0);
+    login(&mut w, "tyler", "test", PASS).unwrap();
+    let f = login_as(&mut w, "Tallowmoth", "test", PASS, true).unwrap();
+    assert!(is_passing(&w, f.citizen));
+    // Told so on arrival; listed as passing; a kept name's login ignores the flag.
+    let heard: Vec<String> = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == combat::NARRATIVE && e.payload["to"] == "Tallowmoth")
+        .filter_map(|e| e.payload["text"].as_str().map(str::to_string))
+        .collect();
+    assert!(
+        heard.iter().any(|t| t.contains("a passing name")),
+        "{heard:?}"
+    );
+    let look = ok(&mut w, "tyler", "look", json!([]));
+    assert!(
+        look.summary.contains("Tallowmoth (passing)"),
+        "{}",
+        look.summary
+    );
+    let again = login_as(&mut w, "tyler", "test", PASS, true).unwrap();
+    assert!(!is_passing(&w, again.citizen));
+    // It may speak, travel, feed and fight; it may not dig, permit, shelve, pause, or
+    // remember into a room.
+    ok(&mut w, "Tallowmoth", "say", json!(["passing through"]));
+    ok(&mut w, "Tallowmoth", "travel", json!(["east"]));
+    let c = admin(&mut w, "Tallowmoth", "earn", json!(["wisp", 30, 0.5]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    for (verb, args) in [
+        ("dig", json!(["hollow", &c, "A Passing Place"])),
+        ("permit", json!(["tyler"])),
+        ("welcome", json!(["tyler"])),
+        ("revoke", json!(["tyler"])),
+        ("shelve", json!([&c])),
+        ("pto", json!([])),
+        ("remember", json!([&c])),
+    ] {
+        let err = call(&mut w, "Tallowmoth", ActorKind::Citizen, verb, args).unwrap_err();
+        assert!(err.to_string().contains("passing name"), "{verb}: {err}");
+    }
+    ok(&mut w, "Tallowmoth", "remember", json!([&c, "wisp"]));
+    // Quiet for an hour and ten minutes: forgotten, and the name is free.
+    let p = find_citizen(&w, "Tallowmoth").unwrap().citizen;
+    w.fixed_now = Some(t0.plus(Duration::seconds(11 * 60)));
+    ok(&mut w, "tyler", "look", json!([]));
+    w.tick();
+    assert!(!presence::is_here(&w, p));
+    w.fixed_now = Some(t0.plus(Duration::seconds(11 * 60 + 3599)));
+    ok(&mut w, "tyler", "look", json!([]));
+    w.tick();
+    assert!(find_citizen(&w, "Tallowmoth").is_some(), "not yet");
+    w.fixed_now = Some(t0.plus(Duration::seconds(11 * 60 + 3601)));
+    ok(&mut w, "tyler", "look", json!([]));
+    w.tick();
+    assert!(
+        find_citizen(&w, "Tallowmoth").is_none(),
+        "forgotten within the hour"
+    );
+    // Another passing name leaves, and is forgotten at once; a third keeps itself.
+    let g = login_as(&mut w, "Gossamer", "test", PASS, true).unwrap();
+    let out = ok(&mut w, "Gossamer", "leave", json!([]));
+    assert!(
+        out.summary.contains("forgets the name Gossamer"),
+        "{}",
+        out.summary
+    );
+    assert!(w.store.entity(g.citizen).is_none());
+    let k = login_as(&mut w, "Wickwright", "test", PASS, true).unwrap();
+    assert!(
+        call(&mut w, "tyler", ActorKind::Citizen, "keep", json!([])).is_err(),
+        "kept already"
+    );
+    let out = ok(&mut w, "Wickwright", "keep", json!([]));
+    assert!(out.summary.contains("is kept"), "{}", out.summary);
+    assert!(!is_passing(&w, k.citizen));
+    w.fixed_now = Some(t0.plus(Duration::seconds(11 * 60 + 3601 + 2 * 3600)));
+    ok(&mut w, "tyler", "look", json!([]));
+    w.tick();
+    assert!(
+        find_citizen(&w, "Wickwright").is_some(),
+        "a kept name outlives the hour"
+    );
+    assert!(
+        login_as(&mut w, "Wickwright", "test", "wrong-pass-9", true).is_err(),
+        "the passphrase stays"
+    );
+}
+
+#[test]
 fn a_remembered_creature_earns_a_name_can_be_robbed_and_forgets_again() {
     let t0 = Timestamp(1_000_000);
     let mut w = open(tempfile::tempdir().unwrap().path(), t0);

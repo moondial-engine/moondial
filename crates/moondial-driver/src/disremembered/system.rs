@@ -158,6 +158,40 @@ pub fn register(world: &mut World) {
 
     world.register(
         CommandSpec::new(
+            "disremembered.keep",
+            "Keep this name: a passing name becomes a kept one, yours until thirty days of silence, and may dig, permit and shelve. The passphrase you set stays the one it answers to.",
+        ),
+        Box::new(|w: &mut World, ctx, _| {
+            let f = super::me(w, ctx)?;
+            if !super::is_passing(w, f.citizen) {
+                return Err(CommandError::precondition(format!(
+                    "{} is a kept name already.",
+                    ctx.actor
+                )));
+            }
+            let mut fields = std::collections::BTreeMap::new();
+            fields.insert(
+                "passing".to_string(),
+                moondial_store::Field::Plain(serde_json::Value::Bool(false)),
+            );
+            w.record(
+                Actor::Citizen(ctx.actor.clone()),
+                StoreEvent::ComponentSet {
+                    id: f.citizen,
+                    component: super::CITIZEN.into(),
+                    fields,
+                },
+            )
+            .map_err(internal)?;
+            Ok(Outcome::new(
+                format!("The name {} is kept: yours until thirty days of silence. Keep the passphrase; nothing recovers it.", ctx.actor),
+                json!({"name": ctx.actor, "kept": true}),
+            ))
+        }),
+    );
+
+    world.register(
+        CommandSpec::new(
             "disremembered.bring",
             "Admin: bring a creature to a room, by the room's key. The room is told something came in; the record says it wandered.",
         )

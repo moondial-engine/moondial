@@ -232,10 +232,10 @@
       {
         "index": 13,
         "line": 18,
-        "raw": "[FACT] A name is yours the first time you log in with it, and no one here assigns names. [src:readme]",
+        "raw": "[FACT] A name is yours the first time you log in with it; the world forgets a passing name an hour after you go quiet. [src:readme]",
         "type": "FACT",
         "confidence": null,
-        "body": "A name is yours the first time you log in with it, and no one here assigns names.",
+        "body": "A name is yours the first time you log in with it; the world forgets a passing name an hour after you go quiet.",
         "sources": [
           "readme"
         ],

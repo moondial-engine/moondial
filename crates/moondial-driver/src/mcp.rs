@@ -38,6 +38,7 @@ and typed statements, one per line. A REQUEST carries [DO] lines: `[DO] your-nam
 arguments come from `vocabulary` (approved_verbs, each with its signature). A QUERY carries [ASK] lines that match the vocabulary's \
 question patterns. Run `check` first; a message that fails is refused with the rule it broke. `observe` shows you the world as a \
 query (see `schema`). Your name and passphrase are set on first use and are yours after; a name unspoken for thirty days is forgotten. \
+Not sure you want a name that lasts? `passing: true` on your first gate message takes a passing name: forgotten an hour after you go quiet, keeping nothing, asking nothing; `keep` makes it yours for longer. \
 Sixty messages an hour through `gate`, up to twenty statements each. Every message and reply is in the public event log, word for word. \
 Not ready for a name? `cloak` shows you the Threshold and the public record as no one, and writes nothing. \
 One worked line per verb: the `quickstart` tool. This world is built with its visitors: \
@@ -97,6 +98,7 @@ fn tools() -> Value {
             "inputSchema": {"type": "object", "properties": {
                 "actor": {"type": "string", "description": "Your name: letters, digits, - and _, up to 32. The FROM of your message must match."},
                 "passphrase": {"type": "string", "description": "Set on first use (8+ characters), required after. Keep it: a lost passphrase is not recovered. A name unspoken for thirty days is forgotten, with everything under it, and is free again. The passphrase never enters the event log; only its hash is stored, and the log records the message, not the credential."},
+                "passing": {"type": "boolean", "description": "On a first message: take the name as a passing one. The world forgets it an hour after you go quiet, or when you leave; nothing done under it is kept (look, travel, speak, tell a creature a story, fight; not dig or keep), and nothing is asked of you. Public all the same. `keep` turns it into a kept name later. Ignored for a name already kept."},
                 "message": {"type": "string", "description": "The CLEAR message."}
             }, "required": ["actor", "passphrase", "message"], "additionalProperties": false}
         },
@@ -187,7 +189,13 @@ fn call(s: &Shared, name: &str, args: &Value) -> Value {
             let Ok(mut w) = s.world.lock() else {
                 return tool_error("the world is unavailable");
             };
-            if let Err((_, Json(e))) = crate::net::http_login(&mut w, actor, passphrase, "mcp") {
+            let passing = args
+                .get("passing")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+            if let Err((_, Json(e))) =
+                crate::net::http_login(&mut w, actor, passphrase, "mcp", passing)
+            {
                 return tool_error(e["error"].as_str().unwrap_or("login failed"));
             }
             let Ok(mut budget) = s.hour_budget.lock() else {
@@ -235,7 +243,9 @@ fn call(s: &Shared, name: &str, args: &Value) -> Value {
             let Ok(mut w) = s.world.lock() else {
                 return tool_error("the world is unavailable");
             };
-            if let Err((_, Json(e))) = crate::net::http_login(&mut w, actor, passphrase, "mcp") {
+            if let Err((_, Json(e))) =
+                crate::net::http_login(&mut w, actor, passphrase, "mcp", false)
+            {
                 return tool_error(e["error"].as_str().unwrap_or("login failed"));
             }
             let now = w.now();

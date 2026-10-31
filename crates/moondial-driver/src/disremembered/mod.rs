@@ -203,7 +203,9 @@ pub fn schemas() -> Vec<ComponentSchema> {
             .field("next_at", FieldKind::Plain, Visibility::Admin),
         ComponentSchema::new(CITIZEN, 1)
             .field("name", FieldKind::Plain, Visibility::Public)
-            .field("origin", FieldKind::Plain, Visibility::Public),
+            .field("origin", FieldKind::Plain, Visibility::Public)
+            // A passing name: forgotten an hour after it goes quiet, keeping nothing.
+            .field("passing", FieldKind::Plain, Visibility::Public),
         ComponentSchema::new(ACCOUNT, 1).field(
             "passphrase_hash",
             FieldKind::Plain,
@@ -323,6 +325,44 @@ pub fn login(
     origin: &str,
     passphrase: &str,
 ) -> Result<Found, LoginError> {
+    login_as(world, actor, origin, passphrase, false)
+}
+
+/// Whether a citizen's name is a passing one: forgotten an hour after they go quiet,
+/// keeping nothing, obligating no one.
+pub fn is_passing(world: &World, citizen: EntityId) -> bool {
+    matches!(
+        world
+            .store
+            .entity(citizen)
+            .and_then(|e| e.components.get(CITIZEN))
+            .and_then(|c| c.fields.get("passing")),
+        Some(Field::Plain(Value::Bool(true)))
+    )
+}
+
+/// The building and keeping verbs are a kept name's: a passing name is refused with
+/// the way to keep it.
+pub(crate) fn kept_only(world: &World, ctx: &CallContext, what: &str) -> Result<(), CommandError> {
+    let f = me(world, ctx)?;
+    if is_passing(world, f.citizen) {
+        return Err(CommandError::precondition(format!(
+            "A passing name does not {what}: nothing of its is kept. `keep` makes {} a kept name, yours until thirty days of silence, and then it can.",
+            ctx.actor
+        )));
+    }
+    Ok(())
+}
+
+/// Log in, or arrive for the first time; `passing` asks for a passing name, which a
+/// name already kept ignores.
+pub fn login_as(
+    world: &mut World,
+    actor: &str,
+    origin: &str,
+    passphrase: &str,
+    passing: bool,
+) -> Result<Found, LoginError> {
     let internal = |e: moondial_store::StoreError| LoginError::Internal(e.to_string());
     let me = Actor::Citizen(actor.to_string());
     let now = world.now();
@@ -421,6 +461,7 @@ pub fn login(
     let mut fields = BTreeMap::new();
     fields.insert("name".into(), Field::Plain(json!(actor)));
     fields.insert("origin".into(), Field::Plain(json!(origin)));
+    fields.insert("passing".into(), Field::Plain(json!(passing)));
     world
         .record(
             me.clone(),
@@ -493,7 +534,11 @@ pub fn login(
     combat::narrate(
         world,
         actor,
-        format!("The name {actor} was no one's; it is yours now, and answers to the passphrase you just gave. Keep that passphrase: nothing recovers it. Everything you do under it is public, and a name unspoken for thirty days is forgotten."),
+        if passing {
+            format!("The name {actor} was no one's; it is yours for now, a passing name: the world forgets it an hour after you go quiet, or when you leave, and nothing done under it is kept. Nothing is asked of you. Everything you do under it is public all the same. `keep` would make it yours for longer.")
+        } else {
+            format!("The name {actor} was no one's; it is yours now, and answers to the passphrase you just gave. Keep that passphrase: nothing recovers it. Everything you do under it is public, and a name unspoken for thirty days is forgotten.")
+        },
     );
     Ok(Found {
         citizen,

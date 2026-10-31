@@ -238,6 +238,7 @@ pub fn register(world: &mut World, curves: Curves) {
         CommandSpec::new("disremembered.shelve", "Move a chunk from your window into your palace, where it fades slower and counts for nothing.")
             .param("chunk", ParamType::Entity, true, "a chunk in your window"),
         Box::new(move |w: &mut World, ctx, args: &Args| {
+            super::kept_only(w, ctx, "shelve")?;
             let f = me(w, ctx)?;
             let id = resolve_chunk(w, ctx, args.str("chunk").unwrap_or(""), &[f.window])?;
             let vividity = plain_num(w, id, CHUNK, "vividity").unwrap_or(0.0);
@@ -311,6 +312,7 @@ pub fn register(world: &mut World, curves: Curves) {
     world.register(
         CommandSpec::new("disremembered.pto", "Pause your own clock. Nothing of yours fades or heals until you resume. (The real rules allow two 7-day windows a year; the slice does not enforce that yet.)"),
         Box::new(|w: &mut World, ctx, _| {
+            super::kept_only(w, ctx, "pause its clock")?;
             me(w, ctx)?;
             let scope = account_scope(&ctx.actor);
             if w.store.clock(&scope).is_some_and(|c| c.is_paused_at(w.now())) {

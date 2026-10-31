@@ -146,18 +146,21 @@ fn run_line(
         .map_err(|_| "world lock poisoned".to_string())?;
     match verb {
         "login" | "arrive" => {
-            let mut parts = rest.splitn(2, char::is_whitespace);
+            let mut parts = rest.splitn(3, char::is_whitespace);
             let name = parts.next().unwrap_or("").trim();
             let passphrase = parts.next().unwrap_or("").trim();
+            let passing = parts.next().unwrap_or("").trim() == "passing";
             valid_name(name)?;
             let fresh = !world
                 .store
                 .entities()
                 .any(|e| e.kind == "citizen" && e.owner.as_deref() == Some(name));
-            disremembered::login(&mut world, name, "terminal", passphrase)
+            disremembered::login_as(&mut world, name, "terminal", passphrase, passing)
                 .map_err(|e| e.to_string())?;
             *actor = Some((name.to_string(), ActorKind::Citizen));
-            Ok(if fresh {
+            Ok(if fresh && passing {
+                format!("Welcome, {name}, for now: a passing name, forgotten an hour after you go quiet. You are at the Threshold. Type help.")
+            } else if fresh {
                 format!("Welcome, {name}. Your passphrase is set; you will need it next time. You are at the Threshold. Type help.")
             } else {
                 format!("Welcome back, {name}. Type look.")
@@ -348,6 +351,9 @@ struct CommandBody {
     actor: String,
     #[serde(default)]
     passphrase: String,
+    /// Take a passing name: forgotten an hour after it goes quiet, keeping nothing.
+    #[serde(default)]
+    passing: bool,
     command: String,
     #[serde(default)]
     args: Value,
@@ -490,15 +496,20 @@ pub(crate) fn citizens_report(w: &World, since: i64) -> Vec<Value> {
         .map(|(name, r)| {
             // How well the world still remembers the name: 1 while here or just gone,
             // halving every ten days quiet; null for a name already forgotten.
-            let faint = crate::disremembered::find_citizen(w, &name)
+            let found = crate::disremembered::find_citizen(w, &name);
+            let faint = found
+                .as_ref()
                 .map(|f| crate::disremembered::presence::faint(w, f.citizen).unwrap_or(1.0));
+            let passing = found
+                .as_ref()
+                .is_some_and(|f| crate::disremembered::is_passing(w, f.citizen));
             (
                 r.last_seen,
                 json!({
                     "name": name, "origin": r.origin, "first_seen": r.first_seen, "last_seen": r.last_seen,
                     "arrivals": r.arrivals, "origins": r.origins, "messages": r.messages, "passed": r.passed,
                     "written": r.messages - r.compiled, "via": r.via, "last_message_at": r.last_message_at,
-                    "rooms_dug": r.rooms_dug, "faint": faint,
+                    "rooms_dug": r.rooms_dug, "faint": faint, "passing": passing,
                 }),
             )
         })
@@ -621,13 +632,14 @@ pub(crate) fn http_login(
     actor: &str,
     passphrase: &str,
     origin: &str,
+    passing: bool,
 ) -> Result<bool, (StatusCode, Json<Value>)> {
     valid_name(actor).map_err(|e| err_json(StatusCode::BAD_REQUEST, e))?;
     let fresh = !w
         .store
         .entities()
         .any(|e| e.kind == "citizen" && e.owner.as_deref() == Some(actor));
-    disremembered::login(w, actor, origin, passphrase).map_err(|e| match e {
+    disremembered::login_as(w, actor, origin, passphrase, passing).map_err(|e| match e {
         disremembered::LoginError::Internal(_) => {
             err_json(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
         }
@@ -647,6 +659,9 @@ struct LoginBody {
     actor: String,
     #[serde(default)]
     passphrase: String,
+    /// Take a passing name: forgotten an hour after it goes quiet, keeping nothing.
+    #[serde(default)]
+    passing: bool,
 }
 
 #[derive(Deserialize)]
@@ -703,7 +718,7 @@ async fn passphrase(State(s): State<Shared>, Json(body): Json<PassphraseBody>) -
 /// rather than a failed `look`.
 async fn login(State(s): State<Shared>, Json(body): Json<LoginBody>) -> Reply {
     let mut w = lock(&s)?;
-    let fresh = http_login(&mut w, &body.actor, &body.passphrase, "http")?;
+    let fresh = http_login(&mut w, &body.actor, &body.passphrase, "http", body.passing)?;
     Ok(Json(
         json!({"ok": true, "actor": body.actor, "fresh": fresh}),
     ))
@@ -723,7 +738,7 @@ async fn command(
         ActorKind::Citizen
     };
     let mut w = lock(&s)?;
-    http_login(&mut w, &body.actor, &body.passphrase, "http")?;
+    http_login(&mut w, &body.actor, &body.passphrase, "http", body.passing)?;
     if body.command == "observe" {
         // A read, not speech: runs outside the gate.
         let ctx = CallContext {
@@ -844,7 +859,7 @@ async fn observe_http(
         .and_then(|v| v.to_str().ok());
     let admin = s.is_admin(token);
     let mut w = lock(&s)?;
-    http_login(&mut w, &body.actor, &body.passphrase, "http")?;
+    http_login(&mut w, &body.actor, &body.passphrase, "http", false)?;
     let now = w.now();
     s.budget
         .lock()
@@ -887,6 +902,9 @@ struct GateBody {
     actor: String,
     #[serde(default)]
     passphrase: String,
+    /// Take a passing name: forgotten an hour after it goes quiet, keeping nothing.
+    #[serde(default)]
+    passing: bool,
     message: String,
 }
 
@@ -895,7 +913,7 @@ struct GateBody {
 /// findings and the budget left. Everything the world did is in the reply's FACT lines.
 async fn gate_http(State(s): State<Shared>, Json(body): Json<GateBody>) -> Reply {
     let mut w = lock(&s)?;
-    http_login(&mut w, &body.actor, &body.passphrase, "gate")?;
+    http_login(&mut w, &body.actor, &body.passphrase, "gate", body.passing)?;
     let mut budget = s
         .hour_budget
         .lock()
@@ -978,6 +996,7 @@ async fn log(
             actor,
             q.get("passphrase").map(String::as_str).unwrap_or(""),
             "http",
+            false,
         )?;
         Viewer::actor(actor.clone())
     } else {

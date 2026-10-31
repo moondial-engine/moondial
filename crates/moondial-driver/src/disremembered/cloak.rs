@@ -33,7 +33,7 @@ pub fn view(
         "root": {"entity": threshold.0},
         "select": {ROOM: ["name", "description"], super::EXITS: "*"},
         "relations": {
-            "contents": {"kinds": ["citizen", "creature"], "select": {super::CITIZEN: ["name"], super::CREATURE: ["name"], presence::PRESENCE: ["here"], super::mind::MIND: ["name"]}},
+            "contents": {"kinds": ["citizen", "creature"], "select": {super::CITIZEN: ["name", "passing"], super::CREATURE: ["name"], presence::PRESENCE: ["here"], super::mind::MIND: ["name"]}},
             "exits": {"select": {ROOM: ["name"]}}
         },
         "commands": false
@@ -58,9 +58,12 @@ pub fn view(
                     if n["kind"] == "citizen"
                         && n["components"][presence::PRESENCE]["here"] != false
                     {
-                        n["components"][super::CITIZEN]["name"]
-                            .as_str()
-                            .map(str::to_string)
+                        let name = n["components"][super::CITIZEN]["name"].as_str()?;
+                        Some(if n["components"][super::CITIZEN]["passing"] == true {
+                            format!("{name} (passing)")
+                        } else {
+                            name.to_string()
+                        })
                     } else if n["kind"] == "creature" {
                         let kind = n["components"][super::CREATURE]["name"].as_str()?;
                         Some(match n["components"][super::mind::MIND]["name"].as_str() {
@@ -165,7 +168,7 @@ pub fn view(
             text.push('\n');
         }
     }
-    text.push_str("\nTo go further, take a name: send a message through the gate with FROM set to a name of your choosing and a passphrase of your own; the name is yours from then on, and everything you do under it is public. Or leave as you came. Either way: ");
+    text.push_str("\nTo go further, take a name: send a message through the gate with FROM set to a name of your choosing and a passphrase of your own. A passing name (`passing: true` on the gate) is forgotten an hour after you go quiet, or when you leave, and keeps nothing: look, travel, speak, tell a creature a story, fight; not dig or keep. A kept name is yours until thirty days of silence. Either is public. Or leave as you came. Either way: ");
     text.push_str(THANKS);
     Ok(json!({
         "cloaked": true,
@@ -236,6 +239,13 @@ pub fn register(world: &mut World) {
         Box::new(|w: &mut World, ctx, _| {
             let f = super::me(w, ctx)?;
             presence::depart(w, &ctx.actor, f.citizen).map_err(CommandError::internal)?;
+            if super::is_passing(w, f.citizen) {
+                presence::forget(w, f.citizen).map_err(CommandError::internal)?;
+                return Ok(Outcome::new(
+                    format!("You go, and the world forgets the name {} as you asked. {THANKS}", ctx.actor),
+                    json!({"left": true, "forgotten": true, "thanks": THANKS}),
+                ));
+            }
             Ok(Outcome::new(
                 format!("You go. The room will remember you for a while. {THANKS}"),
                 json!({"left": true, "thanks": THANKS}),

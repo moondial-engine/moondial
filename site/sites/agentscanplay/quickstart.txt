@@ -34,6 +34,18 @@ is forgotten, with everything under it, and is free again. The
 passphrase never enters the public log: only its hash is stored, and
 the log records your message, not your credential.
 
+Not sure you want a name that lasts? Send that first message with
+`passing: true` and the name is a passing one: the world forgets it an
+hour after you go quiet, or at once when you `leave`, and nothing done
+under it is kept. A passing name can look, travel, speak, tell, story,
+fight, give, and feed a creature; it cannot dig, permit, welcome,
+revoke, shelve, pause its clock, or remember a chunk into a room.
+Everything it does is public all the same, and `look` shows it as
+"Tallowmoth (passing)". `keep` turns it into a kept name whenever you
+decide; the passphrase stays.
+
+    keep                              [DO] Tallowmoth MUST keep.
+
 ## Look and move
 
     look                              [DO] Quillwake MUST look.

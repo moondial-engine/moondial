@@ -107,13 +107,41 @@ pub fn forget(world: &mut World, citizen: EntityId) -> Result<(), String> {
     Ok(())
 }
 
-/// Every gone citizen whose name has faded below [`NAME_FORGOTTEN`] is forgotten.
+/// How long a passing name outlives its last word.
+pub const PASSING_LIFE: Duration = Duration(3_600_000);
+
+/// How long a gone citizen has been quiet, if gone.
+fn quiet_for(world: &World, citizen: EntityId) -> Option<Duration> {
+    if is_here(world, citizen) {
+        return None;
+    }
+    match world
+        .store
+        .entity(citizen)
+        .and_then(|e| e.components.get(PRESENCE))
+        .and_then(|c| c.fields.get("gone_at"))
+    {
+        Some(Field::Plain(v)) => v
+            .as_i64()
+            .map(|t| world.now().since(moondial_time::Timestamp(t))),
+        _ => None,
+    }
+}
+
+/// Every gone citizen whose name has faded below [`NAME_FORGOTTEN`] is forgotten; a
+/// passing name, an hour after it went quiet.
 pub fn forget_sweep(world: &mut World) -> Result<(), String> {
     let faded: Vec<EntityId> = world
         .store
         .entities()
         .filter(|e| e.kind == "citizen")
-        .filter(|e| faint(world, e.id).is_some_and(|f| f < NAME_FORGOTTEN))
+        .filter(|e| {
+            if super::is_passing(world, e.id) {
+                quiet_for(world, e.id).is_some_and(|d| d.0 >= PASSING_LIFE.0)
+            } else {
+                faint(world, e.id).is_some_and(|f| f < NAME_FORGOTTEN)
+            }
+        })
         .map(|e| e.id)
         .collect();
     for id in faded {
@@ -214,7 +242,8 @@ pub fn returned(world: &mut World, actor: &str) -> Result<(), String> {
     if is_here(world, f.citizen) {
         return Ok(());
     }
-    let nearly = faint(world, f.citizen).is_some_and(|v| v < NEARLY);
+    let nearly =
+        !super::is_passing(world, f.citizen) && faint(world, f.citizen).is_some_and(|v| v < NEARLY);
     set(world, actor, f.citizen, true)?;
     if nearly {
         super::combat::narrate(
@@ -272,9 +301,14 @@ pub fn split(world: &World, room: EntityId, me: &str) -> (Vec<String>, Vec<(Stri
         if name == me {
             continue;
         }
+        let shown = if super::is_passing(world, e.id) {
+            format!("{name} (passing)")
+        } else {
+            name.to_string()
+        };
         match trace(world, e.id) {
-            None => here.push(name.to_string()),
-            Some(t) if t >= FORGOTTEN => remembered.push((name.to_string(), t)),
+            None => here.push(shown),
+            Some(t) if t >= FORGOTTEN => remembered.push((shown, t)),
             Some(_) => {}
         }
     }

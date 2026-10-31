@@ -45,6 +45,7 @@ approved_verbs:
   rest: {params: []}
   move:
   leave: {params: []}
+  keep: {params: []}
   # combat (turn-based, positional)
   attack: {params: [{name: creature, type: entity, required: false}]}
   retreat: {params: []}
