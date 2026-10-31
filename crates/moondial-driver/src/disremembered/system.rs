@@ -174,15 +174,7 @@ pub fn register(world: &mut World) {
                 "passing".to_string(),
                 moondial_store::Field::Plain(serde_json::Value::Bool(false)),
             );
-            w.record(
-                Actor::Citizen(ctx.actor.clone()),
-                StoreEvent::ComponentSet {
-                    id: f.citizen,
-                    component: super::CITIZEN.into(),
-                    fields,
-                },
-            )
-            .map_err(internal)?;
+            super::set_citizen_fields(w, &ctx.actor, f.citizen, fields)?;
             Ok(Outcome::new(
                 format!("The name {} is kept: yours until thirty days of silence. Keep the passphrase; nothing recovers it.", ctx.actor),
                 json!({"name": ctx.actor, "kept": true}),

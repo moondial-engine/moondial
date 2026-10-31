@@ -69,3 +69,5 @@ it is, the door and no further; to see more is to take a name.
 2026-10-31 The commands a passing name cannot use say "Kept names only" in the commands list, not only in prose. -- a cloaked visitor
 2026-10-31 The story reply no longer repeats the creature's answer, which reaches the teller as a narrator line already. -- Cormorant-7
 2026-10-31 The quickstart says travel shows the room you enter, so a look right after it is a repeat. -- Cormorant-7
+2026-10-31 look and the cloak say who is at a keyboard and who came through the gate, and the cloak says a keyboard means a person who answers to say and tell. Four visitors spoke to the named wisp at the door and none to the person standing beside it, who was listed as a bare name. -- the sage cohort
+2026-10-31 greet: a standing greeting whoever arrives where you are hears from you, with a note that tell reaches you, so a person who cannot answer within a visitor's minute gets the first word. -- the sage cohort

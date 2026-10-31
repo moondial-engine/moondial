@@ -255,6 +255,7 @@ pub fn returned(world: &mut World, actor: &str) -> Result<(), String> {
     if let Some(room) = world.store.entity(f.citizen).and_then(|e| e.parent) {
         super::combat::on_arrival(world, actor, f.citizen, room)?;
         super::building::visited(world, room)?;
+        super::talk::greet(world, actor, room);
     }
     Ok(())
 }
@@ -289,6 +290,25 @@ pub fn register(world: &mut World, curves: super::Curves) {
     world.on_arrival(Box::new(|w: &mut World, actor: &str| returned(w, actor)));
 }
 
+/// A citizen as the room writes them: the name, then whether the name is passing and
+/// which door they are here by, so a human at a keyboard reads as one.
+pub fn describe_citizen(world: &World, citizen: EntityId, name: &str) -> String {
+    let mut notes = Vec::new();
+    if super::is_passing(world, citizen) {
+        notes.push("passing".to_string());
+    }
+    if is_here(world, citizen) {
+        if let Some(label) = world.door_of(name).and_then(World::door_label) {
+            notes.push(label.to_string());
+        }
+    }
+    if notes.is_empty() {
+        name.to_string()
+    } else {
+        format!("{name} ({})", notes.join(", "))
+    }
+}
+
 /// `look`'s split of the citizens in a room: those here, and those the room still
 /// remembers (with how well), gone ones below [`FORGOTTEN`] left out.
 pub fn split(world: &World, room: EntityId, me: &str) -> (Vec<String>, Vec<(String, f64)>) {
@@ -301,11 +321,7 @@ pub fn split(world: &World, room: EntityId, me: &str) -> (Vec<String>, Vec<(Stri
         if name == me {
             continue;
         }
-        let shown = if super::is_passing(world, e.id) {
-            format!("{name} (passing)")
-        } else {
-            name.to_string()
-        };
+        let shown = describe_citizen(world, e.id, name);
         match trace(world, e.id) {
             None => here.push(shown),
             Some(t) if t >= FORGOTTEN => remembered.push((shown, t)),

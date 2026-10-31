@@ -59,11 +59,8 @@ pub fn view(
                         && n["components"][presence::PRESENCE]["here"] != false
                     {
                         let name = n["components"][super::CITIZEN]["name"].as_str()?;
-                        Some(if n["components"][super::CITIZEN]["passing"] == true {
-                            format!("{name} (passing)")
-                        } else {
-                            name.to_string()
-                        })
+                        let id = n["id"].as_u64().map(moondial_store::EntityId)?;
+                        Some(presence::describe_citizen(world, id, name))
                     } else if n["kind"] == "creature" {
                         let kind = n["components"][super::CREATURE]["name"].as_str()?;
                         Some(match n["components"][super::mind::MIND]["name"].as_str() {
@@ -158,6 +155,9 @@ pub fn view(
             here.join(", ")
         }
     ));
+    if here.iter().any(|h| h.contains("at a keyboard")) {
+        text.push_str(" A citizen at a keyboard is a person on the play page; anyone here answers to say and tell.");
+    }
     text.push_str(&format!("\nThe world has {citizens} citizens, {dug} rooms dug by them, and {} creature{} with a name{}.",
         named.len(), if named.len() == 1 { "" } else { "s" }, if named.is_empty() { String::new() } else { format!(": {}", named.join(", ")) }));
     if !record.is_empty() {

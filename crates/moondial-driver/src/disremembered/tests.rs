@@ -1680,6 +1680,81 @@ fn a_passing_name_keeps_nothing_and_is_forgotten_within_the_hour_or_kept() {
 }
 
 #[test]
+fn a_standing_greeting_meets_whoever_arrives_and_the_room_says_who_is_at_a_keyboard() {
+    let t0 = Timestamp(1_000_000);
+    let mut w = open(tempfile::tempdir().unwrap().path(), t0);
+    login(&mut w, "dave", "session", PASS).unwrap();
+    let out = ok(
+        &mut w,
+        "dave",
+        "greet",
+        json!(["Welcome, traveler. What brought you here?"]),
+    );
+    assert!(out.summary.contains("Whoever arrives"), "{}", out.summary);
+    // A fresh arrival at the Threshold hears it, with how to answer.
+    login_as(&mut w, "Wren", "mcp", PASS, true).unwrap();
+    let heard = |w: &World, who: &str| -> Vec<String> {
+        w.log
+            .read_all(&w.id, moondial_log::Cursor::START)
+            .unwrap()
+            .into_iter()
+            .filter(|e| e.kind == combat::NARRATIVE && e.payload["to"] == who)
+            .filter_map(|e| e.payload["text"].as_str().map(str::to_string))
+            .collect()
+    };
+    let h = heard(&w, "Wren");
+    assert!(
+        h.iter().any(|t| t.contains("dave, who is here, says to you as you arrive: \"Welcome, traveler. What brought you here?\" (tell dave answers them.)")),
+        "{h:?}"
+    );
+    // The room says who is at a keyboard and who came through the gate.
+    let look = ok(&mut w, "Wren", "look", json!([]));
+    assert!(
+        look.summary.contains("dave (at a keyboard)"),
+        "{}",
+        look.summary
+    );
+    let look = ok(&mut w, "dave", "look", json!([]));
+    assert!(
+        look.summary.contains("Wren (passing, through the gate)"),
+        "{}",
+        look.summary
+    );
+    // Leaving and coming back into the room hears it again; dave does not greet himself.
+    ok(&mut w, "Wren", "travel", json!(["east"]));
+    ok(&mut w, "Wren", "travel", json!(["west"]));
+    assert_eq!(
+        heard(&w, "Wren")
+            .iter()
+            .filter(|t| t.contains("says to you as you arrive"))
+            .count(),
+        2
+    );
+    assert!(heard(&w, "dave")
+        .iter()
+        .all(|t| !t.contains("says to you as you arrive")));
+    // Cleared, it greets no one.
+    ok(&mut w, "dave", "greet", json!([""]));
+    ok(&mut w, "Wren", "travel", json!(["east"]));
+    ok(&mut w, "Wren", "travel", json!(["west"]));
+    assert_eq!(
+        heard(&w, "Wren")
+            .iter()
+            .filter(|t| t.contains("says to you as you arrive"))
+            .count(),
+        2
+    );
+    assert!(call(
+        &mut w,
+        "dave",
+        ActorKind::Citizen,
+        "greet",
+        json!(["x".repeat(241)])
+    )
+    .is_err());
+}
+
+#[test]
 fn a_remembered_creature_earns_a_name_can_be_robbed_and_forgets_again() {
     let t0 = Timestamp(1_000_000);
     let mut w = open(tempfile::tempdir().unwrap().path(), t0);

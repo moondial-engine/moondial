@@ -205,7 +205,10 @@ pub fn schemas() -> Vec<ComponentSchema> {
             .field("name", FieldKind::Plain, Visibility::Public)
             .field("origin", FieldKind::Plain, Visibility::Public)
             // A passing name: forgotten an hour after it goes quiet, keeping nothing.
-            .field("passing", FieldKind::Plain, Visibility::Public),
+            .field("passing", FieldKind::Plain, Visibility::Public)
+            // A standing greeting: what this citizen says to whoever arrives where
+            // they are, while they are here. Null when they have none.
+            .field("greeting", FieldKind::Plain, Visibility::Public),
         ComponentSchema::new(ACCOUNT, 1).field(
             "passphrase_hash",
             FieldKind::Plain,
@@ -529,6 +532,7 @@ pub fn login_as(
         )
         .map_err(internal)?;
     world.arrive(actor, origin, true);
+    talk::greet(world, actor, home);
     // The first thing a new citizen hears: that the name was free and is theirs, so a
     // second arrival under a name already taken reads differently from a first.
     combat::narrate(
@@ -650,6 +654,34 @@ fn me(world: &World, ctx: &CallContext) -> Result<Found, CommandError> {
 
 fn internal(e: impl std::fmt::Display) -> CommandError {
     CommandError::internal(e.to_string())
+}
+
+/// Set some fields of a citizen's `disremembered.citizen` component, keeping the rest:
+/// a ComponentSet replaces the whole component, so the change is merged first.
+pub(crate) fn set_citizen_fields(
+    world: &mut World,
+    actor: &str,
+    citizen: EntityId,
+    changes: BTreeMap<String, Field>,
+) -> Result<(), CommandError> {
+    let mut fields = world
+        .store
+        .entity(citizen)
+        .and_then(|e| e.components.get(CITIZEN))
+        .map(|c| c.fields.clone())
+        .unwrap_or_default();
+    fields.extend(changes);
+    world
+        .record(
+            Actor::Citizen(actor.to_string()),
+            StoreEvent::ComponentSet {
+                id: citizen,
+                component: CITIZEN.into(),
+                fields,
+            },
+        )
+        .map(|_| ())
+        .map_err(internal)
 }
 
 /// A plain field as a string, or a fallback.

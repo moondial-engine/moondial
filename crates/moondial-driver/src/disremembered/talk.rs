@@ -27,6 +27,40 @@ const MAX_CHARS: usize = 600;
 pub fn register(world: &mut World) {
     world.register(
         CommandSpec::new(
+            "disremembered.greet",
+            "Set a standing greeting: while you are here, whoever arrives where you are hears it from you, with a note that tell reaches you. Empty text clears it. For a citizen at a keyboard who cannot answer within a visitor's minute, it is the first word.",
+        )
+        .param("text", ParamType::Text, true, "what to say to whoever arrives, quoted; empty to clear"),
+        Box::new(|w: &mut World, ctx, args: &Args| {
+            let f = super::me(w, ctx)?;
+            let text = args
+                .str("text")
+                .unwrap_or("")
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" ");
+            if text.chars().count() > 240 {
+                return Err(CommandError::precondition("A greeting is at most 240 characters."));
+            }
+            let mut fields = BTreeMap::new();
+            fields.insert(
+                "greeting".into(),
+                Field::Plain(if text.is_empty() { Value::Null } else { json!(text) }),
+            );
+            super::set_citizen_fields(w, &ctx.actor, f.citizen, fields)?;
+            Ok(Outcome::new(
+                if text.is_empty() {
+                    "You will greet no one in particular.".to_string()
+                } else {
+                    format!("Whoever arrives where you are will hear: \"{text}\"")
+                },
+                json!({"greeting": if text.is_empty() { Value::Null } else { json!(text) }}),
+            ))
+        }),
+    );
+
+    world.register(
+        CommandSpec::new(
             "disremembered.tell",
             "Say something to one citizen or creature here. A citizen who is away hears it when they return. A creature with a name answers from what it remembers; one without a name does not understand you.",
         )
@@ -233,6 +267,26 @@ pub fn overhear(
 
 /// A named creature notices who walks in.
 pub fn greet(world: &mut World, actor: &str, room: EntityId) {
+    // Citizens here with a standing greeting say it to whoever arrives.
+    let greeters: Vec<(String, String)> = world
+        .store
+        .children(room)
+        .filter(|e| e.kind == "citizen")
+        .filter(|e| e.owner.as_deref() != Some(actor))
+        .filter(|e| presence::is_here(world, e.id))
+        .filter_map(|e| {
+            let name = plain_str(world, e.id, super::CITIZEN, "name")?.to_string();
+            let text = plain_str(world, e.id, super::CITIZEN, "greeting")?.to_string();
+            Some((name, text))
+        })
+        .collect();
+    for (name, text) in greeters {
+        narrate(
+            world,
+            actor,
+            format!("{name}, who is here, says to you as you arrive: \"{text}\" (tell {name} answers them.)"),
+        );
+    }
     let named: Vec<EntityId> = world
         .store
         .children(room)

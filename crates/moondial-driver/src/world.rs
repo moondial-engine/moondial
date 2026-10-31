@@ -42,6 +42,8 @@ pub struct World {
     /// When each actor was last active, in this process. A gap longer than
     /// [`ABSENCE`] makes the next activity an arrival.
     presence: std::collections::HashMap<String, Timestamp>,
+    /// The door each actor last arrived by (terminal, http, session, gate, mcp).
+    doors: std::collections::HashMap<String, String>,
     /// Lines for the operator (a Discord channel, say), drained by the tick loop.
     notices: Vec<String>,
     /// Wrong passphrases per name: how many in a row, and when the last was. Five in a
@@ -92,6 +94,7 @@ impl World {
             jobs: crate::jobs::Jobs::default(),
             job_handlers: Arc::new(std::collections::HashMap::new()),
             presence: std::collections::HashMap::new(),
+            doors: std::collections::HashMap::new(),
             notices: Vec::new(),
             failures: std::collections::HashMap::new(),
             sweepers: Arc::new(Vec::new()),
@@ -136,6 +139,10 @@ impl World {
     /// return after a day away.
     pub fn arrive(&mut self, actor: &str, origin: &str, fresh: bool) {
         let now = self.now();
+        // A command is not a door; the channel that logged the actor in is.
+        if origin != "command" {
+            self.doors.insert(actor.to_string(), origin.to_string());
+        }
         let last = self.presence.insert(actor.to_string(), now);
         let away = last.map(|t| now.since(t));
         if !fresh && away.is_some_and(|d| d.0 < ABSENCE.0) {
@@ -178,6 +185,21 @@ impl World {
     /// When this actor was last active in this process, if they have been.
     pub fn last_active(&self, actor: &str) -> Option<Timestamp> {
         self.presence.get(actor).copied()
+    }
+
+    /// The door an actor last came by, while the process remembers them.
+    pub fn door_of(&self, actor: &str) -> Option<&str> {
+        self.doors.get(actor).map(String::as_str)
+    }
+
+    /// How a door reads to the room: the play page and the text port have a keyboard
+    /// behind them; the gate, HTTP and MCP are how agents come.
+    pub fn door_label(origin: &str) -> Option<&'static str> {
+        match origin {
+            "session" | "terminal" => Some("at a keyboard"),
+            "gate" | "mcp" | "http" => Some("through the gate"),
+            _ => None,
+        }
     }
 
     /// Register a per-tick check. Boot only.
