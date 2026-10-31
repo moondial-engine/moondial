@@ -70,35 +70,23 @@
       {
         "index": 3,
         "line": 8,
-        "raw": "[DO] spacepants MUST give 500 gold to lantern-7 after encounter enc-301.",
+        "raw": "[DO] spacepants MUST give chunk-301 lantern-7.",
         "type": "DO",
         "confidence": null,
-        "body": "spacepants MUST give 500 gold to lantern-7 after encounter enc-301.",
+        "body": "spacepants MUST give chunk-301 lantern-7.",
         "sources": [],
         "actor": "spacepants",
         "modal": "MUST",
         "verb": "give",
-        "arguments": "500 gold to lantern-7 after encounter enc-301",
+        "arguments": "chunk-301 lantern-7",
         "args": [
           {
-            "kind": "number",
-            "value": 500
-          },
-          {
             "kind": "ref",
-            "value": "gold to"
+            "value": "chunk-301"
           },
           {
             "kind": "ref",
             "value": "lantern-7"
-          },
-          {
-            "kind": "ref",
-            "value": "after encounter"
-          },
-          {
-            "kind": "ref",
-            "value": "enc-301"
           }
         ],
         "pattern": null,

@@ -5,5 +5,5 @@ REF: lantern-7-hire-2026-10-26
 
 [FACT] lantern-7 holds chunk-5521, a void lich chunk worth 4,200 XP as of 2026-10-26T04:10Z. [src:ev-88230]
 [DO] lantern-7 MUST reminisce chunk-5521.
-[DO] spacepants MUST give 500 gold to lantern-7 after encounter enc-301.
+[DO] spacepants MUST give chunk-301 lantern-7.
 [ASK] Does spacepants accept this offer?

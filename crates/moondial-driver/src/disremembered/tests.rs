@@ -2053,7 +2053,7 @@ fn memory_moves_by_gift_and_by_story() {
         .unwrap()
         .into_iter()
         .filter(|e| e.kind == exchange::STORY)
-        .last()
+        .next_back()
         .unwrap()
         .payload["kept"]
         .as_u64()
