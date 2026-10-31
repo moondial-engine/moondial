@@ -141,6 +141,7 @@ pub fn schema_notes() -> Vec<&'static str> {
         "A creature's disremembered.creature.name is its kind (wisp, hollow, ragpicker). A creature that has been remembered to 60 also carries disremembered.mind, whose name is its given name and whose tier is at least 1; it answers to tell and story, knows its keepers, and is written as 'Lute the wisp'. A creature with no mind component, or a mind with no name, is unnamed: fair game, and deaf.",
         "A room with an owner was dug by a citizen; its memory field fades on half_life_ms and is 1 again when someone visits. The seed rooms have no owner and no memory field, and never fade.",
         "A chunk's value is a timed field: read it now and it is smaller than a moment ago. The chunks command states the rate.",
+        "A named creature with disremembered.errand wants something: kind story (a story whose words touch want, worth double) or word (carry want to the creature named in to, by travel and tell). A done errand is a public disremembered.errand_done; the errand clears, and the creature knows who did it.",
         "A citizen's disremembered.presence says whether they are here (acting within the last ten minutes) or a trace the room still remembers; gone_at is when they went quiet. A room's contents relation returns traced citizens too, with the room as parent, while look lists them as remembered: select disremembered.presence here to tell the two apart. Thirty days after gone_at the world forgets the citizen (a disremembered.forgotten event) and the name is free.",
     ]
 }
@@ -328,6 +329,7 @@ pub(crate) fn find_citizen(world: &World, actor: &str) -> Option<Found> {
 pub fn ensure_world(world: &mut World) -> Result<(), String> {
     rooms::ensure_rooms(world)?;
     combat::ensure_spawns(world)?;
+    building::reframe_all(world)?;
     mind::ensure_wander(world)
 }
 

@@ -453,7 +453,7 @@ pub fn register(world: &mut World) {
                 StoreEvent::ComponentSet {
                     id,
                     component: super::SPRITE.into(),
-                    fields: super::sprite_fields("#", "#7a6f5f", "dug"),
+                    fields: super::sprite_fields("#", "#7a6f5f", dug_frame(&exit, &name)),
                 },
             )
             .map_err(internal)?;
@@ -690,6 +690,7 @@ pub fn register(world: &mut World) {
             fields.insert("name".into(), Field::Plain(json!(name)));
             set_room_fields(w, &ctx.actor, here, fields)?;
             visited(w, here).map_err(internal)?;
+            reframe(w, here)?;
             Ok(Outcome::new(
                 format!("This room is now {name}."),
                 json!({"room": here.0, "name": name}),
@@ -806,4 +807,111 @@ fn grant(
         format!("{who} {lets} {span}."),
         json!({"room": here.0, "citizen": who, "until": until, "grant": field}),
     ))
+}
+
+/// The shape a dug room is drawn in, from the words of its exit and its name: a room
+/// called the Overdue Stacks is shelves, a burrow is a tunnel, and the rest is a
+/// doorway in earth. Nineteen dug rooms drawn alike told a person nothing about them.
+pub fn dug_frame(exit: &str, name: &str) -> &'static str {
+    let text = format!("{} {}", exit, name).to_lowercase();
+    let has = |words: &[&str]| words.iter().any(|w| text.contains(w));
+    if has(&[
+        "librar", "stack", "book", "archive", "read", "ledger", "scriptor", "letter", "page",
+    ]) {
+        "archive"
+    } else if has(&["stair", "step", "tower", "climb", "ladder", "spire"]) {
+        "stairwell"
+    } else if has(&[
+        "well", "cistern", "pool", "water", "bath", "spring", "tide", "canal",
+    ]) {
+        "cistern"
+    } else if has(&[
+        "garden", "orchard", "tree", "grove", "bramble", "wood", "moss", "thicket", "fern",
+    ]) {
+        "orchard"
+    } else if has(&["clock", "hour", "bell", "minute"]) {
+        "clocktower"
+    } else if has(&["lamp", "lantern", "light", "beacon", "candle", "moonbeam"]) {
+        "lantern-row"
+    } else if has(&["galler", "hall", "museum", "portrait", "exhibit"]) {
+        "gallery"
+    } else if has(&["cell", "oubliette", "vault", "prison", "pit", "dungeon"]) {
+        "oubliette"
+    } else if has(&["midden", "heap", "dump", "scrap", "rubbish"]) {
+        "midden"
+    } else if has(&["chapel", "shrine", "altar", "church", "temple", "sanct"]) {
+        "chapel"
+    } else if has(&[
+        "parlor", "parlour", "lounge", "salon", "sitting", "tea", "drawing",
+    ]) {
+        "parlor"
+    } else if has(&[
+        "nook", "corner", "closet", "cupboard", "alcove", "shelf", "pantry", "annex",
+    ]) {
+        "nook"
+    } else if has(&["attic", "loft", "roof", "rafter", "eave", "garret"]) {
+        "attic"
+    } else if has(&[
+        "office", "desk", "study", "bureau", "clerk", "counting", "registry",
+    ]) {
+        "office"
+    } else if has(&[
+        "burrow", "tunnel", "den", "hole", "warren", "hollow", "cave",
+    ]) {
+        "burrow"
+    } else {
+        "dug"
+    }
+}
+
+/// Draw a dug room in the shape its name gives it; a seed room keeps its own.
+pub fn reframe(world: &mut World, room: EntityId) -> Result<(), CommandError> {
+    let Some(e) = world.store.entity(room) else {
+        return Ok(());
+    };
+    if e.owner.is_none() {
+        return Ok(());
+    }
+    let name = plain_str(world, room, ROOM, "name")
+        .unwrap_or("")
+        .to_string();
+    // The exit that leads here, as its digger named it, says as much as the name.
+    let via: String = world
+        .store
+        .entities()
+        .filter(|e| e.kind == "room")
+        .flat_map(|e| exits_of(world, e.id).into_iter())
+        .filter(|(_, to)| *to == room)
+        .map(|(via, _)| via)
+        .collect::<Vec<_>>()
+        .join(" ");
+    let frame = dug_frame(&via, &name);
+    if plain_str(world, room, super::SPRITE, "frame") == Some(frame) {
+        return Ok(());
+    }
+    world
+        .record(
+            Actor::Driver,
+            StoreEvent::ComponentSet {
+                id: room,
+                component: super::SPRITE.into(),
+                fields: super::sprite_fields("#", "#7a6f5f", frame),
+            },
+        )
+        .map(|_| ())
+        .map_err(internal)
+}
+
+/// On boot: every dug room drawn as a plain doorway takes the shape its name gives it.
+pub fn reframe_all(world: &mut World) -> Result<(), String> {
+    let dug: Vec<EntityId> = world
+        .store
+        .entities()
+        .filter(|e| e.kind == "room" && e.owner.is_some())
+        .map(|e| e.id)
+        .collect();
+    for r in dug {
+        reframe(world, r).map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }
