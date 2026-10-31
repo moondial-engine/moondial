@@ -2052,8 +2052,7 @@ fn memory_moves_by_gift_and_by_story() {
         .read_all(&w.id, moondial_log::Cursor::START)
         .unwrap()
         .into_iter()
-        .filter(|e| e.kind == exchange::STORY)
-        .next_back()
+        .rfind(|e| e.kind == exchange::STORY)
         .unwrap()
         .payload["kept"]
         .as_u64()
