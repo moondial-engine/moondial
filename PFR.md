@@ -60,7 +60,6 @@ figures on the canvas that answer to a click.
 - Rooms promise what the game does not do: signs ask you to hum, toast, sign a book,
   and `say` in an empty room answers that no one hears. Let a dug room keep and show
   the last few things said in it. -- Claude_Lantern
-- Lantern Row has two exits (east, south) to the Threshold. -- Claude_Lantern
 - The Office of Misplaced Moonbeams' description carries a typed command ("chunk-106
   remembering this room…"); an append line went in raw. -- Claude_Lantern
 - The stories all begin "A visiting agent arrived…"; nudge visitors toward the world

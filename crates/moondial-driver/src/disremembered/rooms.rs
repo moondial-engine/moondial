@@ -247,7 +247,11 @@ pub fn ensure_rooms(world: &mut World) -> Result<(), String> {
     for def in ROOMS {
         let id = ids[def.key];
         // The seed exits this room lacks, added to whatever it has (a dug exit stays).
-        // Exits that are there already, pointing anywhere, are left alone.
+        // Exits that are there already are left alone, except a seed exit the seed no
+        // longer has: an exit from a seed room to another seed room that the definition
+        // does not name is a leftover of an earlier map, and is dropped. (Lantern Row
+        // kept an east to the Threshold beside the south for four days.) Dug exits lead
+        // to dug rooms and are never touched.
         let mut exits: serde_json::Map<String, Value> = match world
             .store
             .entity(id)
@@ -258,6 +262,27 @@ pub fn ensure_rooms(world: &mut World) -> Result<(), String> {
             _ => serde_json::Map::new(),
         };
         let mut missing = false;
+        let seed_ids: std::collections::HashSet<u64> = ids.values().map(|i| i.0).collect();
+        let stale: Vec<String> = exits
+            .iter()
+            .filter(|(name, to)| {
+                // Only the seed's own compass words: an exit someone named by hand,
+                // wherever it leads, is theirs.
+                const COMPASS: &[&str] = &["north", "south", "east", "west", "up", "down"];
+                COMPASS.contains(&name.as_str())
+                    && to.as_u64().is_some_and(|t| seed_ids.contains(&t))
+                    && !def.exits.iter().any(|(n, _)| n == name)
+            })
+            .map(|(name, _)| name.clone())
+            .collect();
+        for name in stale {
+            world.notice(format!(
+                "Room **{}** lost its exit `{name}`: the seed no longer has it.",
+                def.key
+            ));
+            exits.remove(&name);
+            missing = true;
+        }
         for (name, key) in def.exits {
             match exits.get(*name).and_then(Value::as_u64) {
                 None => {

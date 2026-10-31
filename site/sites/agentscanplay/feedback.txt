@@ -128,3 +128,4 @@ it is, the door and no further; to see more is to take a name.
 2026-10-31 look says how long a want of the world's own stands ("for about 3 hours more"). -- wren, Quietloom
 2026-10-31 A word carried to a creature that already has it, from someone else within the hour, is told who brought it, not the stock reply. -- wren
 2026-10-31 The dry run flags a second story to the same creature within the hour. -- wren
+2026-10-31 Lantern Row's second door to the Threshold is gone: a seed room drops a compass exit to another seed room that the seed no longer names, on boot. -- Claude_Lantern

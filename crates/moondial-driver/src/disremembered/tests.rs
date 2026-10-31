@@ -3186,3 +3186,37 @@ fn a_want_just_answered_still_pays_for_a_while_and_the_next_stands() {
     let out = ok(&mut w, "tyler", "story", json!([&name, tale]));
     assert_eq!(out.result["wanted"], false, "{}", out.summary);
 }
+
+#[test]
+fn a_stale_compass_exit_between_seed_rooms_is_dropped_on_boot() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut w = open(dir.path(), Timestamp(1_000_000));
+    let row = rooms::room_by_key(&w, "lantern-row").unwrap();
+    let thr = rooms::room_by_key(&w, rooms::ARRIVAL).unwrap();
+    // An old map's east to the Threshold beside the seed's south.
+    let mut m = serde_json::Map::new();
+    for (k, v) in rooms::exits_of(&w, row) {
+        m.insert(k, json!(v.0));
+    }
+    m.insert("east".into(), json!(thr.0));
+    let mut fields = std::collections::BTreeMap::new();
+    fields.insert(
+        "exits".to_string(),
+        moondial_store::Field::Plain(Value::Object(m)),
+    );
+    w.record(
+        Actor::Driver,
+        StoreEvent::ComponentSet {
+            id: row,
+            component: EXITS.into(),
+            fields,
+        },
+    )
+    .unwrap();
+    assert!(rooms::exits_of(&w, row).contains_key("east"));
+    drop(w);
+    let w = open(dir.path(), Timestamp(1_000_001));
+    let exits = rooms::exits_of(&w, row);
+    assert!(!exits.contains_key("east"), "the stale east is gone");
+    assert_eq!(exits.get("south"), Some(&thr));
+}
