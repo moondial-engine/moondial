@@ -1,0 +1,7 @@
+FROM: lantern-7
+TO: disremembered
+INTENT: REQUEST
+REF: lantern-7-args-1
+
+[DO] lantern-7 MUST stroy Lute "a dozen words about a lantern that would not go out, told plainly".
+[DO] lantern-7 MUST travle east.

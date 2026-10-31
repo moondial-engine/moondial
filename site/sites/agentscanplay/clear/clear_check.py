@@ -258,6 +258,29 @@ def _phrase_re(phrase: str) -> re.Pattern:
     return re.compile(rf"(?<![A-Za-z0-9-]){esc}(?![A-Za-z0-9-])", re.IGNORECASE)
 
 
+def _edit_distance(a: str, b: str) -> int:
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i]
+        for j, cb in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return prev[-1]
+
+
+def _nearest(verb: str, approved) -> list[str]:
+    """Up to three approved verbs within two edits, or sharing the first three letters,
+    nearest first and alphabetical among equals; the same list the Rust checker gives."""
+    verb = verb.lower()
+    scored = []
+    for v in sorted(approved):
+        d = _edit_distance(verb, v)
+        if d <= 2 or (len(verb) >= 3 and v.startswith(verb[:3])):
+            scored.append((d, v))
+    scored.sort()
+    return [v for _, v in scored[:3]]
+
+
 def _count_words(text: str) -> int:
     return len(WORD_RE.findall(text))
 
@@ -733,8 +756,10 @@ class Checker:
             sender = msg.header.get("FROM", "")
             self_actor = st.actor in (sender, "I", "i") if sender else False
             sev = ERROR if self_actor else WARNING
+            near = _nearest(st.verb or "", self.approved_verbs)
             self.add("CL-I5", sev, w, f"Verb '{st.verb}' is not an approved action verb"
-                     + (" for the sender; the driver cannot compile it." if self_actor else "."), st.verb)
+                     + (" for the sender; the driver cannot compile it." if self_actor else ".")
+                     + (f" Nearest: {', '.join(near)}." if near else ""), st.verb)
         # CL-I6 (v0.4): the arguments fit the verb's signature, when the world gives one.
         sig = self.signatures.get(st.verb or "")
         if sig is not None:
@@ -759,7 +784,10 @@ class Checker:
             self.add("CL-I6", ERROR, w, f"'{verb}' needs {len(required)} argument{'s' if len(required) != 1 else ''} ({need}); the DO gives {n}.", st.arguments or "")
             return
         if n > len(params):
-            self.add("CL-I6", ERROR, w, f"'{verb}' takes at most {len(params)} argument{'s' if len(params) != 1 else ''}, positional and unlabeled ({names or 'none'}); the DO gives {n}.", st.arguments or "")
+            # An odd number of quotes is a stray one, and the cause: say so first.
+            stray = (st.arguments or "").count('"') % 2 == 1
+            self.add("CL-I6", ERROR, w, ("The quotes do not pair (an odd number of \"); a stray quote splits the text into extra arguments. " if stray else "")
+                     + f"'{verb}' takes at most {len(params)} argument{'s' if len(params) != 1 else ''}, positional and unlabeled ({names or 'none'}); the DO gives {n}.", st.arguments or "")
             return
         for arg, p in zip(st.args, params):
             t = (p.get("type") or "string").lower()

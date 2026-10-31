@@ -9,7 +9,7 @@
       "rule": "CL-I5",
       "severity": "warning",
       "where": "statement 1",
-      "message": "Verb 'nuke' is not an approved action verb.",
+      "message": "Verb 'nuke' is not an approved action verb. Nearest: name.",
       "excerpt": "nuke"
     },
     {

@@ -786,6 +786,18 @@
     "expected": "i6_too_many.json"
   },
   {
+    "name": "i6_stray_quote",
+    "vocab": "vocab/disremembered.yaml",
+    "text": "i6_stray_quote.txt",
+    "expected": "i6_stray_quote.json"
+  },
+  {
+    "name": "i5_near_miss",
+    "vocab": "vocab/disremembered.yaml",
+    "text": "i5_near_miss.txt",
+    "expected": "i5_near_miss.json"
+  },
+  {
     "name": "i6_no_signature",
     "vocab": "vocab/disremembered.yaml",
     "text": "i6_no_signature.txt",

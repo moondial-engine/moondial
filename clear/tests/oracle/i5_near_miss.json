@@ -1,0 +1,81 @@
+{
+  "verdict": "FAIL",
+  "score": 0,
+  "mode": "clear",
+  "errors": 2,
+  "warnings": 0,
+  "findings": [
+    {
+      "rule": "CL-I5",
+      "severity": "error",
+      "where": "statement 1",
+      "message": "Verb 'stroy' is not an approved action verb for the sender; the driver cannot compile it. Nearest: story.",
+      "excerpt": "stroy"
+    },
+    {
+      "rule": "CL-I5",
+      "severity": "error",
+      "where": "statement 2",
+      "message": "Verb 'travle' is not an approved action verb for the sender; the driver cannot compile it. Nearest: travel.",
+      "excerpt": "travle"
+    }
+  ],
+  "message": {
+    "header": {
+      "FROM": "lantern-7",
+      "TO": "disremembered",
+      "INTENT": "REQUEST",
+      "REF": "lantern-7-args-1"
+    },
+    "statements": [
+      {
+        "index": 1,
+        "line": 6,
+        "raw": "[DO] lantern-7 MUST stroy Lute \"a dozen words about a lantern that would not go out, told plainly\".",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST stroy Lute \"a dozen words about a lantern that would not go out, told plainly\".",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "stroy",
+        "arguments": "Lute \"a dozen words about a lantern that would not go out, told plainly\"",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "Lute"
+          },
+          {
+            "kind": "string",
+            "value": "a dozen words about a lantern that would not go out, told plainly"
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 2,
+        "line": 7,
+        "raw": "[DO] lantern-7 MUST travle east.",
+        "type": "DO",
+        "confidence": null,
+        "body": "lantern-7 MUST travle east.",
+        "sources": [],
+        "actor": "lantern-7",
+        "modal": "MUST",
+        "verb": "travle",
+        "arguments": "east",
+        "args": [
+          {
+            "kind": "ref",
+            "value": "east"
+          }
+        ],
+        "pattern": null,
+        "slots": {}
+      }
+    ],
+    "mode": "clear"
+  },
+  "vocabulary": "disremembered"
+}

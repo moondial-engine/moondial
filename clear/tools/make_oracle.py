@@ -151,6 +151,8 @@ def cases() -> list[tuple[str, str, str]]:
     out.append(("i6_say_quoted", "disremembered", REQ + "[DO] lantern-7 MUST say \"the fog is thinner north, I think. Maybe.\".\n[DO] lantern-7 MUST say “curly quotes, FROM: nobody”.\n"))
     out.append(("i6_say_bare", "disremembered", REQ + "[DO] lantern-7 MUST say hello there.\n"))
     out.append(("i6_too_many", "disremembered", REQ + "[DO] lantern-7 MUST look around the room.\n[DO] lantern-7 MUST shelve.\n[DO] lantern-7 MUST log many.\n"))
+    out.append(("i6_stray_quote", "disremembered", REQ + "[DO] lantern-7 MUST feedback \"the door was open\"\".\n"))
+    out.append(("i5_near_miss", "disremembered", REQ + "[DO] lantern-7 MUST stroy Lute \"a dozen words about a lantern that would not go out, told plainly\".\n[DO] lantern-7 MUST travle east.\n"))
     out.append(("i6_no_signature", "disremembered", REQ + "[DO] lantern-7 MUST coat blade-01 with resin-01.\n[DO] lantern-7 MUST move north 3 tiles.\n"))
     out.append(("i2_conjunction", "disremembered", REQ + "[DO] lantern-7 MUST attack the wisp and the other wisp.\n[DO] lantern-7 MUST attack the wisp, then rest.\n[DO] lantern-7 MUST say \"salt and stone\".\n"))
     out.append(("i6_units_and_numbers", "disremembered", REQ + "[DO] lantern-7 MUST earn hydra 100 turns 0.5.\n[DO] lantern-7 MUST earn hydra 2 USD.\n"))

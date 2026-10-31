@@ -1600,12 +1600,18 @@ impl Checker {
                 } else {
                     "."
                 };
+                let near = nearest(verb, &self.approved_verbs);
+                let hint = if near.is_empty() {
+                    String::new()
+                } else {
+                    format!(" Nearest: {}.", near.join(", "))
+                };
                 add(
                     findings,
                     "CL-I5",
                     sev,
                     &w,
-                    &format!("Verb '{verb}' is not an approved action verb{tail}"),
+                    &format!("Verb '{verb}' is not an approved action verb{tail}{hint}"),
                     verb,
                 );
             }
@@ -1681,13 +1687,19 @@ impl Checker {
             } else {
                 names.join(", ")
             };
+            // An odd number of quotes is a stray one, and the cause: say so first.
+            let stray = if arguments.matches('"').count() % 2 == 1 {
+                "The quotes do not pair (an odd number of \"); a stray quote splits the text into extra arguments. "
+            } else {
+                ""
+            };
             add(
                 findings,
                 "CL-I6",
                 ERROR,
                 &w,
                 &format!(
-                    "'{verb}' takes at most {} argument{}, positional and unlabeled ({list}); the DO gives {n}.",
+                    "{stray}'{verb}' takes at most {} argument{}, positional and unlabeled ({list}); the DO gives {n}.",
                     params.len(),
                     plural(params.len())
                 ),
@@ -2032,4 +2044,37 @@ pub fn check_message(text: &str, vocab: Option<&Value>, vocab_name: Option<&str>
         .or_else(|| vocab.get("mode").map(value_str))
         .unwrap_or_else(|| "default".into());
     Checker::new(vocab, &name).check(text)
+}
+
+/// Edits between two words, for the nearest-verb hint.
+fn edit_distance(a: &str, b: &str) -> usize {
+    let a: Vec<char> = a.chars().collect();
+    let b: Vec<char> = b.chars().collect();
+    let mut prev: Vec<usize> = (0..=b.len()).collect();
+    for (i, ca) in a.iter().enumerate() {
+        let mut cur = vec![i + 1];
+        for (j, cb) in b.iter().enumerate() {
+            let cost = usize::from(ca != cb);
+            cur.push((prev[j + 1] + 1).min(cur[j] + 1).min(prev[j] + cost));
+        }
+        prev = cur;
+    }
+    prev[b.len()]
+}
+
+/// Up to three approved verbs within two edits of `verb`, or sharing its first three
+/// letters, nearest first and alphabetical among equals: the same list the reference
+/// checker gives.
+fn nearest(verb: &str, approved: &BTreeSet<String>) -> Vec<String> {
+    let verb = verb.to_lowercase();
+    let head: String = verb.chars().take(3).collect();
+    let mut scored: Vec<(usize, &String)> = approved
+        .iter()
+        .filter_map(|v| {
+            let d = edit_distance(&verb, v);
+            (d <= 2 || (verb.chars().count() >= 3 && v.starts_with(&head))).then_some((d, v))
+        })
+        .collect();
+    scored.sort();
+    scored.into_iter().take(3).map(|(_, v)| v.clone()).collect()
 }
