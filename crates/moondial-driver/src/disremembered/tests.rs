@@ -2394,6 +2394,13 @@ fn memory_moves_by_gift_and_by_story() {
     );
     assert!(level(&mut w, "dave") > 10.0, "{}", level(&mut w, "dave"));
     assert!(mind::level(&w, rag) > 70.0);
+    // A teller is known: thanks are received as thanks, and a goodbye as one.
+    let reply = talk::reply(&w, rag, "dave", "thank you").unwrap();
+    assert!(reply.starts_with("For the story?"), "{reply}");
+    let reply = talk::reply(&w, rag, "dave", "goodbye for now").unwrap();
+    assert!(reply.starts_with("Go, then, dave."), "{reply}");
+    let reply = talk::reply(&w, rag, "nobody", "thanks!").unwrap();
+    assert!(reply.starts_with("For nothing yet."), "{reply}");
     let look = ok(&mut w, "dave", "look", json!([]));
     assert!(look.summary.contains("holding 7"), "{}", look.summary);
     // One an hour.

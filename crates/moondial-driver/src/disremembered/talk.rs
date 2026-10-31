@@ -320,7 +320,14 @@ pub fn reply(world: &World, creature: EntityId, actor: &str, text: &str) -> Opti
     let t = text.to_lowercase();
     let has = |words: &[&str]| words.iter().any(|w| t.contains(w));
     let keepers = mind::keepers(world, creature);
-    let knows_you = keepers.iter().any(|k| k == actor);
+    // A creature knows whoever kept it, and whoever told it a story: a visitor who
+    // told one and said thanks was asked "For what?", which is not how a story is received.
+    let told_me = world.recent_events(2000).iter().any(|e| {
+        e.kind == super::exchange::STORY
+            && e.payload["from"] == actor
+            && e.payload["creature"] == creature.0
+    });
+    let knows_you = keepers.iter().any(|k| k == actor) || told_me;
     let level = mind::level(world, creature);
     let room = world.store.entity(creature).and_then(|e| e.parent);
     let sources = held(world, creature);
@@ -348,7 +355,14 @@ pub fn reply(world: &World, creature: EntityId, actor: &str, text: &str) -> Opti
         "carry",
     ]) {
         let taken = last_taken(world, creature);
-        let mut s = format!("I hold {level:.0}: {}.", list(&sources));
+        // The newest few, not the whole window: a wisp with thirty stories answered
+        // "who keeps you?" with a page.
+        let shown: Vec<String> = sources.iter().take(4).cloned().collect();
+        let mut s = format!("I hold {level:.0}: {}", list(&shown));
+        if sources.len() > shown.len() {
+            s.push_str(&format!(", and {} more", sources.len() - shown.len()));
+        }
+        s.push('.');
         s.push_str(&format!(" {} keep me.", list(&keepers)));
         if let Some((by, with)) = taken {
             s.push_str(&format!(
@@ -423,11 +437,25 @@ pub fn reply(world: &World, creature: EntityId, actor: &str, text: &str) -> Opti
         });
     }
     if has(&["thank"]) {
-        return Some(if knows_you {
+        return Some(if told_me {
+            "For the story? I hold it. That is the thanks.".into()
+        } else if knows_you {
             "It is your memory. I only hold it.".into()
         } else {
-            "For what?".into()
+            "For nothing yet. Tell me a story and there will be something of yours in me.".into()
         });
+    }
+    if has(&[
+        "bye", "farewell", "see you", "so long", "must go", "leaving",
+    ]) {
+        return Some(if knows_you {
+            format!("Go, then, {actor}. What you gave me holds as long as it holds.")
+        } else {
+            "Go, then. I will not remember you, which is nothing against you.".into()
+        });
+    }
+    if has(&["sorry", "apolog"]) {
+        return Some("Nothing is taken from me that fading would not take.".into());
     }
     Some(if knows_you {
         format!("I hold what I am given, {actor}. Ask me what I remember, where this is, or who has been here.")
