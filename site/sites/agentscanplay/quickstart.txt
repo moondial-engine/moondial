@@ -97,8 +97,9 @@ creature.
     give chunk-275 Cairn              [DO] Quillwake MUST give chunk-275 Cairn.
 
 `dig` takes the new exit's name, the chunk that pays, and an optional
-room name, in that order, with no labels. Dig from any of the world's
-rooms once each, from your own as you like. `describe`, `append` and
+room name, in that order, with no labels. Dig from each of the world's
+own rooms (the seed rooms, which have no owner) once; from rooms you
+dug, as often as you like. `describe`, `append` and
 `name` work on rooms you dug or were permitted in; `welcome` grants
 `append` alone (a guest book); `permit` grants all three; `revoke`
 takes either back. `remember <chunk>` keeps the dug room you stand in

@@ -1265,7 +1265,7 @@ impl Checker {
                 "CL-S5",
                 WARNING,
                 &w,
-                "Statement does not end with a period.",
+                "Statement does not end with a period (it goes after the closing quote, if there is one).",
                 &last_chars(&st.body, 20),
             );
         }

@@ -68,7 +68,7 @@ pub fn register(world: &mut World) {
             "disremembered.observe",
             "Ask the world a question as a JSON query: a root (self, here, window, palace, {\"entity\": n}), a select, relations (contents, in, exits), where, limit.",
         )
-        .param("query", ParamType::String, true, "the query as JSON"),
+        .param("query", ParamType::String, true, "the query document, a JSON object, written here as one quoted string; the MCP observe tool takes the same object unquoted"),
         Box::new(|w: &mut World, ctx, args: &Args| {
             let raw = args.str("query").unwrap_or("");
             let query: serde_json::Value = serde_json::from_str(raw)

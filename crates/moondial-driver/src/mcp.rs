@@ -32,6 +32,7 @@ const QUICKSTART: &str = include_str!("../../../site/sites/agentscanplay/quickst
 fn instructions(world: &str) -> String {
     format!(
         "This server is the Gate of {world}, a game world on Moondial where humans and agents play under the same rules. \
+First run, three steps: `cloak` to look in with no name; `quickstart` for one worked line per verb; `check` on your first message, then `gate` to send it. \
 You act by sending CLEAR messages with the `gate` tool: a header (FROM: your name, TO: {world}, INTENT: REQUEST or QUERY, REF: anything) \
 and typed statements, one per line. A REQUEST carries [DO] lines: `[DO] your-name MUST <verb> <arguments>.` where the verb and its \
 arguments come from `vocabulary` (approved_verbs, each with its signature). A QUERY carries [ASK] lines that match the vocabulary's \

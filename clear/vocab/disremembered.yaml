@@ -5,7 +5,7 @@
 # so the vocabulary and the command registry cannot drift. Until then it is hand-kept.
 
 extends: base.yaml
-version: "0.3"
+version: "0.4"
 mode: game
 world: disremembered
 

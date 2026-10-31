@@ -2035,13 +2035,42 @@ fn names_match_in_any_case_and_a_kind_never_means_a_named_creature() {
     );
     ok(&mut w, "dave", "retreat", json!([]));
     assert!(ok(&mut w, "dave", "tell", json!([&name, "hi"])).result["answered"] == true);
+    // Fell the unnamed wisp; then a kind, or no target, never means the named one.
+    for _ in 0..12 {
+        if combat::creatures_in(&w, fog).iter().all(|c| c.0 != b) {
+            break;
+        }
+        let _ = call(
+            &mut w,
+            "dave",
+            ActorKind::Citizen,
+            "attack",
+            json!([format!("wisp-{}", b.0)]),
+        );
+    }
+    assert!(
+        combat::creatures_in(&w, fog).iter().all(|c| c.0 != b),
+        "the unnamed wisp fell"
+    );
+    for args in [json!(["wisp"]), json!([])] {
+        let err = call(&mut w, "dave", ActorKind::Citizen, "attack", args).unwrap_err();
+        assert!(
+            err.to_string().contains("struck only by that name"),
+            "{err}"
+        );
+    }
+    assert_eq!(
+        ok(&mut w, "dave", "attack", json!([&name])).result["creature"],
+        "wisp"
+    );
+    ok(&mut w, "dave", "retreat", json!([]));
     // A named creature is found anywhere by its name, with its room.
     let (found, room) = mind::find_named(&w, &name.to_ascii_uppercase()).unwrap();
     assert_eq!(found, a);
     assert_eq!(room, Some(fog));
     assert!(mind::find_named(&w, "nobody").is_none());
     // The log verb reads like a log, and shows this viewer only what they may see.
-    let out = ok(&mut w, "dave", "log", json!([40]));
+    let out = ok(&mut w, "dave", "log", json!([80]));
     assert!(
         out.summary.contains(&format!("the wisp is {name} now")),
         "{}",

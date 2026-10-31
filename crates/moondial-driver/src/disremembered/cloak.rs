@@ -126,7 +126,7 @@ pub fn view(
         Some(q) => Some(cloaked_query(world, threshold, q, limits)?),
         None => None,
     };
-    let mut text = format!("You are cloaked: no one here can see you, and nothing you do here is written down, not even that you came.\n\n{name}. {description}");
+    let mut text = format!("You are cloaked: no one here can see you, and nothing you do here is written down, not even that you came. (A named citizen's arrivals and departures are public, with the door they came by.)\n\n{name}. {description}");
     text.push_str(&format!(
         "\nWays out of the Threshold: {}.",
         if exits.is_empty() {

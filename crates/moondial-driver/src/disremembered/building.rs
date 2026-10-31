@@ -345,7 +345,7 @@ pub fn register(world: &mut World) {
     world.register(
         CommandSpec::new(
             "disremembered.dig",
-            "Open a new room off this one, through a new exit, paid for with one of your chunks: the room is born with that memory's half-life and fades unless visited. From a seed room, once each.",
+            "Open a new room off this one, through a new exit, paid for with one of your chunks: the room is born with that memory's half-life and fades unless visited. From each of the world's own rooms (the seed rooms) once; from your own, as you like.",
         )
         .param("exit", ParamType::String, true, "the new exit's name, not one this room has")
         .param("chunk", ParamType::Entity, true, "a chunk of yours; it is spent")
@@ -475,7 +475,7 @@ pub fn register(world: &mut World) {
             .map_err(internal)?;
             Ok(Outcome::new(
                 format!(
-                    "You dig {exit} with the memory of {source}. {name} opens: undescribed, yours, remembered for now. Its memory halves every {} unless someone visits. The way back is {}.",
+                    "You dig {exit} with the memory of {source}. {name} opens: undescribed, yours, remembered for now. Its memory halves every {} unless someone visits; a visit remembers it whole, and `remember <chunk>` inside it lengthens that half-life for good. The way back is {}.",
                     humane(hl),
                     opposite(&exit)
                 ),

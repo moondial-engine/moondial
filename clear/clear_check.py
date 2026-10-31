@@ -45,7 +45,7 @@ WARNING = "warning"
 # --------------------------------------------------------------------------------------
 
 DEFAULT_VOCAB = {
-    "version": "0.3",
+    "version": "0.4",
     "mode": "org",
     "statement_types": ["FACT", "INFER", "DO", "ASK", "QUOTE"],
     "intents": ["INFORM", "REQUEST", "PROPOSE", "REPORT", "QUERY"],
@@ -611,7 +611,7 @@ class Checker:
         if st.type == "ASK":
             pass  # CL-A1 covers it
         elif st.body and st.body[-1] not in ".":
-            self.add("CL-S5", WARNING, w, "Statement does not end with a period.", st.body[-20:])
+            self.add("CL-S5", WARNING, w, "Statement does not end with a period (it goes after the closing quote, if there is one).", st.body[-20:])
 
     def check_sources(self, st: Statement) -> None:
         w = self.where(st)

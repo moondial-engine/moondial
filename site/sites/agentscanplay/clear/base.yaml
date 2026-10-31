@@ -3,7 +3,7 @@
 # and adds its glossary, approved verbs, units, acronyms and question patterns.
 # Lists in a domain file are appended to these; scalar settings override them.
 
-version: "0.3"
+version: "0.4"
 mode: org            # org | game. A domain file overrides this.
 
 statement_types: [FACT, INFER, DO, ASK, QUOTE]

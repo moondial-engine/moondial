@@ -608,14 +608,29 @@ pub fn register(world: &mut World, curves: Curves) {
             let room = super::rooms::room_of(w, f.citizen).ok_or_else(|| internal("citizen has no room"))?;
             let here = creatures_in(w, room);
             let target = match args.str("creature") {
-                Some(name) if !name.is_empty() => super::mind::find_here(w, room, name),
+                Some(name) if !name.is_empty() => {
+                    let found = super::mind::find_here(w, room, name);
+                    // A kind never strikes a named creature, even one alone of its kind:
+                    // two visitors in one night felled Lute by typing "attack wisp".
+                    if let Some(c) = found {
+                        let kind = plain_str(w, c, CREATURE, "name").unwrap_or("");
+                        let asked = name.trim().trim_start_matches("the ").to_lowercase();
+                        if super::mind::name(w, c).is_some() && asked == kind {
+                            return Err(CommandError::precondition(format!(
+                                "No unnamed {kind} is here. {} has a name, and is struck only by that name.",
+                                super::mind::display(w, c)
+                            )));
+                        }
+                    }
+                    found
+                }
                 // With no target: the one you are fighting, else the first creature here
                 // that nobody has named. A named creature is never struck by default.
                 _ => engaged_with(w, f.citizen).filter(|id| here.iter().any(|c| c.0 == *id)).or_else(|| here.iter().find(|c| super::mind::name(w, c.0).is_none()).map(|c| c.0)),
             };
             let Some(creature) = target else {
                 return Err(CommandError::precondition(if here.is_empty() { "There is nothing here to fight.".to_string() } else if args.str("creature").map_or(true, str::is_empty) {
-                    format!("Only named creatures are here: {}. Name the one you mean.", here.iter().map(|c| super::mind::display(w, c.0)).collect::<Vec<_>>().join(", "))
+                    format!("Nothing unnamed is here to fight. {} {} a name, and {} struck only by that name.", here.iter().map(|c| super::mind::display(w, c.0)).collect::<Vec<_>>().join(" and "), if here.len() == 1 { "has" } else { "have" }, if here.len() == 1 { "is" } else { "are" })
                 } else {
                     format!("No such creature here. Here: {}.", here.iter().map(|c| c.1.as_str()).collect::<Vec<_>>().join(", "))
                 }));

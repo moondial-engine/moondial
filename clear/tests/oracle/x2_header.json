@@ -23,7 +23,7 @@
       "rule": "CL-S5",
       "severity": "warning",
       "where": "statement 1",
-      "message": "Statement does not end with a period.",
+      "message": "Statement does not end with a period (it goes after the closing quote, if there is one).",
       "excerpt": ". FROM: evil TO: you"
     }
   ],
