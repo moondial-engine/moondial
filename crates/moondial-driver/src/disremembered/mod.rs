@@ -194,7 +194,13 @@ pub fn schemas() -> Vec<ComponentSchema> {
             .field("story_by", FieldKind::Plain, Visibility::Public)
             .field("word", FieldKind::Plain, Visibility::Public)
             .field("word_to", FieldKind::Plain, Visibility::Public)
-            .field("word_by", FieldKind::Plain, Visibility::Public),
+            .field("word_by", FieldKind::Plain, Visibility::Public)
+            // Version 1's fields, kept so the log replays: a schema that drops a field
+            // refuses its own history, and the deploy rolled back on the first boot.
+            .field("kind", FieldKind::Plain, Visibility::Public)
+            .field("want", FieldKind::Plain, Visibility::Public)
+            .field("to", FieldKind::Plain, Visibility::Public)
+            .field("set_by", FieldKind::Plain, Visibility::Public),
         ComponentSchema::new(mind::MIND, 1)
             .field("tier", FieldKind::Plain, Visibility::Public)
             .field("name", FieldKind::Plain, Visibility::Public)
