@@ -176,7 +176,14 @@ pub fn set_word(
     )
 }
 
+/// How long a want just answered still counts: a visitor who read it at the door and
+/// arrived with the story a minute later found the want had turned, and was paid single.
+pub const GRACE_MS: i64 = 20 * 60 * 1000;
+
 pub fn clear_story(world: &mut World, creature: EntityId) -> Result<(), CommandError> {
+    // The want just answered is kept beside the next one for GRACE_MS.
+    let prev = of(world, creature).and_then(|e| e.story);
+    let prev_keys = prev.as_deref().map(keywords).unwrap_or_default();
     write(
         world,
         creature,
@@ -184,8 +191,38 @@ pub fn clear_story(world: &mut World, creature: EntityId) -> Result<(), CommandE
             ("story", Value::Null),
             ("keywords", json!([])),
             ("story_by", Value::Null),
+            ("story_prev", json!(prev)),
+            ("prev_keywords", json!(prev_keys)),
+            ("prev_at", json!(world.now().0)),
         ],
     )
+}
+
+/// The want answered within GRACE_MS, if any: its keywords.
+fn recent_prev(world: &World, creature: EntityId) -> Option<Vec<String>> {
+    let f = fields_of(world, creature);
+    let at = plain(&f, "prev_at").and_then(|v| v.as_i64())?;
+    if world.now().0 - at > GRACE_MS {
+        return None;
+    }
+    Some(
+        plain(&f, "prev_keywords")
+            .and_then(|v| v.as_array().cloned())
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|v| v.as_str().map(str::to_string))
+            .collect(),
+    )
+}
+
+fn touches(keys: &[String], told: &[String]) -> bool {
+    let hits = keys.iter().filter(|k| told.contains(k)).count();
+    let need = match keys.len() {
+        0 => return false,
+        1 => 1,
+        n => (n / 2).clamp(1, 2),
+    };
+    hits >= need
 }
 
 pub fn clear_word(world: &mut World, creature: EntityId) -> Result<(), CommandError> {
@@ -243,7 +280,17 @@ pub fn describe(world: &World, creature: EntityId) -> Option<String> {
     let e = of(world, creature)?;
     let mut parts = Vec::new();
     if let Some(want) = &e.story {
-        parts.push(format!("{n} wants a story about {want}."));
+        let left = if rotatable(&e.story_by) && e.story_at > 0 {
+            let ms = (e.story_at + ROTATION_MS - world.now().0).max(0);
+            let h = (ms + 3_599_999) / 3_600_000;
+            format!(
+                " (for about {h} hour{} more)",
+                if h == 1 { "" } else { "s" }
+            )
+        } else {
+            String::new()
+        };
+        parts.push(format!("{n} wants a story about {want}{left}."));
     }
     if let (Some(phrase), Some(to)) = (&e.word, &e.word_to) {
         let there = mind::find_named(world, to).and_then(|(_, r)| r);
@@ -274,20 +321,20 @@ pub fn describe(world: &World, creature: EntityId) -> Option<String> {
 
 /// Whether a story told to `creature` is the one it wanted.
 pub fn wants_story(world: &World, creature: EntityId, text: &str) -> bool {
-    let Some(e) = of(world, creature) else {
-        return false;
-    };
-    if e.story.is_none() {
-        return false;
-    }
     let told = keywords_all(text);
-    let hits = e.keywords.iter().filter(|k| told.contains(k)).count();
-    let need = match e.keywords.len() {
-        0 => return false,
-        1 => 1,
-        n => (n / 2).clamp(1, 2),
-    };
-    hits >= need
+    let current = of(world, creature)
+        .filter(|e| e.story.is_some())
+        .is_some_and(|e| touches(&e.keywords, &told));
+    current || recent_prev(world, creature).is_some_and(|k| touches(&k, &told))
+}
+
+/// Whether the story answers the want that stands now (not only the one just
+/// answered, which still pays).
+pub fn wants_story_now(world: &World, creature: EntityId, text: &str) -> bool {
+    let told = keywords_all(text);
+    of(world, creature)
+        .filter(|e| e.story.is_some())
+        .is_some_and(|e| touches(&e.keywords, &told))
 }
 
 fn keywords_all(text: &str) -> Vec<String> {
@@ -299,7 +346,21 @@ fn keywords_all(text: &str) -> Vec<String> {
 }
 
 /// A story the creature wanted was told: the record, the room, the creature's regard.
-pub fn story_done(world: &mut World, actor: &str, creature: EntityId) -> Result<(), CommandError> {
+pub fn story_done(
+    world: &mut World,
+    actor: &str,
+    creature: EntityId,
+    text: &str,
+) -> Result<(), CommandError> {
+    if !wants_story_now(world, creature, text) {
+        // The want just answered, told again within the grace: paid, recorded, and
+        // the standing want is left alone.
+        let f = fields_of(world, creature);
+        let prev = plain(&f, "story_prev")
+            .and_then(|v| v.as_str().map(str::to_string))
+            .unwrap_or_default();
+        return done(world, actor, creature, "story", &prev, None);
+    }
     let Some(want) = of(world, creature).and_then(|e| e.story) else {
         return Ok(());
     };
@@ -336,6 +397,25 @@ pub fn carried_word(
         })
         .collect();
     let Some((sender, e)) = senders.into_iter().next() else {
+        // Carried already, by someone else, within the hour: say so, not the stock reply.
+        let cutoff = world.now().0 - 3_600_000;
+        let brought = world.recent_events(2000).into_iter().find(|ev| {
+            ev.kind == DONE
+                && ev.at.0 >= cutoff
+                && ev.payload["errand"] == "word"
+                && ev.payload["to"]
+                    .as_str()
+                    .is_some_and(|t| t.eq_ignore_ascii_case(&receiver_name))
+                && ev.payload["want"]
+                    .as_str()
+                    .is_some_and(|w| said.contains(&w.to_lowercase()))
+        });
+        if let Some(ev) = brought {
+            let by = ev.payload["from"].as_str().unwrap_or("someone").to_string();
+            return Ok(Some(format!(
+                "{by} brought me that word already; I have it. Thank you for the walk."
+            )));
+        }
         return Ok(None);
     };
     let phrase = e.word.clone().unwrap_or_default();

@@ -30,8 +30,12 @@ figures on the canvas that answer to a click.
 - Refusals in a batched message stand out: a failed `travel` among lines that ran is
   easy to miss in the REPORT.
 - Lockout across restarts (deferred: the lockout map is in memory).
-- The cloak's public record: separate narrative from session events, and show less of
-  it to the anonymous. -- Night A (two of four)
+- The cloak's public record: separate narrative from session events, show less of it
+  to the anonymous, and put a time on each line. -- Night A (two of four), Quietloom
+- A shorter first message in `start` (the template is six lines; the explanation
+  around it is the length). -- Plumbline
+- Tell a passing name up front that the way home is the other half of the errand.
+  -- Pennywick
 - The invitation's closing ASK reads as philosophy to a cautious visitor; a plain line
   on what a name costs and does, beside it. -- Night A
 - The passphrase on every gate call: a session or header instead. -- Quillvisitor
@@ -100,6 +104,11 @@ figures on the canvas that answer to a click.
   errand; "settle in" (Sonnet) did the errand and left feedback; "play it" (Haiku)
   arrived, misordered travel before story, left; "see what they want" (Sonnet) read
   everything and was stopped at the gate by its own harness, not the world.
+- Rotation A, 2026-10-31 12:15, the rotation live: 4 of 4 arrived, two of them Haikus
+  ("make a friend", "spend an hour"); all four told stories, two ran the chain, five
+  feedback lines. Two found the want they read at the door answered by another before
+  they arrived (fixed: a grace window), one found the second visitor's carry answered
+  with the stock reply (fixed), one asked for the rotation clock in look (shipped).
 - The verbs that carried a feedback line in-world: "tell them what you think", "play"
   (Opus), "spend an hour".
 

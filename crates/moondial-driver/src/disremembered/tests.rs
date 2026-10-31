@@ -3115,3 +3115,74 @@ fn travel_back_is_the_way_you_came() {
         out.summary
     );
 }
+
+#[test]
+fn a_want_just_answered_still_pays_for_a_while_and_the_next_stands() {
+    let t0 = Timestamp(1_000_000);
+    let mut w = open(tempfile::tempdir().unwrap().path(), t0);
+    login(&mut w, "dave", "test", PASS).unwrap();
+    login(&mut w, "tyler", "test", PASS).unwrap();
+    for who in ["dave", "tyler"] {
+        ok(&mut w, who, "travel", json!(["east"]));
+        ok(&mut w, who, "travel", json!(["south"]));
+    }
+    let c = admin(&mut w, "tyler", "earn", json!(["hollow", 70, 0.5]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    ok(&mut w, "tyler", "remember", json!([c, "ragpicker"]));
+    let midden = rooms::room_by_key(&w, "midden").unwrap();
+    let rag = combat::creatures_in(&w, midden)[0].0;
+    let name = mind::name(&w, rag).unwrap();
+    admin(
+        &mut w,
+        "tyler",
+        "errand",
+        json!([&name, "a lantern that would not go out"]),
+    );
+    let look = ok(&mut w, "dave", "look", json!([]));
+    assert!(
+        !look.summary.contains("hours more"),
+        "an operator's want has no clock: {}",
+        look.summary
+    );
+    let tale =
+        "There was a lantern in the midden that would not go out, whatever the wind did to it.";
+    // Dave answers it; the want is done and the rotation sets the next.
+    let out = ok(&mut w, "dave", "story", json!([&name, tale]));
+    assert_eq!(out.result["wanted"], true);
+    w.tick();
+    let next = errand::of(&w, rag)
+        .and_then(|e| e.story)
+        .expect("the next want");
+    assert_ne!(next, "a lantern that would not go out");
+    let look = ok(&mut w, "tyler", "look", json!([]));
+    assert!(
+        look.summary.contains("hours more)") || look.summary.contains("hour more)"),
+        "{}",
+        look.summary
+    );
+    // (The rotation's next want came from the lantern story itself; a want of the
+    // operator's stands in for one that the old story does not touch.)
+    admin(
+        &mut w,
+        "tyler",
+        "errand",
+        json!([&name, "a door that was left open"]),
+    );
+    let next = "a door that was left open".to_string();
+    // Tyler read the old want at the door and arrives with it a minute later: still
+    // paid double, and the standing want is not touched.
+    w.fixed_now = Some(t0.plus(Duration::seconds(90)));
+    let out = ok(&mut w, "tyler", "story", json!([&name, tale]));
+    assert_eq!(out.result["wanted"], true, "{}", out.summary);
+    assert_eq!(
+        errand::of(&w, rag).and_then(|e| e.story),
+        Some(next.clone())
+    );
+    // Half an hour on, the old want no longer pays.
+    w.fixed_now = Some(t0.plus(Duration::seconds(errand::GRACE_MS / 1000 + 3700)));
+    let c = admin(&mut w, "tyler", "earn", json!(["hollow", 70, 0.5]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    ok(&mut w, "tyler", "remember", json!([c, "ragpicker"]));
+    let out = ok(&mut w, "tyler", "story", json!([&name, tale]));
+    assert_eq!(out.result["wanted"], false, "{}", out.summary);
+}

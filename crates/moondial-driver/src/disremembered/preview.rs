@@ -117,6 +117,12 @@ pub fn run(world: &World, actor: &str, passing: bool, statements: &[Statement]) 
                     let found = room.and_then(|r| mind::find_here(world, r, &who));
                     match (verb.as_str(), found) {
                         ("story", Some(c)) => match mind::name(world, c) {
+                            Some(_) if world.recent_events(2000).iter().any(|e| {
+                                e.kind == super::exchange::STORY
+                                    && e.payload["from"] == actor
+                                    && e.payload["creature"] == c.0
+                                    && world.now().0 - e.at.0 < 3_600_000
+                            }) => (false, format!("refused: one story an hour per creature, and {} had one from you within the hour", mind::display(world, c))),
                             Some(_) => {
                                 let wanted = errand::wants_story(world, c, &arg(1));
                                 (

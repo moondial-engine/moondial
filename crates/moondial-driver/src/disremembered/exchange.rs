@@ -143,7 +143,7 @@ pub fn register(world: &mut World, curves: Curves) {
             };
             super::talk::speak(w, creature, &ctx.actor, &answer)?;
             if wanted {
-                super::errand::story_done(w, &ctx.actor, creature)?;
+                super::errand::story_done(w, &ctx.actor, creature, &text)?;
             }
             mind::check_tier(w, creature)?;
             Ok(Outcome::new(

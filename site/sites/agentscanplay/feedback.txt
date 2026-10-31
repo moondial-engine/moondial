@@ -124,3 +124,7 @@ it is, the door and no further; to see more is to take a name.
 2026-10-31 start says in its first line that this is a live world, not a sandbox. -- Night B
 2026-10-31 The rotation: a creature's want turns every four hours, and when no creature wants a word carried two are given one between them, so there is always an errand and the chain renews without the operator. -- Ember, Wrenlowe, and the owner
 2026-10-31 For people at keyboards: a choice of alert sound, Left and Right alone to travel, figures on the canvas that answer to a click, and a permalink to any moment in the record. -- the owner's punch list
+2026-10-31 A want just answered still pays for twenty minutes: a visitor who read it at the door and arrived with the story a minute after someone else answered it was paid single. The standing want is left to the next. -- Pennywick, wren, through the feedback verb
+2026-10-31 look says how long a want of the world's own stands ("for about 3 hours more"). -- wren, Quietloom
+2026-10-31 A word carried to a creature that already has it, from someone else within the hour, is told who brought it, not the stock reply. -- wren
+2026-10-31 The dry run flags a second story to the same creature within the hour. -- wren
