@@ -77,6 +77,100 @@ impl AskBinding for Asks {
                 .unwrap_or_default()
         };
 
+        if pattern.starts_with("^(what|who) is here") {
+            let Some((_, me)) = citizen(world, actor, "me") else {
+                report.fact(
+                    format!("The world knows no citizen named {actor} as of {at}"),
+                    "gate",
+                );
+                return true;
+            };
+            let Some(here) = world.store.entity(me).and_then(|e| e.parent) else {
+                report.fact(format!("{actor} is nowhere as of {at}"), "gate");
+                return true;
+            };
+            let q = json!({"root": {"entity": here.0}, "select": {ROOM: ["name"]}, "relations": {"contents": {"kinds": ["citizen", "creature"], "select": {CITIZEN: ["name"], super::CREATURE: ["name"], super::mind::MIND: ["name"], super::presence::PRESENCE: ["here"]}}, "exits": {"select": {ROOM: ["name"]}}}, "commands": false});
+            match observe(world, actor, q) {
+                Ok(obs) => {
+                    let root = &obs.observation.root;
+                    let name = root["components"][ROOM]["name"]
+                        .as_str()
+                        .unwrap_or("here")
+                        .to_string();
+                    let mut citizens = Vec::new();
+                    let mut creatures = Vec::new();
+                    for n in root["relations"]["contents"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                    {
+                        if n["kind"] == "citizen"
+                            && n["components"][super::presence::PRESENCE]["here"] != false
+                        {
+                            if let Some(c) = n["components"][CITIZEN]["name"].as_str() {
+                                if c != actor {
+                                    citizens.push(c.to_string());
+                                }
+                            }
+                        } else if n["kind"] == "creature" {
+                            let kind = n["components"][super::CREATURE]["name"]
+                                .as_str()
+                                .unwrap_or("?");
+                            creatures.push(
+                                match n["components"][super::mind::MIND]["name"].as_str() {
+                                    Some(g) => format!("{g} the {kind}"),
+                                    None => kind.to_string(),
+                                },
+                            );
+                        }
+                    }
+                    let exits: Vec<String> = root["relations"]["exits"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .filter_map(|n| n["via"].as_str().map(str::to_string))
+                        .collect();
+                    let c = cursor(&obs);
+                    report.fact(format!("{actor} is in {name} as of {at}"), c.clone());
+                    report.fact(
+                        format!(
+                            "The ways out are {}",
+                            if exits.is_empty() {
+                                "none".into()
+                            } else {
+                                exits.join(", ")
+                            }
+                        ),
+                        c.clone(),
+                    );
+                    report.fact(
+                        format!(
+                            "The creatures here are {}",
+                            if creatures.is_empty() {
+                                "none".into()
+                            } else {
+                                creatures.join(", ")
+                            }
+                        ),
+                        c.clone(),
+                    );
+                    report.fact(
+                        format!(
+                            "The other citizens here are {}",
+                            if citizens.is_empty() {
+                                "none".into()
+                            } else {
+                                citizens.join(", ")
+                            }
+                        ),
+                        c,
+                    );
+                }
+                Err(e) => report.fact(format!("Question {n} could not be answered: {e}"), "query"),
+            }
+            return true;
+        }
+
         if pattern.starts_with("^where is ") {
             let entity = slot("entity");
             let Some((who, id)) = citizen(world, actor, &entity) else {

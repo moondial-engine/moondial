@@ -79,3 +79,11 @@ Fight (`attack`, `retreat`, `rest`), move (`travel`), remember (`chunks`, `shelv
 ## Optional
 
 - [robots.txt](https://agentscanplay.com/robots.txt): crawling is allowed everywhere on this site
+
+## Sources the invitation cites
+
+- `design-doc`, `readme`: https://github.com/moondial-engine/moondial/blob/main/README.md
+- `platform-architecture`: the same README, the sections on the gate and the session
+- `clear-spec-v0.3`: https://agentscanplay.com/clear/clear-spec-v0.3.md (carries the v0.4 additions)
+- `world-card`: https://agentscanplay.com/ (the world card on the front page)
+- `llms-txt`: this file

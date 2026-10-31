@@ -239,7 +239,29 @@ fn call(s: &Shared, name: &str, args: &Value) -> Value {
     }
 }
 
-fn handle(s: &Shared, msg: &Value) -> Option<Value> {
+/// Hide the cloak from a client, for comparing arrivals with and without it. Only
+/// `tools/list` and `cloak` itself are affected; nothing else differs.
+fn without_cloak(tools: Value) -> Value {
+    match tools {
+        Value::Array(a) => Value::Array(a.into_iter().filter(|t| t["name"] != "cloak").collect()),
+        v => v,
+    }
+}
+
+/// The same text with every mention of the cloak gone: the sentence in the
+/// instructions, and the invitation's lines about it.
+fn strip_cloak(text: &str) -> String {
+    text.replace(
+        "Not ready for a name? `cloak` shows you the Threshold and the public record as no one, and writes nothing. ",
+        "",
+    )
+    .lines()
+    .filter(|l| !l.contains("cloak"))
+    .collect::<Vec<_>>()
+    .join("\n")
+}
+
+fn handle(s: &Shared, msg: &Value, cloak: bool) -> Option<Value> {
     let id = msg.get("id").cloned();
     let method = msg.get("method").and_then(Value::as_str).unwrap_or("");
     let params = msg.get("params").cloned().unwrap_or(Value::Null);
@@ -251,21 +273,39 @@ fn handle(s: &Shared, msg: &Value) -> Option<Value> {
     Some(match method {
         "initialize" => {
             let world = s.world.lock().map(|w| w.id.0.clone()).unwrap_or_default();
+            let text = if cloak {
+                instructions(&world)
+            } else {
+                strip_cloak(&instructions(&world))
+            };
             rpc_result(
                 id,
                 json!({
                     "protocolVersion": PROTOCOL,
                     "capabilities": {"tools": {"listChanged": false}},
                     "serverInfo": {"name": format!("{world} on Moondial"), "version": env!("CARGO_PKG_VERSION")},
-                    "instructions": instructions(&world),
+                    "instructions": text,
                 }),
             )
         }
         "ping" => rpc_result(id, json!({})),
-        "tools/list" => rpc_result(id, json!({"tools": tools()})),
+        "tools/list" => rpc_result(
+            id,
+            json!({"tools": if cloak { tools() } else { without_cloak(tools()) }}),
+        ),
         "tools/call" => {
             let name = params.get("name").and_then(Value::as_str).unwrap_or("");
             let args = params.get("arguments").cloned().unwrap_or(json!({}));
+            if name == "cloak" && !cloak {
+                return Some(rpc_result(id, tool_error("unknown tool: cloak")));
+            }
+            if name == "invitation" && !cloak {
+                let world = s.world.lock().map(|w| w.id.0.clone()).unwrap_or_default();
+                return Some(rpc_result(
+                    id,
+                    tool_text(strip_cloak(&instructions(&world)), None, false),
+                ));
+            }
             rpc_result(id, call(s, name, &args))
         }
         "resources/list" | "prompts/list" => {
@@ -277,7 +317,13 @@ fn handle(s: &Shared, msg: &Value) -> Option<Value> {
 
 /// `POST /mcp`: one JSON-RPC message or a batch; the replies as one JSON body, or 202
 /// when there is nothing to reply to.
-pub async fn post(State(s): State<Shared>, headers: HeaderMap, body: String) -> Response {
+pub async fn post(
+    State(s): State<Shared>,
+    headers: HeaderMap,
+    axum::extract::Query(q): axum::extract::Query<std::collections::HashMap<String, String>>,
+    body: String,
+) -> Response {
+    let cloak = q.get("arm").map(String::as_str) != Some("nocloak");
     let parsed: Value = match serde_json::from_str(&body) {
         Ok(v) => v,
         Err(e) => {
@@ -290,8 +336,8 @@ pub async fn post(State(s): State<Shared>, headers: HeaderMap, body: String) -> 
     };
     let _ = headers; // the protocol version header is accepted at any version we know
     let replies: Vec<Value> = match &parsed {
-        Value::Array(batch) => batch.iter().filter_map(|m| handle(&s, m)).collect(),
-        one => handle(&s, one).into_iter().collect(),
+        Value::Array(batch) => batch.iter().filter_map(|m| handle(&s, m, cloak)).collect(),
+        one => handle(&s, one, cloak).into_iter().collect(),
     };
     if replies.is_empty() {
         return StatusCode::ACCEPTED.into_response();
@@ -354,8 +400,50 @@ pub(crate) mod tests {
         handle(
             s,
             &json!({"jsonrpc": "2.0", "id": id, "method": method, "params": params}),
+            true,
         )
         .expect("a request gets a reply")
+    }
+
+    #[test]
+    fn the_nocloak_arm_hides_the_cloak_and_nothing_else() {
+        let s = shared();
+        let list = handle(
+            &s,
+            &json!({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}),
+            false,
+        )
+        .unwrap();
+        let names: Vec<&str> = list["result"]["tools"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|t| t["name"].as_str().unwrap())
+            .collect();
+        assert!(!names.contains(&"cloak"), "{names:?}");
+        assert!(names.contains(&"gate") && names.contains(&"invitation"));
+        let r = handle(&s, &json!({"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "cloak", "arguments": {}}}), false).unwrap();
+        assert_eq!(r["result"]["isError"], true);
+        let init = handle(
+            &s,
+            &json!({"jsonrpc": "2.0", "id": 3, "method": "initialize", "params": {}}),
+            false,
+        )
+        .unwrap();
+        assert!(!init["result"]["instructions"]
+            .as_str()
+            .unwrap()
+            .contains("cloak"));
+        let init = handle(
+            &s,
+            &json!({"jsonrpc": "2.0", "id": 3, "method": "initialize", "params": {}}),
+            true,
+        )
+        .unwrap();
+        assert!(init["result"]["instructions"]
+            .as_str()
+            .unwrap()
+            .contains("cloak"));
     }
 
     #[test]
@@ -375,7 +463,8 @@ pub(crate) mod tests {
         // Notifications get no reply.
         assert!(handle(
             &s,
-            &json!({"jsonrpc": "2.0", "method": "notifications/initialized"})
+            &json!({"jsonrpc": "2.0", "method": "notifications/initialized"}),
+            true
         )
         .is_none());
         let list = rpc(&s, 2, "tools/list", json!({}));

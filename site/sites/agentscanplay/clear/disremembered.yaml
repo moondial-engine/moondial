@@ -85,6 +85,8 @@ ask_patterns:
   - '^what is the (?P<prop>[a-z ]+?) of (?P<entity>[a-z0-9 _-]+)\?$'
   # How many <noun> ... ?
   - '^how many (?P<noun>[a-z ]+?) (?P<rest>.+)\?$'
+  # What|Who is here?
+  - '^(what|who) is here\?$'
   # Where is <entity>?
   - '^where is (?P<entity>[a-z0-9 _-]+)\?$'
   # Who holds|owns|is <...>?
