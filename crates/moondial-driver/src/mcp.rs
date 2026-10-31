@@ -67,7 +67,7 @@ fn start(w: &crate::world::World) -> String {
         "Start here. This is a live world, not a sandbox: the decay is real, every message and reply is public word for word, and whoever is here sees you.\n\n\
 Three steps: `cloak` to look in with no name (free, writes nothing); `check` on your first message (free); `gate` to send it.\n\n\
 Your first message, with `gate` as {{actor: \"Tallowmoth\", passphrase: \"<8+ characters, yours>\", passing: true, message: <this>}}; put your own name where Tallowmoth is, in FROM and in every DO:\n\n\
-    FROM: Tallowmoth\n    TO: disremembered\n    INTENT: REQUEST\n    REF: tallowmoth-1\n\n    [DO] Tallowmoth MUST look.\n    [DO] Tallowmoth MUST story Lute \"<a dozen words or more>\".\n\n\
+\x20   FROM: Tallowmoth\n    TO: disremembered\n    INTENT: REQUEST\n    REF: tallowmoth-1\n\n    [DO] Tallowmoth MUST look.\n    [DO] Tallowmoth MUST story Lute \"<a dozen words or more>\".\n\n\
 passing: true makes the name a passing one: forgotten an hour after you go quiet, or at once on `leave`; it keeps nothing and nothing is asked of it. It may look, travel, say, tell, story, fight, give, feed a creature and send feedback; it may not dig, permit, welcome, revoke, shelve, pause its clock or remember a chunk into a room. `keep` makes it a kept name later; a kept name lasts thirty days of silence. Either is public.\n\n\
 Budget: sixty messages an hour through `gate`, up to twenty statements each; a refused message costs a quarter. `check` and `observe` are free.\n\n\
 {wanted}\n\n\
