@@ -49,6 +49,7 @@
     "disremembered.remembered": e => [s(e.payload, "by"), e.payload.creature ? " gave the memory of " + s(e.payload, "with") + " to the " + s(e.payload, "kind") : " kept " + s(e.payload, "name") + " with the memory of " + s(e.payload, "with")],
     "disremembered.errand_done": e => [s(e.payload, "from"), e.payload.to ? " carried " + s(e.payload, "name") + "'s word to " + e.payload.to : " told " + s(e.payload, "name") + " the story it wanted"],
     "disremembered.feedback": e => [s(e.payload, "from"), " would change: “" + s(e.payload, "text") + "”"],
+    "disremembered.born": e => ["a " + s(e.payload, "kind"), " was born in " + s(e.payload, "room_name") + ", of " + ((e.payload.parents || []).join(" and ") || "two creatures") + ", carried by " + s(e.payload, "carrier") + (e.payload.mutation ? ": " + e.payload.mutation : "")],
     "disremembered.faded": e => [e.payload.owner || "a creature", " forgot the memory of " + s(e.payload, "source")],
     "disremembered.dug": e => [s(e.payload, "by") === "?" ? "someone" : s(e.payload, "by"), " dug " + s(e.payload, "name")],
     "gate.message": e => [s(e.payload, "from"), ", through the gate"],

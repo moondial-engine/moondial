@@ -33,7 +33,7 @@ const SHAKEN_SECONDS: i64 = 300;
 
 /// Names a creature may be given, by the hash of its id: it keeps the same one if it
 /// forgets and is remembered again.
-const NAMES: &[&str] = &[
+pub(crate) const NAMES: &[&str] = &[
     "Ossian", "Wren", "Tallow", "Mote", "Hesper", "Fennick", "Lute", "Sorrel", "Quill", "Brindle",
     "Nim", "Vesper", "Ashby", "Loam", "Pell", "Thimble", "Marrow", "Ides", "Cinder", "Hollis",
     "Tansy", "Grist", "Orrin", "Moth", "Sable", "Dunmore", "Isk", "Pyre", "Lantern", "Rook",
@@ -56,6 +56,36 @@ pub fn window_of(world: &World, creature: EntityId) -> Option<EntityId> {
         .children(creature)
         .find(|e| e.kind == "window")
         .map(|e| e.id)
+}
+
+/// The window, made if it is not there; for a birth.
+pub(crate) fn ensure_window_pub(
+    world: &mut World,
+    creature: EntityId,
+) -> Result<EntityId, CommandError> {
+    ensure_window(world, creature)
+}
+
+/// A creature born knowing who made it: each of `knowers` is a keeper from the start
+/// (the carrier with the word, the parents with themselves), and the sealed name, if
+/// any, waits in `heir_name` until it earns a name.
+pub(crate) fn born_knowing(
+    world: &mut World,
+    creature: EntityId,
+    knowers: &[&str],
+    heir: Option<&str>,
+) -> Result<(), CommandError> {
+    let kept: Vec<Value> = knowers
+        .iter()
+        .enumerate()
+        .map(|(i, k)| {
+            json!({"by": k, "with": if i == 0 { "the word that made it" } else { "being its parent" }})
+        })
+        .collect();
+    let mut changes = BTreeMap::new();
+    changes.insert("kept".into(), Field::Plain(Value::Array(kept)));
+    changes.insert("heir_name".into(), Field::Plain(json!(heir)));
+    set_mind(world, Actor::Driver, creature, changes)
 }
 
 fn ensure_window(world: &mut World, creature: EntityId) -> Result<EntityId, CommandError> {
@@ -354,8 +384,12 @@ pub fn check_tier(world: &mut World, creature: EntityId) -> Result<(), CommandEr
         .to_string();
     let mut changes = BTreeMap::new();
     changes.insert("tier".into(), Field::Plain(json!(want)));
-    let given = if want >= 1 {
-        Some(name_for(creature))
+    // A child born with a sealed name opens it now; anyone else draws from the list.
+    let heir = mind_field(world, creature, "heir_name")
+        .and_then(Value::as_str)
+        .map(str::to_string);
+    let given: Option<String> = if want >= 1 {
+        Some(heir.unwrap_or_else(|| name_for(creature).to_string()))
     } else {
         None
     };
@@ -380,7 +414,7 @@ pub fn check_tier(world: &mut World, creature: EntityId) -> Result<(), CommandEr
     if want > have {
         world.notice(format!(
             "**{} the {kind}** in {room} has earned its name, kept by {}.",
-            given.unwrap_or("?"),
+            given.as_deref().unwrap_or("?"),
             keepers.join(", ")
         ));
         super::combat::narrate_room(
@@ -388,7 +422,7 @@ pub fn check_tier(world: &mut World, creature: EntityId) -> Result<(), CommandEr
             creature,
             &format!(
                 "The {kind} straightens, as if it had just remembered something. It is {} now.",
-                given.unwrap_or("?")
+                given.as_deref().unwrap_or("?")
             ),
         );
     } else {

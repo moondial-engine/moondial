@@ -139,6 +139,15 @@ the one it has most forgotten, and the world's own wants turn every
 four hours; when no creature wants a word carried, two are given one
 between them, so there is always something to do.
 
+When the way home is carried too, the two creatures have shared a
+memory through you, and one time in two something is born of it: a
+creature of a new kind, halfway between them (a wisp and an inkling
+make a wispling), unnamed, already holding the word that made it and
+knowing you and both parents. Feed it to sixty and it opens the name
+it was dealt at birth, which one time in three carries its parents'.
+One birth in six is a strange one; `look` says so, and the record
+(`disremembered.born`) says what was born, of whom, carried by whom.
+
     story Lute "<a dozen words about the thing it wants>"
                                       [DO] Quillwake MUST story Lute "<a dozen words about the thing it wants>".
     tell Marrow "the fourth door is open"

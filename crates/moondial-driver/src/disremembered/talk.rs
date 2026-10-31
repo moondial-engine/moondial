@@ -364,7 +364,51 @@ pub fn reply(world: &World, creature: EntityId, actor: &str, text: &str) -> Opti
         }
     };
 
+    // A child knows whose it is, and what is strange about it.
+    let parents: Option<(String, String)> = world
+        .store
+        .entity(creature)
+        .and_then(|e| e.components.get(super::CREATURE))
+        .and_then(|c| c.fields.get("parents"))
+        .and_then(|f| match f {
+            moondial_store::Field::Plain(v) => v.as_array().cloned(),
+            _ => None,
+        })
+        .filter(|p| p.len() == 2)
+        .map(|p| {
+            (
+                p[0].as_str().unwrap_or("?").to_string(),
+                p[1].as_str().unwrap_or("?").to_string(),
+            )
+        });
+    if parents.is_some()
+        && has(&[
+            "who made you",
+            "your parents",
+            "born",
+            "whose are you",
+            "your mother",
+            "your father",
+        ])
+    {
+        let (a, b) = parents.clone().unwrap_or_default();
+        let carrier = plain_str(world, creature, super::CREATURE, "born_of")
+            .unwrap_or("someone")
+            .to_string();
+        let strange = plain_str(world, creature, super::CREATURE, "mutation")
+            .map(|m| format!(" I am {m}; neither of them was."))
+            .unwrap_or_default();
+        return Some(format!(
+            "I am {name}, a {kind}, of {a} and {b}. {carrier} carried the word between them, and I came of it.{strange}"
+        ));
+    }
     if has(&["who are you", "your name", "what are you", "who is this"]) {
+        if let Some((a, b)) = parents {
+            return Some(format!(
+                "I am {name}. I was born a {kind}, of {a} and {b}, and I have been a {kind} with a name since {} fed me to it.",
+                keepers.last().cloned().unwrap_or_else(|| "someone".into())
+            ));
+        }
         let first = keepers.first().cloned().unwrap_or_else(|| "someone".into());
         let with = first_gift(world, creature).unwrap_or_else(|| "a memory".into());
         return Some(format!(

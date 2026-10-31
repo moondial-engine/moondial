@@ -27,6 +27,18 @@ pub(crate) fn line_for(e: &moondial_log::Event) -> String {
             Some(t) => format!("{} carried {}'s word to {t}", s("from"), s("name")),
             None => format!("{} told {} the story it wanted", s("from"), s("name")),
         },
+        "disremembered.born" => format!(
+            "a {} was born in {}, of {} and {}, carried by {}{}",
+            s("kind"),
+            s("room_name"),
+            p["parents"][0].as_str().unwrap_or("?"),
+            p["parents"][1].as_str().unwrap_or("?"),
+            s("carrier"),
+            p["mutation"]
+                .as_str()
+                .map(|m| format!(": {m}"))
+                .unwrap_or_default()
+        ),
         "disremembered.faded" => match p["owner"].as_str() {
             Some(o) => format!("{o} forgot the memory of {}", s("source")),
             None => format!("a creature forgot the memory of {}", s("source")),
@@ -326,7 +338,7 @@ pub fn register(world: &mut World) {
                 json!({"creature": creature.0, "kind": kind, "room": room.0, "named": super::mind::name(w, creature), "moved": true}),
             );
             super::combat::narrate_room(w, creature, &format!("Something has come in: {shown}."));
-            if super::combat::def_by_key(&kind).is_some_and(|d| d.aggressive) {
+            if super::combat::is_aggressive(w, creature) {
                 super::combat::notice_everyone(w, room).map_err(internal)?;
             }
             w.notice(format!("**{shown}** was moved to {rname}."));

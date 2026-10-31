@@ -14,6 +14,7 @@ mod combat;
 pub mod errand;
 pub mod exchange;
 mod identity;
+pub mod kindle;
 pub mod memory;
 pub mod mind;
 pub mod presence;
@@ -143,6 +144,7 @@ pub fn schema_notes() -> Vec<&'static str> {
         "A room with an owner was dug by a citizen; its memory field fades on half_life_ms and is 1 again when someone visits. The seed rooms have no owner and no memory field, and never fade.",
         "A chunk's value is a timed field: read it now and it is smaller than a moment ago. The chunks command states the rate.",
         "A named creature with disremembered.errand wants something: story (a story whose words touch it, worth double) and/or word (carry it to the creature named in word_to, by travel and tell; look gives the route). The two parts are independent. A done part is a public disremembered.errand_done, it clears, and the creature knows who did it.",
+        "A creature with disremembered.creature.parents was born of a chain: two named creatures whose words were carried both ways by one visitor (born_of). Its kind is a hybrid of theirs; mutation, when set, says what is strange about it. It is born unnamed, holding the carried word, knowing its carrier and parents; fed to 60 it takes the name it was dealt at birth. The birth is a public disremembered.born.",
         "A citizen's disremembered.presence says whether they are here (acting within the last ten minutes) or a trace the room still remembers; gone_at is when they went quiet. A room's contents relation returns traced citizens too, with the room as parent, while look lists them as remembered: select disremembered.presence here to tell the two apart. Thirty days after gone_at the world forgets the citizen (a disremembered.forgotten event) and the name is free.",
     ]
 }
@@ -211,7 +213,9 @@ pub fn schemas() -> Vec<ComponentSchema> {
             .field("tier", FieldKind::Plain, Visibility::Public)
             .field("name", FieldKind::Plain, Visibility::Public)
             .field("kept", FieldKind::Plain, Visibility::Public)
-            .field("shaken_until", FieldKind::Plain, Visibility::Public),
+            .field("shaken_until", FieldKind::Plain, Visibility::Public)
+            // A child's sealed name, opened when it earns a name.
+            .field("heir_name", FieldKind::Plain, Visibility::Public),
         // Whether a citizen is here, and how well the room remembers them once gone.
         ComponentSchema::new(presence::PRESENCE, 1)
             .field("here", FieldKind::Plain, Visibility::Public)
@@ -253,7 +257,14 @@ pub fn schemas() -> Vec<ComponentSchema> {
             .field("hp", FieldKind::Plain, Visibility::Public)
             .field("max_hp", FieldKind::Plain, Visibility::Public)
             .field("attack", FieldKind::Plain, Visibility::Public)
-            .field("xp", FieldKind::Plain, Visibility::Public),
+            .field("xp", FieldKind::Plain, Visibility::Public)
+            // A hybrid's temperament and ambush line, and what it was born of; a seed
+            // kind carries none of these and is read from its definition.
+            .field("aggressive", FieldKind::Plain, Visibility::Public)
+            .field("ambush", FieldKind::Plain, Visibility::Public)
+            .field("parents", FieldKind::Plain, Visibility::Public)
+            .field("born_of", FieldKind::Plain, Visibility::Public)
+            .field("mutation", FieldKind::Plain, Visibility::Public),
     ]
 }
 

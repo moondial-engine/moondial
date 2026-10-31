@@ -201,6 +201,35 @@ fn creature_def(world: &World, creature: EntityId) -> Option<&'static CreatureDe
     plain_str(world, creature, CREATURE, "name").and_then(def)
 }
 
+/// Whether a creature ambushes: its own field when it has one (a hybrid, or a mutant
+/// that turned), else its kind's.
+pub(crate) fn is_aggressive(world: &World, creature: EntityId) -> bool {
+    match world
+        .store
+        .entity(creature)
+        .and_then(|e| e.components.get(CREATURE))
+        .and_then(|c| c.fields.get("aggressive"))
+    {
+        Some(Field::Plain(Value::Bool(b))) => *b,
+        _ => creature_def(world, creature).is_some_and(|d| d.aggressive),
+    }
+}
+
+/// How a creature announces an ambush: its own line, else its kind's, else a plain one.
+fn ambush_line(world: &World, creature: EntityId) -> String {
+    match world
+        .store
+        .entity(creature)
+        .and_then(|e| e.components.get(CREATURE))
+        .and_then(|c| c.fields.get("ambush"))
+    {
+        Some(Field::Plain(Value::String(s))) => s.clone(),
+        _ => creature_def(world, creature)
+            .map(|d| d.ambush.to_string())
+            .unwrap_or_else(|| "comes at you.".to_string()),
+    }
+}
+
 fn def(key: &str) -> Option<&'static CreatureDef> {
     CREATURES.iter().find(|c| c.key == key)
 }
@@ -370,7 +399,7 @@ pub fn on_arrival(
 ) -> Result<(), String> {
     let hunters: Vec<EntityId> = creatures_in(world, room)
         .into_iter()
-        .filter(|(id, _, _, _)| creature_def(world, *id).is_some_and(|d| d.aggressive))
+        .filter(|(id, _, _, _)| is_aggressive(world, *id))
         .map(|c| c.0)
         .collect();
     let due = world
@@ -580,7 +609,11 @@ pub fn register(world: &mut World, curves: Curves) {
             if !same_room || w.store.entity(creature).is_none() || engaged_with(w, citizen).is_some() || !super::presence::is_here(w, citizen) {
                 return Ok(());
             }
-            let Some(d) = creature_def(w, creature) else { return Ok(()) };
+            if !is_aggressive(w, creature) {
+                return Ok(());
+            }
+            let dname = plain_str(w, creature, CREATURE, "name").unwrap_or("creature").to_string();
+            let dambush = ambush_line(w, creature);
             if super::mind::shaken(w, creature) || super::mind::keepers(w, creature).iter().any(|k| k == &actor) {
                 return Ok(());
             }
@@ -590,12 +623,12 @@ pub fn register(world: &mut World, curves: Curves) {
                 let f = super::find_citizen(w, &actor).ok_or("citizen vanished")?;
                 let lost = die(w, &actor, &f).map_err(|e| e.to_string())?;
                 narrate(w, &actor, match lost {
-                    Some(c) => format!("The {} {} It hits you for {taken:.0}. You go down. Concussion: you have lost {c}. You wake at the Threshold.", d.name, d.ambush),
-                    None => format!("The {} {} It hits you for {taken:.0}. You go down, and wake at the Threshold with everything you had.", d.name, d.ambush),
+                    Some(c) => format!("The {dname} {dambush} It hits you for {taken:.0}. You go down. Concussion: you have lost {c}. You wake at the Threshold."),
+                    None => format!("The {dname} {dambush} It hits you for {taken:.0}. You go down, and wake at the Threshold with everything you had."),
                 });
                 return Ok(());
             }
-            narrate(w, &actor, format!("The {} {} It hits you for {taken:.0}. You have {:.0}/{:.0}. Attack it, or retreat.", d.name, d.ambush, hp(w, citizen), super::MAX_HP));
+            narrate(w, &actor, format!("The {dname} {dambush} It hits you for {taken:.0}. You have {:.0}/{:.0}. Attack it, or retreat.", hp(w, citizen), super::MAX_HP));
             schedule_strike(w, &actor, citizen, creature)
         }),
     );

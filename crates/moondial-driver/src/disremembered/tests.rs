@@ -3220,3 +3220,208 @@ fn a_stale_compass_exit_between_seed_rooms_is_dropped_on_boot() {
     assert!(!exits.contains_key("east"), "the stale east is gone");
     assert_eq!(exits.get("south"), Some(&thr));
 }
+
+#[test]
+fn a_chain_closing_can_kindle_a_hybrid_that_knows_its_makers_and_opens_its_sealed_name() {
+    use super::kindle;
+    // The rule for kinds: the sender's first syllable, the receiver's last; like breeds
+    // true; the table has the better words.
+    assert_eq!(kindle::hybrid_kind("wisp", "wisp"), "wisp");
+    assert_eq!(kindle::hybrid_kind("wisp", "inkling"), "wispling");
+    assert_eq!(kindle::hybrid_kind("inkling", "wisp"), "inkwisp");
+    assert_eq!(kindle::hybrid_kind("ragpicker", "wisp"), "ragwisp");
+    assert_eq!(kindle::hybrid_kind("hourhand", "keeper"), "hourper");
+    assert_eq!(kindle::hybrid_kind("wispling", "ragpicker"), "wiser");
+    // Names that carry the parents': a blend either way, or one with a diminutive.
+    assert_eq!(kindle::heir_name("Lute", "Marrow", 0), "Lurow");
+    assert_eq!(kindle::heir_name("Lute", "Marrow", 1), "Marte");
+    assert_eq!(kindle::heir_name("Lute", "Marrow", 2), "Lutekin");
+    assert_eq!(kindle::heir_name("Lute", "Marrow", 7), "Marrowling");
+
+    let t0 = Timestamp(1_000_000);
+    let mut w = open(tempfile::tempdir().unwrap().path(), t0);
+    login(&mut w, "dave", "test", PASS).unwrap();
+    login(&mut w, "tyler", "test", PASS).unwrap();
+    // A named wisp in the Fogbank and a named ragpicker in the midden, as in the
+    // errand test; three rooms apart by the route through the Fogbank.
+    for who in ["dave", "tyler"] {
+        ok(&mut w, who, "travel", json!(["east"]));
+    }
+    let fog = rooms::room_by_key(&w, "fogbank").unwrap();
+    let wisp = combat::creatures_in(&w, fog)[0].0;
+    let c = admin(&mut w, "tyler", "earn", json!(["hollow", 70, 0.5]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    ok(
+        &mut w,
+        "tyler",
+        "remember",
+        json!([c, format!("wisp-{}", wisp.0)]),
+    );
+    let wisp_name = mind::name(&w, wisp).unwrap();
+    for who in ["dave", "tyler"] {
+        ok(&mut w, who, "travel", json!(["south"]));
+    }
+    let midden = rooms::room_by_key(&w, "midden").unwrap();
+    let rag = combat::creatures_in(&w, midden)[0].0;
+    let c = admin(&mut w, "tyler", "earn", json!(["hollow", 70, 0.5]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    ok(&mut w, "tyler", "remember", json!([c, "ragpicker"]));
+    let rag_name = mind::name(&w, rag).unwrap();
+    // The chain: the ragpicker's word to the wisp, the wisp's way home to the ragpicker.
+    admin(&mut w, "tyler", "errand", json!([&wisp_name, ""]));
+    admin(
+        &mut w,
+        "tyler",
+        "errand",
+        json!([&rag_name, "the fourth door is open", &wisp_name]),
+    );
+    ok(&mut w, "dave", "travel", json!(["north"]));
+    ok(
+        &mut w,
+        "dave",
+        "tell",
+        json!([&wisp_name, "the fourth door is open"]),
+    );
+    let back = errand::of(&w, wisp).unwrap().word.unwrap();
+    ok(&mut w, "dave", "travel", json!(["south"]));
+    // Dice that kindle: the first roll on the way home is the birth roll.
+    let mut seed = 1u64;
+    loop {
+        w.seed(seed);
+        if w.roll(kindle::BIRTH_IN) == 0 {
+            w.seed(seed);
+            break;
+        }
+        seed += 1;
+    }
+    let out = ok(&mut w, "dave", "tell", json!([&rag_name, &back]));
+    assert!(
+        out.summary
+            .contains("Something has come of it: a ragwisp, in The Midden. It knows your name."),
+        "{}",
+        out.summary
+    );
+    let child = w
+        .store
+        .entities()
+        .find(|e| e.kind == "creature" && plain_str(&w, e.id, CREATURE, "name") == Some("ragwisp"))
+        .map(|e| e.id)
+        .expect("a child");
+    // Halfway between the two, rounded toward the sender: the midden, one room away.
+    assert_eq!(w.store.entity(child).unwrap().parent, Some(midden));
+    // Of the two, carried by the one; the record says so, publicly, in prose.
+    assert_eq!(plain_str(&w, child, CREATURE, "born_of"), Some("dave"));
+    assert_eq!(
+        mind::keepers(&w, child),
+        vec!["dave", &rag_name, &wisp_name]
+    );
+    assert!(
+        mind::level(&w, child) > errand::WORD_XP * 0.9,
+        "born holding the word that made it"
+    );
+    let born: Vec<_> = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == kindle::BORN)
+        .collect();
+    assert_eq!(born.len(), 1);
+    assert_eq!(born[0].payload["parents"], json!([rag_name, wisp_name]));
+    assert!(crate::observe::visible(
+        &w,
+        &Viewer::actor("someone-else"),
+        w.now(),
+        &born[0]
+    ));
+    assert!(
+        system::line_for(&born[0]).starts_with(&format!(
+            "a ragwisp was born in The Midden, of {rag_name} and {wisp_name}, carried by dave"
+        )),
+        "{}",
+        system::line_for(&born[0])
+    );
+    let look = ok(&mut w, "dave", "look", json!([]));
+    assert!(
+        look.summary
+            .contains(&format!("born of {rag_name} and {wisp_name}")),
+        "{}",
+        look.summary
+    );
+    // Fed to sixty, it opens its sealed name: the parents' if it was dealt one, else
+    // the list's; and it says whose it is.
+    let heir = w
+        .store
+        .entity(child)
+        .and_then(|e| e.components.get(mind::MIND))
+        .and_then(|c| c.fields.get("heir_name"))
+        .and_then(|f| match f {
+            Field::Plain(v) => v.as_str().map(str::to_string),
+            _ => None,
+        });
+    let c = admin(&mut w, "tyler", "earn", json!(["hollow", 70, 0.5]));
+    let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+    ok(&mut w, "tyler", "remember", json!([c, "ragwisp"]));
+    let given = mind::name(&w, child).expect("named at sixty");
+    match &heir {
+        Some(h) => assert_eq!(&given, h, "the sealed name opens"),
+        None => assert!(mind::NAMES.contains(&given.as_str()), "{given}"),
+    }
+    let out = ok(
+        &mut w,
+        "dave",
+        "say",
+        json!([format!("{given}, who made you?")]),
+    );
+    assert!(
+        out.summary.contains(&format!(
+            "of {rag_name} and {wisp_name}. dave carried the word"
+        )),
+        "{}",
+        out.summary
+    );
+    // Births, run until one is strange: a mutant is on the record and in look; the
+    // cap holds the count.
+    let mut strange = None;
+    let mut seed = 100u64;
+    while strange.is_none() && seed < 5000 {
+        w.seed(seed);
+        seed += 1;
+        let Some(id) = kindle::try_birth(&mut w, "tyler", rag, wisp, "a test word").unwrap() else {
+            continue;
+        };
+        if plain_str(&w, id, CREATURE, "mutation").is_some() {
+            strange = Some(id);
+        }
+    }
+    let strange = strange.expect("one birth in six is a mutant");
+    let m = plain_str(&w, strange, CREATURE, "mutation")
+        .unwrap()
+        .to_string();
+    let look = ok(&mut w, "tyler", "look", json!([]));
+    let room = w.store.entity(strange).unwrap().parent.unwrap();
+    if room == midden {
+        assert!(
+            look.summary.contains("a strange one"),
+            "{m}: {}",
+            look.summary
+        );
+    }
+    let children = w
+        .store
+        .entities()
+        .filter(|e| e.kind == "creature" && plain_str(&w, e.id, CREATURE, "born_of").is_some())
+        .count();
+    assert!(children <= kindle::MAX_CHILDREN, "{children}");
+    // And past the cap, none.
+    for s in 5000..5200u64 {
+        w.seed(s);
+        kindle::try_birth(&mut w, "tyler", rag, wisp, "a test word").unwrap();
+    }
+    let children = w
+        .store
+        .entities()
+        .filter(|e| e.kind == "creature" && plain_str(&w, e.id, CREATURE, "born_of").is_some())
+        .count();
+    assert_eq!(children, kindle::MAX_CHILDREN);
+}

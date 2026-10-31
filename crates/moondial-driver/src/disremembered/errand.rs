@@ -454,8 +454,28 @@ pub fn carried_word(
             chunk.0
         ),
     );
+    // The chain closed: the two have shared a memory through this visitor. One time in
+    // two, something is born of it halfway between them. On the way home, the one
+    // hearing this word sent the first; the one who sent it received the first.
+    let born = if homeward {
+        super::kindle::try_birth(world, actor, receiver, sender, &phrase)?
+    } else {
+        None
+    };
+    let born_phrase = born
+        .map(|c| {
+            let kind = super::plain_str(world, c, super::CREATURE, "name").unwrap_or("something");
+            let room = world
+                .store
+                .entity(c)
+                .and_then(|e| e.parent)
+                .and_then(|r| super::plain_str(world, r, super::ROOM, "name"))
+                .unwrap_or("somewhere");
+            format!(" Something has come of it: a {kind}, in {room}. It knows your name.")
+        })
+        .unwrap_or_default();
     Ok(Some(format!(
-        "So {sender_name} says \"{phrase}\". I have it. {actor}, I will know you by that.{reply_phrase}"
+        "So {sender_name} says \"{phrase}\". I have it. {actor}, I will know you by that.{reply_phrase}{born_phrase}"
     )))
 }
 

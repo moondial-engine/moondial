@@ -389,7 +389,7 @@ pub fn look_query(room: EntityId) -> Value {
         "relations": {
             "contents": {
                 "kinds": ["citizen", "creature"],
-                "select": {super::CITIZEN: ["name"], super::CREATURE: ["name", "hp", "max_hp"], super::mind::MIND: ["name", "tier"]}
+                "select": {super::CITIZEN: ["name"], super::CREATURE: ["name", "hp", "max_hp", "parents", "born_of", "mutation"], super::mind::MIND: ["name", "tier"]}
             }
         }
     })
@@ -441,6 +441,11 @@ pub fn describe(
             let id = EntityId(n["id"].as_u64().unwrap_or(0));
             let mut v =
                 json!({"id": n["id"], "name": c["name"], "hp": c["hp"], "max_hp": c["max_hp"]});
+            if c["parents"].is_array() {
+                v["parents"] = c["parents"].clone();
+                v["born_of"] = c["born_of"].clone();
+                v["mutation"] = c["mutation"].clone();
+            }
             if n["components"][super::mind::MIND].is_object() {
                 v["mind"] = super::mind::summary(world, id);
             }
@@ -512,7 +517,21 @@ pub fn describe(
                     Some(l) if l >= 0.5 => format!(", holding {l:.0}"),
                     _ => String::new(),
                 };
-                format!("{who} ({}/{}{holds})", c["hp"], c["max_hp"])
+                // A child says whose it is; a mutant that it is a strange one.
+                let born = match c["parents"].as_array() {
+                    Some(p) if p.len() == 2 => format!(
+                        ", born of {} and {}{}",
+                        p[0].as_str().unwrap_or("?"),
+                        p[1].as_str().unwrap_or("?"),
+                        if c["mutation"].is_string() {
+                            ", a strange one"
+                        } else {
+                            ""
+                        }
+                    ),
+                    _ => String::new(),
+                };
+                format!("{who} ({}/{}{holds}{born})", c["hp"], c["max_hp"])
             })
             .collect();
         text.push_str(&format!(" Here: {}.", list.join(", ")));

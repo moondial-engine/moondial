@@ -75,6 +75,10 @@ figures on the canvas that answer to a click.
 - Event visibility declared on the event; subscription deltas.
 - A halo for named creatures in the tiles mod; a "speaks" mark.
 - "Last words" when a creature forgets its name.
+- Kindling round two (hybrids shipped 2026-10-31): aging (an age on the record, epithets
+  by age, name retirement, a room that remembers a creature for a day after it goes);
+  revenants from forgotten citizens; spawn by memory density with a population cap;
+  a child's sprite as its own frame, not a parent's.
 - An operator note that the operator's name is public in the record.
 - Dug room keys in the schema list (they are in the roots' values already; a note).
 
