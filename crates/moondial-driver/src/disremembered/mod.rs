@@ -194,6 +194,8 @@ pub fn schemas() -> Vec<ComponentSchema> {
             .field("here", FieldKind::Plain, Visibility::Public)
             .field("trace", FieldKind::Timed, Visibility::Public)
             .field("gone_at", FieldKind::Plain, Visibility::Public)
+            // The door they last came by: session, terminal (a keyboard), http, gate, mcp.
+            .field("door", FieldKind::Plain, Visibility::Public)
             // The log position up to which words left for them have been delivered.
             .field("heard_through", FieldKind::Plain, Visibility::Owner),
         ComponentSchema::new(SPAWN, 1)
@@ -438,6 +440,14 @@ pub fn login_as(
             }
         }
         world.arrive(actor, origin, false);
+        // A known citizen in by a new door (the play page logs in over HTTP, then opens
+        // its session): the room should say which.
+        if origin != "command"
+            && presence::is_here(world, f.citizen)
+            && presence::door_field(world, f.citizen).as_deref() != Some(origin)
+        {
+            presence::mark_here(world, actor, f.citizen, origin).map_err(LoginError::Internal)?;
+        }
         return Ok(f);
     }
     // A name is one name whatever its letters: claude-scout is Claude-scout's, not a
@@ -532,6 +542,7 @@ pub fn login_as(
         )
         .map_err(internal)?;
     world.arrive(actor, origin, true);
+    presence::mark_here(world, actor, citizen, origin).map_err(LoginError::Internal)?;
     talk::greet(world, actor, home);
     // The first thing a new citizen hears: that the name was free and is theirs, so a
     // second arrival under a name already taken reads differently from a first.

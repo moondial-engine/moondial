@@ -178,10 +178,54 @@ pub fn trace(world: &World, citizen: EntityId) -> Option<f64> {
         .and_then(|v| v.as_f64())
 }
 
+/// The door the presence component records, if any.
+pub fn door_field(world: &World, citizen: EntityId) -> Option<String> {
+    match world
+        .store
+        .entity(citizen)
+        .and_then(|e| e.components.get(PRESENCE))
+        .and_then(|c| c.fields.get("door"))
+    {
+        Some(Field::Plain(serde_json::Value::String(d))) => Some(d.clone()),
+        _ => None,
+    }
+}
+
+/// A citizen is here, by a door: written at a first arrival so the room can say so.
+pub fn mark_here(
+    world: &mut World,
+    actor: &str,
+    citizen: EntityId,
+    door: &str,
+) -> Result<(), String> {
+    set_with_door(world, actor, citizen, true, Some(door))
+}
+
 fn set(world: &mut World, actor: &str, citizen: EntityId, here: bool) -> Result<(), String> {
+    let door = world.door_of(actor).map(str::to_string);
+    set_with_door(world, actor, citizen, here, door.as_deref())
+}
+
+fn set_with_door(
+    world: &mut World,
+    actor: &str,
+    citizen: EntityId,
+    here: bool,
+    door: Option<&str>,
+) -> Result<(), String> {
     let now = world.now();
-    let mut fields = BTreeMap::new();
+    // Keep what else the component holds (the inbox cursor); a ComponentSet replaces it.
+    let mut fields: BTreeMap<String, Field> = world
+        .store
+        .entity(citizen)
+        .and_then(|e| e.components.get(PRESENCE))
+        .map(|c| c.fields.clone())
+        .unwrap_or_default();
     fields.insert("here".into(), Field::Plain(json!(here)));
+    fields.insert(
+        "door".into(),
+        Field::Plain(door.map(|d| json!(d)).unwrap_or(serde_json::Value::Null)),
+    );
     if here {
         fields.insert(
             "trace".into(),
@@ -298,7 +342,17 @@ pub fn describe_citizen(world: &World, citizen: EntityId, name: &str) -> String 
         notes.push("passing".to_string());
     }
     if is_here(world, citizen) {
-        if let Some(label) = world.door_of(name).and_then(World::door_label) {
+        let field = match world
+            .store
+            .entity(citizen)
+            .and_then(|e| e.components.get(PRESENCE))
+            .and_then(|c| c.fields.get("door"))
+        {
+            Some(Field::Plain(serde_json::Value::String(d))) => Some(d.clone()),
+            _ => None,
+        };
+        let door = field.or_else(|| world.door_of(name).map(str::to_string));
+        if let Some(label) = door.as_deref().and_then(World::door_label) {
             notes.push(label.to_string());
         }
     }

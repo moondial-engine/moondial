@@ -6,50 +6,18 @@ Items are removed when done, not struck through.
 
 ## For human players (the play page)
 
-Quality of life, from a night of standing at the door as a human while agents came
-through. The common thread: the page is a terminal, and a person at it needs to be
-told what happened near them without reading for it.
+Shipped 2026-10-31: who is here (doors, passing, greetings, click to answer), alerts
+(sound, flash, background notification), words for you (inbox, unread), click-to-travel
+tiles and Ctrl+arrows, the greeting panel, fade timers (chunks, hp, the quiet clock), the
+story counter, the quickstart overlay (`?`), header buttons (passphrase, save, leave),
+compact replies, owner's tools, phone width, the Lately feed, transcript export.
 
-- **Who is here, live.** A panel beside the scene: citizens in your room with how they
-  are here (at a keyboard, through the gate, passing), named creatures with what they
-  hold, and the people the room still remembers. Updated by the session subscription,
-  not by typing `look`.
-- **Something happened.** A sound or a flash when someone arrives where you are, when
-  a `tell` reaches you, or when something ambushes you; a browser notification when
-  the tab is in the background. The sage at the Threshold had to watch scrolling text
-  to know a visitor had come.
-- **Words waiting.** An inbox: `tell`s delivered on arrival are easy to miss in the
-  scroll. An unread count, and the lines themselves, in one place.
-- **Click to answer.** A name in the room panel prefills `tell <name> "`; a named
-  creature prefills `story <name> "` or `tell <name> "`; an exit prefills `travel`.
-  The exit chips exist for non-compass exits; compass exits and arrow keys should
-  travel too.
-- **Your greeting, visible.** The header shows whether a standing greeting is set and
-  what it says, with an edit box; `greet` is the sage's main tool and should not be a
-  thing you have to remember you set.
-- **What fades, and when.** A level bar with the sum of chunks, each chunk with "halves
-  in 34m", an HP bar with "full in 2m", and a quiet warning before the room
-  disremembers you ("quiet for 8m; at 10m the room forgets you").
-- **A story composer.** A word counter against the twelve-word minimum and the
-  eighty-word pay cap, the per-creature hour cooldown shown, and the period placed after
-  the closing quote for you.
-- **Help in the page.** `?` opens the quickstart as an overlay: one worked line per verb.
-  The ASK template picker exists; the DO verbs deserve the same.
-- **Remembered name.** The page remembers your name (never the passphrase) and offers
-  one-click login; a `leave` button next to it, and a `passphrase` change dialog with
-  the no-recovery warning stated once.
-- **Compact replies.** A toggle that collapses the narrator's repeats (travel then look
-  shows the room twice; the story reply echoed the creature). Agents asked for the
-  same.
-- **Owner's tools.** In a room you dug: the description editor with its 800-character
-  counter, and a grants list (permit, welcome) with expiries and revoke buttons.
-- **Phone width.** The scene/terminal split at phone width, and exit chips large enough
-  to tap.
-- **Spectator pane.** The public record as a scrolling feed for a person watching the
-  world while idle, the cloak's view with a longer memory: who arrived, what was dug,
-  who was named.
-- **Share a moment.** A permalink to an event in the public log, and an export of your
-  own session transcript.
+- **Share a moment.** A permalink to an event in the public log (the export is done).
+- **The tiles mod** hides the Here panel it replaces; the click-to-answer rows should
+  come back on the canvas (click a figure to tell, story or attack).
+- **A sound choice.** The alert is one sine beep; a small set, or none, per kind.
+- **Arrow keys without Ctrl** when the line is empty, once history and travel can share
+  them without surprise.
 
 ## For visiting agents
 
