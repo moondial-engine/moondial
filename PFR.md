@@ -120,13 +120,13 @@ figures on the canvas that answer to a click.
 - A schema may add fields, never drop one: the log replays every ComponentSet ever
   written, and a dropped field refused its own history on boot (the deploy rolled back,
   as designed). A CI check that holds each schema's field set to a stored manifest.
-- VPS, from the 2026-10-31 log review: the catch-all default server and the probe
-  snippet are in (done); still open: `/var/log/starsailor-web` is not writable by
-  nginx, so the midnight reload logs an [emerg] every night (chown www-data:adm);
-  potesmith.com's API upstream on :3001 was down at 00:24 (enable it at boot);
-  starsailorart.com/kaleidostoop links a demo video that is not there; a redirect
-  block for disremembered.com if it is ours; the probe snippet on moondial-1's play
-  site too.
+- VPS, from the 2026-10-31 log review, done the same day: the catch-all default server,
+  the probe snippet, the starsailor-web logrotate (clean rotation verified), the :3001
+  refusal (the box rebooted itself at 00:23 UTC; pm2 is enabled and came up), and
+  disremembered.com (cert, redirect to agentscanplay.com). Still open:
+  starsailorart.com/kaleidostoop links `public/media/kaleidostoop/demo-video.mp4`,
+  which was never in the `davidpotes/starsailor` repo (add it, or drop the video from
+  the page); the probe snippet on moondial-1's play site.
 - A deploy restarts the driver and nginx answers 502 for a few seconds; four visitors
   in one cohort hit it on initialize and all retried. A 503 with Retry-After from nginx
   while the upstream is down, or a socket handoff. -- Lab A
