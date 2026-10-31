@@ -121,6 +121,7 @@ fn help_text(world: &World, kind: ActorKind) -> String {
     lines.push(
         "  clear [on|off]  Show replies as the CLEAR the world wrote, or as prose.".to_string(),
     );
+    lines.push("  passphrase <old> <new>  Change your passphrase (never through the gate, so never in the log).".to_string());
     lines.push("  quit".to_string());
     lines.join("\n")
 }
@@ -161,6 +162,20 @@ fn run_line(
             } else {
                 format!("Welcome back, {name}. Type look.")
             })
+        }
+        "passphrase" => {
+            let Some((name, _)) = actor.clone() else {
+                return Err("passphrase <old> <new>: log in first.".into());
+            };
+            let mut parts = rest.splitn(2, char::is_whitespace);
+            let old = parts.next().unwrap_or("").trim();
+            let new = parts.next().unwrap_or("").trim();
+            if new.is_empty() {
+                return Err("passphrase <old> <new>".into());
+            }
+            disremembered::change_passphrase(&mut world, &name, old, new)
+                .map_err(|e| e.to_string())?;
+            Ok("Your passphrase is changed. You will need the new one next time.".to_string())
         }
         "admin" => {
             let (Some((name, _)), true) = (actor.clone(), shared.is_admin(Some(rest))) else {
@@ -629,6 +644,39 @@ struct LoginBody {
     passphrase: String,
 }
 
+#[derive(Deserialize)]
+struct PassphraseBody {
+    actor: String,
+    #[serde(default)]
+    passphrase: String,
+    #[serde(default)]
+    new: String,
+}
+
+/// `POST /v0/passphrase {actor, passphrase, new}`: change your passphrase. Not a gate
+/// verb, so nothing of it is in the log.
+async fn passphrase(State(s): State<Shared>, Json(body): Json<PassphraseBody>) -> Reply {
+    let mut w = lock(&s)?;
+    valid_name(&body.actor).map_err(|e| err_json(StatusCode::BAD_REQUEST, e))?;
+    disremembered::change_passphrase(&mut w, &body.actor, &body.passphrase, &body.new).map_err(
+        |e| match e {
+            disremembered::LoginError::Internal(_) => {
+                err_json(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+            }
+            disremembered::LoginError::WrongPassphrase { .. } => {
+                err_json(StatusCode::UNAUTHORIZED, e.to_string())
+            }
+            disremembered::LoginError::Locked { .. } => {
+                err_json(StatusCode::TOO_MANY_REQUESTS, e.to_string())
+            }
+            _ => err_json(StatusCode::BAD_REQUEST, e.to_string()),
+        },
+    )?;
+    Ok(Json(
+        json!({"ok": true, "actor": body.actor, "changed": true}),
+    ))
+}
+
 /// Check a name and passphrase (creating the citizen on first login) without running a
 /// command. The browser client calls this first so a bad passphrase is a clear message
 /// rather than a failed `look`.
@@ -948,6 +996,7 @@ pub fn router(shared: Shared) -> Router {
         .route("/health", get(health))
         .route("/v0/commands", get(commands))
         .route("/v0/login", post(login))
+        .route("/v0/passphrase", post(passphrase))
         .route("/v0/command", post(command))
         .route("/v0/observe", post(observe_http))
         .route("/v0/gate", post(gate_http))

@@ -1788,3 +1788,25 @@ fn creatures_wander_into_remembered_dug_rooms_and_rarely_arrive_knowing_things()
     // The job is scheduled at boot and reschedules itself.
     assert!(w.jobs.pending().any(|j| j.kind == mind::JOB_WANDER));
 }
+
+#[test]
+fn a_passphrase_can_be_changed_with_the_old_one_and_never_touches_the_gate() {
+    let mut w = open(tempfile::tempdir().unwrap().path(), Timestamp(0));
+    login(&mut w, "dave", "test", PASS).unwrap();
+    let Err(e) = change_passphrase(&mut w, "dave", "not-the-old-one", "a-brand-new-one") else {
+        panic!()
+    };
+    assert!(matches!(e, LoginError::WrongPassphrase { .. }), "{e}");
+    let Err(e) = change_passphrase(&mut w, "dave", PASS, "short") else {
+        panic!()
+    };
+    assert!(matches!(e, LoginError::TooShort { .. }), "{e}");
+    change_passphrase(&mut w, "dave", PASS, "a-brand-new-one").unwrap();
+    assert!(login(&mut w, "dave", "test", PASS).is_err());
+    login(&mut w, "dave", "test", "a-brand-new-one").unwrap();
+    // Nothing in the log says what it was, except the hash.
+    let text = serde_json::to_string(&w.log.read_all(&w.id, moondial_log::Cursor::START).unwrap())
+        .unwrap();
+    assert!(!text.contains("a-brand-new-one"));
+    assert!(!text.contains(PASS));
+}

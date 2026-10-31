@@ -579,6 +579,7 @@
     }
     const el = print("", "cmd"); el.innerHTML = "<b>clear</b><i></i> Clear this window.";
     const el2 = print("", "cmd"); el2.innerHTML = "<b>logout</b><i></i> Forget your passphrase in this tab.";
+    const el3 = print("", "cmd"); el3.innerHTML = "<b>passphrase &lt;new&gt;</b><i></i> Change your passphrase. Not a verb: it never goes through the gate or into the log.";
     print("Up and Down walk your history, matching what you have typed so far; !! repeats the last line; Ctrl+L clears, Ctrl+U empties the line.", "sys");
   }
 
@@ -757,7 +758,7 @@
     if (t === "!!") { t = history[history.length - 1] || ""; if (!t) return; }
     const [verb, ...rest] = t.split(/\s+/);
     // The line is remembered; a passphrase on it is not.
-    remember(verb === "login" ? ["login", rest[0]].filter(Boolean).join(" ") : t);
+    remember(verb === "login" ? ["login", rest[0]].filter(Boolean).join(" ") : verb === "passphrase" ? "passphrase" : t);
     if (verb === "login") {
       print("login " + (rest[0] || ""), "you");
       if (rest.length >= 2) await login(rest[0], rest.slice(1).join(" "));
@@ -765,9 +766,19 @@
       else askName();
       return;
     }
-    print(t, "you");
+    print(verb === "passphrase" ? "passphrase \u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" : t, "you");
     if (verb === "clear") { log.replaceChildren(); return; }
     if (verb === "logout") { logout(); print("Forgotten. Type login to come back.", "sys"); return; }
+    if (verb === "passphrase") {
+      // Not a gate verb: the words go to /v0/passphrase and nowhere near the log or the history.
+      if (!actor) { print("Log in first.", "err"); return; }
+      const next = rest.join(" ");
+      if (next.length < 8) { print("passphrase <new>: at least 8 characters.", "err"); return; }
+      const r = await api("/v0/passphrase", { actor, passphrase, new: next });
+      if (r.body && r.body.ok) { passphrase = next; try { sessionStorage.setItem("disremembered.pass", next); } catch (e) {} print("Your passphrase is changed. You will need the new one next time.", "sys"); }
+      else print((r.body && r.body.error) || "The world did not answer.", "err");
+      return;
+    }
     if (verb === "help") { await help(); return; }
     await run(verb, rest);
   }
@@ -788,6 +799,7 @@
     vocab: null, name: null, checker: null, intent: "REQUEST", rows: [], raw: false, timer: null, last: null,
   };
   const ASK_HINT = "where is X? / what is the level|hit points|attack|room of X? / how many creatures|chunks|citizens ...?";
+  const ASK_TEMPLATES = ["Where is me?", "What is the level of me?", "What is the hit points of me?", "What is the attack of me?", "What is the room of me?", "How many creatures are here?", "How many chunks does me hold?", "How many citizens are here?"];
   function rowDefaults(type) {
     return { type, actor: actor || "you", modal: "MUST", verb: "", args: "", params: {}, text: "", src: "", conf: "HIGH" };
   }
@@ -857,7 +869,11 @@
           top.append(el);
         }
       } else if (r.type === "ASK") {
-        top.append(field(r, "text", Object.assign(mk("input", { type: "text", list: "asks", placeholder: "a question the patterns know", title: ASK_HINT }), { value: r.text })));
+        // A template fills the question in, with your name where it says me.
+        const tpl = sel(["", ...ASK_TEMPLATES], ""); tpl.firstChild.textContent = "template…"; tpl.title = "Questions the world's patterns answer";
+        const q = field(r, "text", Object.assign(mk("input", { type: "text", list: "asks", placeholder: "a question the patterns know", title: ASK_HINT }), { value: r.text }));
+        tpl.addEventListener("input", () => { if (!tpl.value) return; r.text = tpl.value.replace(/\bme\b/g, actor || "me"); q.value = r.text; tpl.value = ""; composeChanged(); q.focus(); });
+        top.append(tpl, q);
       } else if (r.type === "INFER") {
         const c = sel(C.vocab ? C.vocab.confidence_levels : ["HIGH", "MEDIUM", "LOW"], r.conf); c.addEventListener("input", () => { r.conf = c.value; drawRows(); composeChanged(); }); top.append(c);
         top.append(field(r, "text", Object.assign(mk("input", { type: "text", placeholder: "what you infer" }), { value: r.text })));
@@ -1281,7 +1297,7 @@
   let activeMod = null; // {spec, undo}
   const pick = $("modpick");
   function rememberMod(spec) {
-    try { if (spec) localStorage.setItem("disremembered.mod", spec); else localStorage.removeItem("disremembered.mod"); } catch (e) {}
+    try { localStorage.setItem("disremembered.mod", spec || "none"); } catch (e) {}
     const u = new URL(location.href);
     if (spec) u.searchParams.set("mod", spec); else u.searchParams.delete("mod");
     window.history.replaceState(null, "", u);
@@ -1337,9 +1353,11 @@
     }
     syncPick();
   }).catch(() => {});
+  // The URL decides; else what this browser chose last; else tiles. "none" is a choice.
   let modSpec = new URLSearchParams(location.search).get("mod");
   if (modSpec === null) { try { modSpec = localStorage.getItem("disremembered.mod"); } catch (e) {} }
-  if (modSpec) loadMod(modSpec);
+  if (modSpec === null) modSpec = "tiles";
+  if (modSpec && modSpec !== "none") loadMod(modSpec);
 
   // ---- boot ----
   print("Disremembered on Moondial, pre-alpha. A text world where everything you earn fades.", "sys");

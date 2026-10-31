@@ -57,10 +57,29 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE INDEX IF NOT EXISTS events_world_kind ON events (world, kind, seq);
 ";
 
+/// How often, and how long between, connection attempts at open.
+const CONNECT_TRIES: u32 = 20;
+const CONNECT_WAIT_SECONDS: u64 = 3;
+
 impl PostgresLog {
     /// Connect, create the schema if it is missing, and start the connection thread.
     pub fn open(url: &str) -> Result<Self, LogError> {
-        let mut client = Client::connect(url, NoTls).map_err(storage)?;
+        // At boot the database may still be starting (a reboot brings both up at once):
+        // try for a while before giving up.
+        let mut client = {
+            let mut tries = 0;
+            loop {
+                match Client::connect(url, NoTls) {
+                    Ok(c) => break c,
+                    Err(e) if tries < CONNECT_TRIES => {
+                        tries += 1;
+                        eprintln!("postgres: {e}; retrying ({tries}/{CONNECT_TRIES})");
+                        std::thread::sleep(std::time::Duration::from_secs(CONNECT_WAIT_SECONDS));
+                    }
+                    Err(e) => return Err(storage(e)),
+                }
+            }
+        };
         // Two openers at once (two tests, two drivers) must not both create the schema:
         // CREATE ... IF NOT EXISTS races. A transaction-scoped advisory lock serializes them.
         let mut tx = client.transaction().map_err(storage)?;

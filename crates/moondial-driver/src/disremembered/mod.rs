@@ -217,6 +217,42 @@ fn account_scope(actor: &str) -> ClockId {
     ClockId(format!("account:{actor}"))
 }
 
+/// Change a citizen's passphrase: the old one must be right, the new one acceptable.
+/// Never a gate verb, so the words never reach the log.
+pub fn change_passphrase(
+    world: &mut World,
+    actor: &str,
+    old: &str,
+    new: &str,
+) -> Result<(), LoginError> {
+    let f = find_citizen(world, actor).ok_or(LoginError::Missing)?;
+    if let Some(minutes) = world.locked_for(actor) {
+        return Err(LoginError::Locked {
+            name: actor.to_string(),
+            minutes,
+        });
+    }
+    if let Err(e) = identity::check(world, f.citizen, old) {
+        if matches!(e, LoginError::WrongPassphrase { .. }) {
+            world.failed_login(actor);
+        }
+        return Err(e);
+    }
+    identity::acceptable(new)?;
+    world
+        .record(
+            Actor::Citizen(actor.to_string()),
+            StoreEvent::ComponentSet {
+                id: f.citizen,
+                component: ACCOUNT.into(),
+                fields: account_fields(new)?,
+            },
+        )
+        .map_err(|e| LoginError::Internal(e.to_string()))?;
+    world.succeeded_login(actor);
+    Ok(())
+}
+
 /// Entities the slice keeps per citizen: the citizen (in a room), a window and a palace
 /// (both under the citizen).
 pub struct Found {
