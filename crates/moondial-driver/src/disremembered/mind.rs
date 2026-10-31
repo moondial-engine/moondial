@@ -422,10 +422,22 @@ pub fn find_here(world: &World, room: EntityId, what: &str) -> Option<EntityId> 
     }) {
         return Some(*id);
     }
-    let same: Vec<EntityId> = here
+    // A kind names the unnamed first: beside an unnamed wisp, Lute the wisp is Lute or
+    // wisp-101, never "wisp". Alone of its kind, it still answers to its kind.
+    let kind: Vec<EntityId> = here
         .into_iter()
         .filter(|&c| plain_str(world, c, CREATURE, "name").is_some_and(|n| n == what))
         .collect();
+    let unnamed: Vec<EntityId> = kind
+        .iter()
+        .copied()
+        .filter(|&c| name(world, c).is_none())
+        .collect();
+    let same = if unnamed.is_empty() && kind.len() == 1 {
+        kind
+    } else {
+        unnamed
+    };
     same.iter()
         .copied()
         .find(|&c| !shaken(world, c))

@@ -1866,3 +1866,61 @@ fn twins_are_written_with_ids_and_either_can_be_named() {
     assert!(out.summary.contains("dave keep me."), "{}", out.summary);
     assert!(!out.summary.contains("dave, dave"), "{}", out.summary);
 }
+
+#[test]
+fn names_match_in_any_case_and_a_kind_never_means_a_named_creature() {
+    let mut w = open(tempfile::tempdir().unwrap().path(), Timestamp(0));
+    login(&mut w, "Lantern_Moth", "test", PASS).unwrap();
+    login(&mut w, "dave", "test", PASS).unwrap();
+    let out = ok(&mut w, "dave", "tell", json!(["lantern_moth", "hello"]));
+    assert!(
+        out.summary.starts_with("You say to Lantern_Moth,"),
+        "{}",
+        out.summary
+    );
+    // A named wisp is not "wisp" any more.
+    ok(&mut w, "dave", "travel", json!(["east"]));
+    let fog = rooms::room_by_key(&w, "fogbank").unwrap();
+    let (a, b) = {
+        let v = combat::creatures_in(&w, fog);
+        (v[0].0, v[1].0)
+    };
+    for _ in 0..3 {
+        let c = admin(&mut w, "dave", "earn", json!(["wisp", 30, 0.5]));
+        let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+        ok(&mut w, "dave", "remember", json!([c, format!("{}", a.0)]));
+    }
+    let name = mind::name(&w, a).unwrap();
+    let out = ok(&mut w, "dave", "attack", json!(["wisp"]));
+    assert_eq!(out.result["creature"], "wisp");
+    assert!(
+        combat::creatures_in(&w, fog)
+            .iter()
+            .find(|c| c.0 == a)
+            .unwrap()
+            .2
+            >= 8.0,
+        "the named one is untouched"
+    );
+    assert!(
+        combat::creatures_in(&w, fog)
+            .iter()
+            .find(|c| c.0 == b)
+            .unwrap()
+            .2
+            < 8.0
+    );
+    ok(&mut w, "dave", "retreat", json!([]));
+    assert!(ok(&mut w, "dave", "tell", json!([&name, "hi"])).result["answered"] == true);
+    // The log verb reads like a log, and shows this viewer only what they may see.
+    let out = ok(&mut w, "dave", "log", json!([20]));
+    assert!(
+        out.summary.contains(&format!("the wisp is {name} now")),
+        "{}",
+        out.summary
+    );
+    assert!(out.summary.contains("dave says to"), "{}", out.summary);
+    assert!(!serde_json::to_string(&out.result)
+        .unwrap()
+        .contains("passphrase_hash"));
+}

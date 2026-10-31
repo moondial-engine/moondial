@@ -11,7 +11,7 @@
 //! test, so no one digs "the gate".
 
 use super::rooms::{exits_of, room_of};
-use super::{find_citizen, internal, me, plain_str, CHUNK, EXITS, ROOM};
+use super::{internal, me, plain_str, CHUNK, EXITS, ROOM};
 use crate::world::World;
 use moondial_log::Actor;
 use moondial_registry::{
@@ -690,12 +690,12 @@ pub fn register(world: &mut World) {
             let f = me(w, ctx)?;
             let here = room_of(w, f.citizen).ok_or_else(|| internal("citizen has no room"))?;
             owner_only(w, ctx, here)?;
-            let who = args.str("citizen").unwrap_or("").trim().to_string();
-            if find_citizen(w, &who).is_none() {
+            let typed = args.str("citizen").unwrap_or("").trim().to_string();
+            let Some(who) = super::canonical_name(w, &typed) else {
                 return Err(CommandError::precondition(format!(
-                    "No citizen is named {who}."
+                    "No citizen is named {typed}."
                 )));
-            }
+            };
             let hours = args.num("hours");
             if hours.is_some_and(|h| !(h > 0.0 && h <= 24.0 * 3650.0)) {
                 return Err(CommandError::precondition(

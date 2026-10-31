@@ -70,11 +70,14 @@ pub fn register(world: &mut World) {
                 ));
             }
             // A citizen, here or away.
-            let target = who.trim_start_matches("citizen-").to_string();
-            let Some(them) = super::find_citizen(w, &target) else {
+            let typed = who.trim_start_matches("citizen-").to_string();
+            let Some(target) = super::canonical_name(w, &typed) else {
                 return Err(CommandError::precondition(format!(
-                    "There is no one called {target}, and no such creature here."
+                    "There is no one called {typed}, and no such creature here."
                 )));
+            };
+            let Some(them) = super::find_citizen(w, &target) else {
+                return Err(CommandError::precondition(format!("There is no one called {typed}.")));
             };
             if target == ctx.actor {
                 return Err(CommandError::precondition("You tell yourself. Nothing changes."));

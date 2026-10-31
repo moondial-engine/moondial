@@ -261,6 +261,18 @@ pub struct Found {
     pub palace: EntityId,
 }
 
+/// A citizen's name as it is spelled, from any spelling of it: names are unique
+/// regardless of case, so `lantern_moth` finds Lantern_Moth.
+pub(crate) fn canonical_name(world: &World, name: &str) -> Option<String> {
+    let lower = name.trim().to_lowercase();
+    world
+        .store
+        .entities()
+        .filter(|e| e.kind == "citizen")
+        .filter_map(|e| e.owner.clone())
+        .find(|o| o.to_lowercase() == lower)
+}
+
 pub(crate) fn find_citizen(world: &World, actor: &str) -> Option<Found> {
     let citizen = world
         .store

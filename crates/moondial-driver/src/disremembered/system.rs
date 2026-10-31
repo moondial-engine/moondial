@@ -7,6 +7,60 @@ use moondial_registry::{ActorKind, Args, CommandError, CommandSpec, Outcome, Par
 use moondial_store::{ClockId, StoreEvent, WORLD_CLOCK};
 use serde_json::json;
 
+/// One event as a line a reader can follow: who said what, who came and went, what was
+/// kept and taken; the rest by kind.
+fn line_for(e: &moondial_log::Event) -> String {
+    let p = &e.payload;
+    let s = |k: &str| p[k].as_str().unwrap_or("?").to_string();
+    match e.kind.as_str() {
+        "disremembered.say" => match p["to"].as_str() {
+            Some(to) => format!("{} says to {to}, \"{}\"", s("from"), s("text")),
+            None => format!("{} says, \"{}\"", s("from"), s("text")),
+        },
+        "disremembered.tell" => format!("{} left word for {}", s("from"), s("to")),
+        "citizen.arrived" => format!("{} arrived via {}", s("actor"), s("origin")),
+        "disremembered.departed" => format!("{} went quiet", s("actor")),
+        "disremembered.remembered" => match p["creature"].as_u64() {
+            Some(_) => format!(
+                "{} gave the memory of {} to the {}",
+                s("by"),
+                s("with"),
+                s("kind")
+            ),
+            None => format!(
+                "{} kept {} with the memory of {}",
+                s("by"),
+                s("name"),
+                s("with")
+            ),
+        },
+        "disremembered.tier" => match p["name"].as_str() {
+            Some(n) => format!("the {} is {n} now", s("kind")),
+            None => format!("the {} has forgotten its name", s("kind")),
+        },
+        "disremembered.taken" => format!(
+            "{} took the memory of {} from {}",
+            s("by"),
+            s("with"),
+            p["name"].as_str().unwrap_or(&s("kind"))
+        ),
+        "disremembered.wandered" => format!("a {} wandered in", s("kind")),
+        "gate.message" => {
+            let text = s("text");
+            let first_do = text
+                .lines()
+                .find(|l| l.starts_with("[DO]") || l.starts_with("[ASK]"))
+                .unwrap_or("");
+            format!("{} ({}): {first_do}", s("from"), s("via"))
+        }
+        "gate.reply" => format!("the world replied to {}", s("to")),
+        k => format!(
+            "{k} {}",
+            serde_json::to_string(&e.actor).unwrap_or_default()
+        ),
+    }
+}
+
 pub fn register(world: &mut World) {
     world.register(
         CommandSpec::new(
@@ -112,20 +166,32 @@ pub fn register(world: &mut World) {
             false,
             "how many (default 10, max 100)",
         ),
-        Box::new(|w: &mut World, _, args: &Args| {
+        Box::new(|w: &mut World, ctx, args: &Args| {
             let n = args.int("count").unwrap_or(10).clamp(1, 100) as usize;
-            let events = w.recent_events(n);
+            // What this viewer may see, as they may see it: the same rule as /v0/log.
+            let viewer = if ctx.kind == ActorKind::Admin {
+                moondial_store::Viewer::admin()
+            } else {
+                moondial_store::Viewer::actor(&ctx.actor)
+            };
+            let now = w.now();
+            let events: Vec<moondial_log::Event> = w
+                .recent_events(n * 4)
+                .into_iter()
+                .filter(|e| crate::observe::visible(w, &viewer, now, e))
+                .map(|e| crate::observe::redacted(w, &viewer, e))
+                .collect();
+            let events: Vec<moondial_log::Event> = events
+                .into_iter()
+                .rev()
+                .take(n)
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .collect();
             let lines: Vec<String> = events
                 .iter()
-                .map(|e| {
-                    format!(
-                        "  #{} t={} {} {}",
-                        e.seq.0,
-                        e.at.0,
-                        e.kind,
-                        serde_json::to_string(&e.actor).unwrap_or_default()
-                    )
-                })
+                .map(|e| format!("  #{} {}", e.seq.0, line_for(e)))
                 .collect();
             Ok(Outcome::new(
                 if lines.is_empty() {
