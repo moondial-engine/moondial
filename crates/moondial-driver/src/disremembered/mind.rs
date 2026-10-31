@@ -468,6 +468,16 @@ pub fn find_here(world: &World, room: EntityId, what: &str) -> Option<EntityId> 
         .or_else(|| same.first().copied())
 }
 
+/// Whether `actor` has told this creature a story, under this name, within what the
+/// log keeps near.
+pub fn told_by(world: &World, creature: EntityId, actor: &str) -> bool {
+    world.recent_events(2000).iter().any(|e| {
+        e.kind == super::exchange::STORY
+            && e.payload["from"] == actor
+            && e.payload["creature"] == creature.0
+    })
+}
+
 /// What a named creature thinks of the one looking at it.
 pub fn regard(world: &World, creature: EntityId, actor: &str) -> Option<String> {
     let n = name(world, creature)?;
@@ -475,6 +485,10 @@ pub fn regard(world: &World, creature: EntityId, actor: &str) -> Option<String> 
     let keepers = keepers(world, creature);
     Some(if keepers.iter().any(|k| k == actor) {
         format!("{n} the {kind} knows you.")
+    } else if told_by(world, creature, actor) {
+        // A story is enough to be known, under any kind of name; a passing visitor
+        // read "does not know you" right after its story was kept.
+        format!("{n} the {kind} knows you: it holds your story.")
     } else if keepers.is_empty() {
         format!("{n} the {kind} does not know you.")
     } else {

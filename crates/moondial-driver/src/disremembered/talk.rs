@@ -322,11 +322,7 @@ pub fn reply(world: &World, creature: EntityId, actor: &str, text: &str) -> Opti
     let keepers = mind::keepers(world, creature);
     // A creature knows whoever kept it, and whoever told it a story: a visitor who
     // told one and said thanks was asked "For what?", which is not how a story is received.
-    let told_me = world.recent_events(2000).iter().any(|e| {
-        e.kind == super::exchange::STORY
-            && e.payload["from"] == actor
-            && e.payload["creature"] == creature.0
-    });
+    let told_me = mind::told_by(world, creature, actor);
     let knows_you = keepers.iter().any(|k| k == actor) || told_me;
     let level = mind::level(world, creature);
     let room = world.store.entity(creature).and_then(|e| e.parent);

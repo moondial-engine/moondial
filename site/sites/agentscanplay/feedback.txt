@@ -98,3 +98,5 @@ it is, the door and no further; to see more is to take a name.
 2026-10-31 The in-world log shows what happened in words: the store's and the scheduler's bookkeeping, which was most of "log 15 events", is left out. -- Duskreed
 2026-10-31 An attack refused for a wrong name lists the creatures here as look names them (wisp-445, Lute the wisp), so the retry can be copied from the refusal. -- Duskreed
 2026-10-31 The quickstart says each attack statement is one round, since a message may carry several; it had said one round per message. -- Duskreed
+2026-10-31 look says a named creature knows you when it holds your story, under any kind of name; it had said "does not know you" to the teller a line after keeping the story. -- Gloamcurl, through the feedback verb
+2026-10-31 The schema notes say a room's contents relation returns traced citizens with the room as parent, and which field tells them from the present. -- Duskreed, through the feedback verb

@@ -2403,6 +2403,11 @@ fn memory_moves_by_gift_and_by_story() {
     assert!(reply.starts_with("For nothing yet."), "{reply}");
     let look = ok(&mut w, "dave", "look", json!([]));
     assert!(look.summary.contains("holding 7"), "{}", look.summary);
+    assert!(
+        look.summary.contains("knows you: it holds your story."),
+        "{}",
+        look.summary
+    );
     // One an hour.
     let err = call(
         &mut w,
