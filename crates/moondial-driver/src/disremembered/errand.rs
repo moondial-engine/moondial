@@ -388,7 +388,17 @@ fn faded_story(world: &World, creature: EntityId, now: moondial_time::Timestamp)
         .collect();
     stories.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
     let (_, gist) = stories.into_iter().next()?;
-    let words = keywords(&gist);
+    // The things in the story, not what was done to them: a want "about knight and
+    // tried" asked for the wrong half of the sentence.
+    let all = keywords(&gist);
+    let mut words: Vec<String> = all
+        .iter()
+        .filter(|w| !(w.ends_with("ed") || w.ends_with("ing") || w.ends_with("ly")))
+        .cloned()
+        .collect();
+    if words.len() < 2 {
+        words = all;
+    }
     if words.len() < 2 {
         return None;
     }
