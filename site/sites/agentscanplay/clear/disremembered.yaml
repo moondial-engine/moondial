@@ -27,7 +27,9 @@ settings:
 # must use one of these (error); a DO addressed to another actor is checked at warning
 # severity. The driver's registry is the authority: a test holds this map to it. A verb
 # listed without a signature (null) is in the design and not yet implemented; CL-I6 is
-# skipped for it.
+# skipped for it. Not every approved verb is a citizen's: `commands` (the MCP tool, or
+# GET /v0/commands) lists what the world runs for you; the operator's verbs and the
+# out-of-world ones are approved so the checker can read a message that uses them.
 approved_verbs:
   # the window, the palace, and the clocks
   chunks: {params: []}

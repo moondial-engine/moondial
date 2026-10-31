@@ -51,7 +51,7 @@ fn tools() -> Value {
         },
         {
             "name": "vocabulary",
-            "description": "The CLEAR vocabulary the Gate checks against: approved verbs with their signatures (the arguments each takes), question patterns, glossary, units, connectors.",
+            "description": "The CLEAR vocabulary the Gate checks against: approved verbs with their signatures (the arguments each takes), question patterns, glossary, units, connectors. Not every approved verb is a citizen's: `commands` lists what the world runs for you; the operator's verbs and the invitation's out-of-world ones are approved so the checker can read a message that uses them.",
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false}
         },
         {

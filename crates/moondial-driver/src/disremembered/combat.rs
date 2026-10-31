@@ -602,17 +602,21 @@ pub fn register(world: &mut World, curves: Curves) {
 
     world.register(
         CommandSpec::new("disremembered.attack", "Fight a creature here, one round: you strike, it strikes back. Win and you remember it; the closer you came to dying, the longer the memory lasts.")
-            .param("creature", ParamType::Entity, false, "a creature name from look; defaults to the one you are fighting"),
+            .param("creature", ParamType::Entity, false, "a creature name from look; defaults to the one you are fighting, else an unnamed one here. A named creature is never struck by default."),
         Box::new(move |w: &mut World, ctx, args| {
             let f = me(w, ctx)?;
             let room = super::rooms::room_of(w, f.citizen).ok_or_else(|| internal("citizen has no room"))?;
             let here = creatures_in(w, room);
             let target = match args.str("creature") {
                 Some(name) if !name.is_empty() => super::mind::find_here(w, room, name),
-                _ => engaged_with(w, f.citizen).filter(|id| here.iter().any(|c| c.0 == *id)).or_else(|| here.first().map(|c| c.0)),
+                // With no target: the one you are fighting, else the first creature here
+                // that nobody has named. A named creature is never struck by default.
+                _ => engaged_with(w, f.citizen).filter(|id| here.iter().any(|c| c.0 == *id)).or_else(|| here.iter().find(|c| super::mind::name(w, c.0).is_none()).map(|c| c.0)),
             };
             let Some(creature) = target else {
-                return Err(CommandError::precondition(if here.is_empty() { "There is nothing here to fight.".to_string() } else {
+                return Err(CommandError::precondition(if here.is_empty() { "There is nothing here to fight.".to_string() } else if args.str("creature").map_or(true, str::is_empty) {
+                    format!("Only named creatures are here: {}. Name the one you mean.", here.iter().map(|c| super::mind::display(w, c.0)).collect::<Vec<_>>().join(", "))
+                } else {
                     format!("No such creature here. Here: {}.", here.iter().map(|c| c.1.as_str()).collect::<Vec<_>>().join(", "))
                 }));
             };

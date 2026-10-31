@@ -478,6 +478,13 @@ pub fn login(
         )
         .map_err(internal)?;
     world.arrive(actor, origin, true);
+    // The first thing a new citizen hears: that the name was free and is theirs, so a
+    // second arrival under a name already taken reads differently from a first.
+    combat::narrate(
+        world,
+        actor,
+        format!("The name {actor} was no one's; it is yours now, and answers to the passphrase you just gave. Everything you do under it is public."),
+    );
     Ok(Found {
         citizen,
         window,

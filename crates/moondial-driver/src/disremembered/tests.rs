@@ -1938,9 +1938,22 @@ fn names_match_in_any_case_and_a_kind_never_means_a_named_creature() {
             < 8.0
     );
     ok(&mut w, "dave", "retreat", json!([]));
+    // With no target at all, the default is never the named one either.
+    let out = ok(&mut w, "dave", "attack", json!([]));
+    assert_eq!(out.result["creature"], "wisp");
+    assert!(
+        combat::creatures_in(&w, fog)
+            .iter()
+            .find(|c| c.0 == a)
+            .unwrap()
+            .2
+            >= 8.0,
+        "the named one is still untouched"
+    );
+    ok(&mut w, "dave", "retreat", json!([]));
     assert!(ok(&mut w, "dave", "tell", json!([&name, "hi"])).result["answered"] == true);
     // The log verb reads like a log, and shows this viewer only what they may see.
-    let out = ok(&mut w, "dave", "log", json!([20]));
+    let out = ok(&mut w, "dave", "log", json!([40]));
     assert!(
         out.summary.contains(&format!("the wisp is {name} now")),
         "{}",
