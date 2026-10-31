@@ -2297,7 +2297,24 @@ fn memory_moves_by_gift_and_by_story() {
         "{}",
         out.summary
     );
-    assert!(out.summary.contains("I will keep that."), "{}", out.summary);
+    // The answer reaches the teller as a narrator line, not in the outcome.
+    assert!(
+        !out.summary.contains("I will keep that."),
+        "{}",
+        out.summary
+    );
+    let heard: Vec<String> = w
+        .log
+        .read_all(&w.id, moondial_log::Cursor::START)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.kind == combat::NARRATIVE && e.payload["to"] == "dave")
+        .filter_map(|e| e.payload["text"].as_str().map(str::to_string))
+        .collect();
+    assert!(
+        heard.iter().any(|t| t.contains("I will keep that.")),
+        "{heard:?}"
+    );
     assert!(level(&mut w, "dave") > 10.0, "{}", level(&mut w, "dave"));
     assert!(mind::level(&w, rag) > 70.0);
     let look = ok(&mut w, "dave", "look", json!([]));
