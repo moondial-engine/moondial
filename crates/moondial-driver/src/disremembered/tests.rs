@@ -2981,3 +2981,44 @@ fn the_rotation_renews_a_stale_want_and_keeps_one_word_in_the_air() {
         Some("the operator's own want")
     );
 }
+
+#[test]
+fn a_creature_pages_through_what_it_holds_on_what_else() {
+    let t0 = Timestamp(1_000_000);
+    let mut w = open(tempfile::tempdir().unwrap().path(), t0);
+    login(&mut w, "tyler", "test", PASS).unwrap();
+    ok(&mut w, "tyler", "travel", json!(["east"]));
+    ok(&mut w, "tyler", "travel", json!(["south"]));
+    // Nine memories into the ragpicker.
+    for i in 0..9 {
+        let c = admin(
+            &mut w,
+            "tyler",
+            "earn",
+            json!([format!("thing-{i}"), 70, 0.5]),
+        );
+        let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+        ok(&mut w, "tyler", "remember", json!([c, "ragpicker"]));
+    }
+    let midden = rooms::room_by_key(&w, "midden").unwrap();
+    let rag = combat::creatures_in(&w, midden)[0].0;
+    let name = mind::name(&w, rag).unwrap();
+    let out = ok(&mut w, "tyler", "tell", json!([&name, "what do you hold?"]));
+    assert!(
+        out.summary.contains("and 5 more (ask what else)"),
+        "{}",
+        out.summary
+    );
+    let out = ok(&mut w, "tyler", "tell", json!([&name, "what else?"]));
+    assert!(out.summary.contains("Also "), "{}", out.summary);
+    assert!(out.summary.contains(", and 1 more"), "{}", out.summary);
+    let out = ok(&mut w, "tyler", "tell", json!([&name, "and what else?"]));
+    assert!(out.summary.contains("Also "), "{}", out.summary);
+    assert!(!out.summary.contains(" more"), "{}", out.summary);
+    let out = ok(&mut w, "tyler", "tell", json!([&name, "what else?"]));
+    assert!(
+        out.summary.contains("That is all of it."),
+        "{}",
+        out.summary
+    );
+}

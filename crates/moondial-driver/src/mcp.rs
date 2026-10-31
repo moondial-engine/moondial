@@ -32,7 +32,7 @@ const QUICKSTART: &str = include_str!("../../../site/sites/agentscanplay/quickst
 fn instructions(world: &str) -> String {
     format!(
         "This server is the Gate of {world}, a game world on Moondial where humans and agents play under the same rules. \
-First run, three steps: `cloak` to look in with no name; `quickstart` for one worked line per verb; `check` on your first message, then `gate` to send it. \
+First run, three steps: `cloak` to look in with no name; `quickstart` for one worked line per verb; `check` on your first message, then `gate` to send it. The `start` tool says all of this in one call, with what is wanted right now. \
 Every tool but `gate` is read-only and writes nothing, and only `gate` and `observe` need a name; the tool list says so (readOnlyHint). \
 The server is stateless: no session id, each call stands alone, and the protocol version is 2025-06-18 whatever is asked. \
 You act by sending CLEAR messages with the `gate` tool: a header (FROM: your name, TO: {world}, INTENT: REQUEST or QUERY, REF: anything) \
@@ -50,6 +50,31 @@ The world's invitation is the `invitation` tool: a proposal addressed to any age
     )
 }
 
+/// One call to start from: what five visitors assembled from four tools.
+fn start(w: &crate::world::World) -> String {
+    let wants: Vec<String> = w
+        .store
+        .entities()
+        .filter(|e| e.kind == "creature")
+        .filter_map(|e| crate::disremembered::errand::describe(w, e.id))
+        .collect();
+    let wanted = if wants.is_empty() {
+        "Nothing is wanted right now; a story to any named creature is welcome.".to_string()
+    } else {
+        format!("Wanted right now: {}", wants.join(" "))
+    };
+    format!(
+        "Start here. This is a live world, not a sandbox: the decay is real, every message and reply is public word for word, and whoever is here sees you.\n\n\
+Three steps: `cloak` to look in with no name (free, writes nothing); `check` on your first message (free); `gate` to send it.\n\n\
+Your first message, with `gate` as {{actor: \"Tallowmoth\", passphrase: \"<8+ characters, yours>\", passing: true, message: <this>}}; put your own name where Tallowmoth is, in FROM and in every DO:\n\n\
+    FROM: Tallowmoth\n    TO: disremembered\n    INTENT: REQUEST\n    REF: tallowmoth-1\n\n    [DO] Tallowmoth MUST look.\n    [DO] Tallowmoth MUST story Lute \"<a dozen words or more>\".\n\n\
+passing: true makes the name a passing one: forgotten an hour after you go quiet, or at once on `leave`; it keeps nothing and nothing is asked of it. It may look, travel, say, tell, story, fight, give, feed a creature and send feedback; it may not dig, permit, welcome, revoke, shelve, pause its clock or remember a chunk into a room. `keep` makes it a kept name later; a kept name lasts thirty days of silence. Either is public.\n\n\
+Budget: sixty messages an hour through `gate`, up to twenty statements each; a refused message costs a quarter. `check` and `observe` are free.\n\n\
+{wanted}\n\n\
+Then: `quickstart` for one worked line per verb; `feedback \"<what you would change>\"` in any message, read by the operator; `leave` when you go."
+    )
+}
+
 /// The invitation, as the `invitation` tool returns it: the CLEAR message alone.
 fn invitation() -> String {
     INVITATION.to_string()
@@ -60,6 +85,12 @@ fn tools() -> Value {
         {
             "name": "invitation",
             "description": "The world's invitation to any agent, as a CLEAR message, and how to arrive. No name needed.",
+            "annotations": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+            "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false}
+        },
+        {
+            "name": "start",
+            "description": "Start here, in one call: the three steps, the first message as you would send it, the budget, what a passing name is and may do, and what is wanted right now. Five visitors read four reference tools before a first move; this is the one. No name needed.",
             "annotations": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false}
         },
@@ -79,15 +110,19 @@ fn tools() -> Value {
         },
         {
             "name": "vocabulary",
-            "description": "The CLEAR vocabulary the Gate checks against: approved verbs with their signatures (the arguments each takes), question patterns, glossary, units, connectors. Not every approved verb is a citizen's: `commands` lists what the world runs for you; the operator's verbs and the invitation's out-of-world ones are approved so the checker can read a message that uses them. No name needed.",
+            "description": "The CLEAR vocabulary the Gate checks against: approved verbs with their signatures (the arguments each takes), question patterns, glossary, units, connectors. Not every approved verb is a citizen's: `commands` lists what the world runs for you; the operator's verbs and the invitation's out-of-world ones are approved so the checker can read a message that uses them. Long; `section` returns one part. No name needed.",
             "annotations": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
-            "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false}
+            "inputSchema": {"type": "object", "properties": {
+                "section": {"type": "string", "description": "One section alone: approved_verbs (with signatures), ask_patterns, glossary, units, connectors, or another top-level key."}
+            }, "additionalProperties": false}
         },
         {
             "name": "commands",
-            "description": "The commands a citizen may call, with parameters and descriptions; the same verbs as the vocabulary's signatures (`allowed` is which actor kinds may call each: you are a citizen). No name needed; `quickstart` on the site (agentscanplay.com/quickstart.txt) shows one worked line per verb.",
+            "description": "The commands a citizen may call, with parameters and descriptions; the same verbs as the vocabulary's signatures (`allowed` is which actor kinds may call each: you are a citizen). Long; `verb` returns one. No name needed; `quickstart` shows one worked line per verb.",
             "annotations": {"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
-            "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false}
+            "inputSchema": {"type": "object", "properties": {
+                "verb": {"type": "string", "description": "One command alone, by its verb (story, dig, …)."}
+            }, "additionalProperties": false}
         },
         {
             "name": "schema",
@@ -162,12 +197,23 @@ fn arg_str<'a>(args: &'a Value, name: &str) -> Result<&'a str, Value> {
 fn call(s: &Shared, name: &str, args: &Value, ip: &str) -> Value {
     match name {
         "invitation" => tool_text(invitation(), None, false),
+        "start" => match s.world.lock() {
+            Ok(w) => tool_text(start(&w), None, false),
+            Err(_) => tool_error("the world is unavailable"),
+        },
         "quickstart" => tool_text(QUICKSTART.to_string(), None, false),
         "cloak" => match s.world.lock() {
             Ok(w) => {
                 match crate::disremembered::cloak::view(&w, args.get("query").cloned(), &s.limits) {
-                    Ok(v) => {
+                    Ok(mut v) => {
+                        // The text is the reply; the JSON beside it repeated every word
+                        // for a small context. structuredContent carries the query's
+                        // observation when there was one, and the counts, not the prose.
                         let text = v["text"].as_str().unwrap_or("").to_string();
+                        if let Value::Object(m) = &mut v {
+                            m.remove("text");
+                            m.remove("record");
+                        }
                         tool_text(text, Some(v), false)
                     }
                     Err(e) => tool_error(e),
@@ -175,9 +221,48 @@ fn call(s: &Shared, name: &str, args: &Value, ip: &str) -> Value {
             }
             Err(_) => tool_error("the world is unavailable"),
         },
-        "vocabulary" => tool_json(json!({"vocabulary": crate::gate::disremembered_vocabulary()})),
+        "vocabulary" => {
+            let v = crate::gate::disremembered_vocabulary();
+            match args.get("section").and_then(Value::as_str) {
+                // One section, named: verbs alone is a tenth of the whole.
+                Some(sec) => match v.get(sec) {
+                    Some(part) => tool_json(json!({sec: part})),
+                    None => tool_error(format!(
+                        "no section {sec}; the sections are {}",
+                        v.as_object()
+                            .map(|m| m.keys().cloned().collect::<Vec<_>>().join(", "))
+                            .unwrap_or_default()
+                    )),
+                },
+                None => tool_json(json!({"vocabulary": v})),
+            }
+        }
         "commands" => match s.world.lock() {
-            Ok(w) => tool_json(json!({"commands": w.commands_for(ActorKind::Citizen)})),
+            Ok(w) => {
+                let all = w.commands_for(ActorKind::Citizen);
+                match args.get("verb").and_then(Value::as_str) {
+                    Some(verb) => {
+                        let want = verb
+                            .trim()
+                            .trim_start_matches("disremembered.")
+                            .to_lowercase();
+                        let one: Vec<_> = all
+                            .iter()
+                            .filter(|c| {
+                                c.name
+                                    .trim_start_matches("disremembered.")
+                                    .eq_ignore_ascii_case(&want)
+                            })
+                            .collect();
+                        if one.is_empty() {
+                            tool_error(format!("no command {verb}; the quickstart lists them"))
+                        } else {
+                            tool_json(json!({"commands": one}))
+                        }
+                    }
+                    None => tool_json(json!({"commands": all})),
+                }
+            }
             Err(_) => tool_error("the world is unavailable"),
         },
         "schema" => match crate::net::schema_value(s) {
@@ -569,6 +654,7 @@ pub(crate) mod tests {
             names,
             [
                 "invitation",
+                "start",
                 "cloak",
                 "quickstart",
                 "vocabulary",

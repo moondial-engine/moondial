@@ -372,6 +372,56 @@ pub fn reply(world: &World, creature: EntityId, actor: &str, text: &str) -> Opti
         ));
     }
     if has(&[
+        "what else",
+        "the rest",
+        "go on",
+        "and the others",
+        "more of",
+    ]) {
+        // The rest of what it holds, four at a time: the answer to "and 18 more".
+        let asked = world
+            .recent_events(400)
+            .iter()
+            .filter(|e| {
+                e.kind == SAY
+                    && e.payload["from"] == actor
+                    && e.payload["to"]
+                        .as_str()
+                        .is_some_and(|t| t.starts_with(&name))
+                    && e.payload["text"].as_str().is_some_and(|t| {
+                        let t = t.to_lowercase();
+                        [
+                            "what else",
+                            "the rest",
+                            "go on",
+                            "and the others",
+                            "more of",
+                        ]
+                        .iter()
+                        .any(|w| t.contains(w))
+                    })
+            })
+            .count();
+        // The ask being answered is already in the log, so the count includes it: the
+        // first "what else" is page two.
+        let asked = asked.max(1);
+        let page: Vec<String> = sources.iter().skip(4 * asked).take(4).cloned().collect();
+        return Some(if page.is_empty() {
+            "That is all of it.".into()
+        } else {
+            let left = sources.len().saturating_sub(4 * (asked + 1));
+            format!(
+                "Also {}{}.",
+                list(&page),
+                if left > 0 {
+                    format!(", and {left} more")
+                } else {
+                    String::new()
+                }
+            )
+        });
+    }
+    if has(&[
         "remember",
         "hold",
         "keep",
@@ -385,7 +435,10 @@ pub fn reply(world: &World, creature: EntityId, actor: &str, text: &str) -> Opti
         let shown: Vec<String> = sources.iter().take(4).cloned().collect();
         let mut s = format!("I hold {level:.0}: {}", list(&shown));
         if sources.len() > shown.len() {
-            s.push_str(&format!(", and {} more", sources.len() - shown.len()));
+            s.push_str(&format!(
+                ", and {} more (ask what else)",
+                sources.len() - shown.len()
+            ));
         }
         s.push('.');
         s.push_str(&format!(" {} keep me.", list(&keepers)));

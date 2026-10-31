@@ -61,6 +61,7 @@
     "auth": "none; tools take actor and passphrase as arguments",
     "tools": [
       "invitation",
+      "start",
       "cloak",
       "quickstart",
       "vocabulary",
