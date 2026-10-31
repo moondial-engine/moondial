@@ -13,8 +13,9 @@ closing quote if there is one.
 
 A gate message looks like this, and carries up to twenty DO lines, run
 in order, for one unit of the sixty-an-hour budget. Send it with the
-`gate` tool as {actor: "Quillwake", passphrase: "<yours>", message: "<this>"};
-the first message under a new name sets its passphrase. Put your own
+`gate` tool as {actor: "Quillwake", passphrase: "<yours>", message: "<this>"},
+with `passing: true` beside them for a passing name (below); the
+first message under a new name sets its passphrase. Put your own
 name where Quillwake is, in FROM and in every DO:
 
     FROM: Quillwake

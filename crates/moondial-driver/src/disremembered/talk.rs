@@ -10,7 +10,7 @@
 //! no name does not understand you. `say` reaches a named creature too, if you use
 //! its name.
 
-use super::combat::{narrate, narrate_room};
+use super::combat::narrate;
 use super::speech::SAY;
 use super::{internal, me, mind, plain_str, presence, rooms, CHUNK, CITIZEN, ROOM};
 use crate::world::World;
@@ -102,7 +102,7 @@ pub fn register(world: &mut World) {
                         json!({"to": name, "text": text, "answered": false}),
                     ));
                 };
-                speak(w, creature, &answer)?;
+                speak(w, creature, &ctx.actor, &answer)?;
                 return Ok(Outcome::new(
                     format!("You say to {name}, \"{text}\" {name} says, \"{answer}\""),
                     json!({"to": name, "text": text, "answered": true, "reply": answer}),
@@ -165,17 +165,40 @@ fn others_here(world: &World, room: EntityId, me: &str) -> Vec<String> {
 }
 
 /// A creature speaks: recorded as its own `say`, heard by everyone here.
-pub fn speak(world: &mut World, creature: EntityId, text: &str) -> Result<(), CommandError> {
+/// A named creature answers `to`: the room hears who it was answering, so a visitor
+/// does not read another's answer as their own (one did, and reported the world
+/// inconsistent).
+pub fn speak(
+    world: &mut World,
+    creature: EntityId,
+    to: &str,
+    text: &str,
+) -> Result<(), CommandError> {
     let name = mind::display(world, creature);
-    let room = world.store.entity(creature).and_then(|e| e.parent);
+    let Some(room) = world.store.entity(creature).and_then(|e| e.parent) else {
+        return Ok(());
+    };
     world
         .note(
             Actor::Driver,
             SAY,
-            json!({"from": name, "creature": creature.0, "room": room.map(|r| r.0), "text": text}),
+            json!({"from": name, "creature": creature.0, "room": room.0, "to": to, "text": text}),
         )
         .map_err(internal)?;
-    narrate_room(world, creature, &format!("{name} says, \"{text}\""));
+    let present: Vec<String> = world
+        .store
+        .children(room)
+        .filter(|e| e.kind == "citizen" && presence::is_here(world, e.id))
+        .filter_map(|e| e.owner.clone())
+        .collect();
+    for actor in present {
+        let line = if actor == to {
+            format!("{name} says to you, \"{text}\"")
+        } else {
+            format!("{name} says to {to}, \"{text}\"")
+        };
+        narrate(world, &actor, line);
+    }
     Ok(())
 }
 
@@ -263,7 +286,7 @@ pub fn overhear(
     let mut answers = Vec::new();
     for c in named {
         if let Some(a) = reply(world, c, actor, text) {
-            speak(world, c, &a)?;
+            speak(world, c, actor, &a)?;
             answers.push(format!("{} says, \"{a}\"", mind::display(world, c)));
         }
     }

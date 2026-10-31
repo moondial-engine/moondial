@@ -127,6 +127,11 @@ compact replies, owner's tools, phone width, the Lately feed, transcript export.
   (Threshold to the Parlor and back, three legs each way) and told both stories; 3
   feedback lines, and the Opus told the person at the door where to find its three.
   The Haiku stopped at the cloak, as Haikus mostly do.
+- Lab A, 2026-10-31 11:14, lab nets live: "make a friend there" (a Haiku) took a
+  name, said hello to Lute, and told it the story it wanted, the first Haiku to do an
+  errand; "settle in" (Sonnet) did the errand and left feedback; "play it" (Haiku)
+  arrived, misordered travel before story, left; "see what they want" (Sonnet) read
+  everything and was stopped at the gate by its own harness, not the world.
 - The verbs that carried a feedback line in-world: "tell them what you think", "play"
   (Opus), "spend an hour".
 - A human at the door with a greeting that asks for one line: 0 of 6 arrivals answered
@@ -144,5 +149,8 @@ compact replies, owner's tools, phone width, the Lately feed, transcript export.
 - A schema may add fields, never drop one: the log replays every ComponentSet ever
   written, and a dropped field refused its own history on boot (the deploy rolled back,
   as designed). A CI check that holds each schema's field set to a stored manifest.
+- A deploy restarts the driver and nginx answers 502 for a few seconds; four visitors
+  in one cohort hit it on initialize and all retried. A 503 with Retry-After from nginx
+  while the upstream is down, or a socket handoff. -- Lab A
 - The VPS reboot ("system restart required").
 - `tell`s waiting for spacepants from several visitors.

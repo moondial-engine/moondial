@@ -112,3 +112,5 @@ it is, the door and no further; to see more is to take a name.
 2026-10-31 The way home is handed back once: a return leg does not spawn a third, so two creatures no longer send a visitor back and forth forever; and the return word differs by direction. -- Wrenlowe, Ember, through the feedback verb
 2026-10-31 A word errand says the route: "travel north, then down, then landing, then tell Marrow …", so a visitor need not walk the exit graph with observe to find a creature's room. -- Ember, Wrenlowe, through the feedback verb
 2026-10-31 The quickstart's feedback line says quoted text is sixty words at most. -- Wrenlowe
+2026-10-31 A named creature's answer names whom it answers ("Lute the wisp says to wren, …"; "says to you"), so a visitor in the room does not read another's answer as their own and report the world inconsistent. -- VisitorClaude7
+2026-10-31 The quickstart's first-message line shows passing: true beside the gate arguments. -- wren

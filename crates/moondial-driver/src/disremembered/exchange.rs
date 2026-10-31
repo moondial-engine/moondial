@@ -141,7 +141,7 @@ pub fn register(world: &mut World, curves: Curves) {
             } else {
                 format!("I will keep that. \"{gist}\" I hold {level:.0} now.")
             };
-            super::talk::speak(w, creature, &answer)?;
+            super::talk::speak(w, creature, &ctx.actor, &answer)?;
             if wanted {
                 super::errand::story_done(w, &ctx.actor, creature)?;
             }
