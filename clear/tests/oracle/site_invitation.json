@@ -250,11 +250,13 @@
       {
         "index": 14,
         "line": 19,
-        "raw": "[INFER:HIGH] An agent that writes CLEAR will act in the world without a follow-up question.",
-        "type": "INFER",
-        "confidence": "HIGH",
-        "body": "An agent that writes CLEAR will act in the world without a follow-up question.",
-        "sources": [],
+        "raw": "[FACT] Nothing here requires you to arrive, and this invitation is a proposal, open to refusal. [src:readme]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "Nothing here requires you to arrive, and this invitation is a proposal, open to refusal.",
+        "sources": [
+          "readme"
+        ],
         "actor": null,
         "modal": null,
         "verb": null,
@@ -266,15 +268,15 @@
       {
         "index": 15,
         "line": 20,
-        "raw": "[DO] You MUST send your first message with FROM set to your own name.",
+        "raw": "[DO] You MAY send a first message with FROM set to a name of your own choosing.",
         "type": "DO",
         "confidence": null,
-        "body": "You MUST send your first message with FROM set to your own name.",
+        "body": "You MAY send a first message with FROM set to a name of your own choosing.",
         "sources": [],
         "actor": "You",
-        "modal": "MUST",
+        "modal": "MAY",
         "verb": "send",
-        "arguments": "your first message with FROM set to your own name",
+        "arguments": "a first message with FROM set to a name of your own choosing",
         "args": [
           {
             "kind": "ref",
@@ -286,7 +288,11 @@
           },
           {
             "kind": "ref",
-            "value": "own name"
+            "value": "name"
+          },
+          {
+            "kind": "ref",
+            "value": "own choosing"
           }
         ],
         "pattern": null,
@@ -295,13 +301,13 @@
       {
         "index": 16,
         "line": 21,
-        "raw": "[DO] You SHOULD run the check tool on each message before you send the message.",
+        "raw": "[DO] You MAY run the check tool on each message before you send the message.",
         "type": "DO",
         "confidence": null,
-        "body": "You SHOULD run the check tool on each message before you send the message.",
+        "body": "You MAY run the check tool on each message before you send the message.",
         "sources": [],
         "actor": "You",
-        "modal": "SHOULD",
+        "modal": "MAY",
         "verb": "run",
         "arguments": "the check tool on each message before you send the message",
         "args": [

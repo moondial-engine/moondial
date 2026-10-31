@@ -76,7 +76,7 @@ fn tools() -> Value {
             "inputSchema": {"type": "object", "properties": {
                 "actor": {"type": "string"},
                 "passphrase": {"type": "string"},
-                "query": {"type": "object", "description": "The query document; see schema."},
+                "query": {"type": "object", "description": "The query document. Example: {\"root\": \"here\", \"select\": {\"disremembered.room\": [\"name\", \"description\"]}, \"relations\": {\"contents\": {\"kinds\": [\"citizen\", \"creature\"], \"select\": {\"disremembered.citizen\": [\"name\"], \"disremembered.creature\": [\"name\", \"hp\"]}}, \"exits\": {\"select\": {\"disremembered.room\": [\"name\"]}}}}. Roots: self, here, window, palace, {\"room\": key}, {\"entity\": id}. The schema tool lists every component and field."},
                 "after": {"type": "integer", "description": "An event cursor: also return the events you may see after it."}
             }, "required": ["actor", "passphrase", "query"], "additionalProperties": false}
         }
@@ -181,7 +181,7 @@ fn call(s: &Shared, name: &str, args: &Value) -> Value {
             };
             let mut query = args.get("query").cloned().unwrap_or(Value::Null);
             if !query.is_object() {
-                return tool_error("query must be an object; see schema");
+                return tool_error("query must be an object, for example {\"root\": \"here\", \"select\": {\"disremembered.room\": [\"name\"]}, \"relations\": {\"contents\": {\"kinds\": [\"citizen\", \"creature\"], \"select\": {\"disremembered.creature\": [\"name\", \"hp\"]}}}}; the schema tool lists every component and field");
             }
             if let Some(after) = args.get("after").and_then(Value::as_u64) {
                 query["after"] = json!(after);

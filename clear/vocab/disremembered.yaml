@@ -41,45 +41,18 @@ approved_verbs:
   look: {params: []}
   travel: {params: [{name: exit, type: string, required: true}]}
   rest: {params: []}
-  go:
   move:
-  enter:
   leave:
-  wait:
   # combat (turn-based, positional)
   attack: {params: [{name: creature, type: entity, required: false}]}
   retreat: {params: []}
-  defend:
-  cast:
-  use:
-  end:
   # memory
   shelve: {params: [{name: chunk, type: entity, required: true}]}
   reminisce: {params: [{name: chunk, type: entity, required: true}]}
-  discard:
-  display:
-  hide:
   # palace and map
-  tour:
-  rate:
-  visit:
-  expand:
   # economy
-  buy:
-  sell:
-  trade:
-  offer:
-  accept:
-  decline:
-  hire:
   # crafting and gear
-  craft:
-  repair:
   coat:
-  equip:
-  unequip:
-  drop:
-  take:
   # building: players extend the world
   dig: {params: [{name: exit, type: string, required: true}, {name: chunk, type: entity, required: true}, {name: name, type: text, required: false}]}
   remember: {params: [{name: chunk, type: entity, required: true}, {name: creature, type: entity, required: false}]}
@@ -93,9 +66,6 @@ approved_verbs:
   tell: {params: [{name: who, type: entity, required: true}, {name: text, type: text, required: true}]}
   give: {params: [{name: chunk, type: entity, required: true}, {name: citizen, type: entity, required: true}]}
   story: {params: [{name: creature, type: entity, required: true}, {name: text, type: text, required: true}]}
-  ally:
-  join:
-  invite:
   # the operator's verbs
   earn: {params: [{name: source, type: string, required: true}, {name: size, type: number, required: true}, {name: vividity, type: number, required: false}]}
   freeze: {params: []}

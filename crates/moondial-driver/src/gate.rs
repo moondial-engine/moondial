@@ -800,6 +800,10 @@ fn run_query(
                 ),
                 "gate",
             );
+            report.fact(
+                "The world answers: where is X; what is the level, hit points, attack or room of X; a count of creatures, citizens or chunks",
+                "gate",
+            );
         }
     }
 }
@@ -1073,7 +1077,7 @@ mod tests {
         assert!(
             r.contains(
                 "[FACT] Question 8 matched a pattern this world does not answer yet. [src:gate]"
-            ),
+            ) && r.contains("[FACT] The world answers: where is X;"),
             "{r}"
         );
     }
