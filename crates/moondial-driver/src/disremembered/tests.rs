@@ -957,6 +957,33 @@ fn players_dig_rooms_that_fade_but_stay() {
         json!(["Again."])
     )
     .is_err());
+    // A welcome is a guest book: tyler may add a line, not rewrite or rename.
+    ok(&mut w, "dave", "welcome", json!(["tyler"]));
+    for (verb, arg) in [("describe", "Mine."), ("name", "Tyler's Stair")] {
+        let err = call(&mut w, "tyler", ActorKind::Citizen, verb, json!([arg])).unwrap_err();
+        assert!(err.to_string().contains("permission"), "{verb}: {err}");
+    }
+    let out = ok(&mut w, "tyler", "append", json!(["Tyler was here."]));
+    assert!(out.result["description"]
+        .as_str()
+        .unwrap()
+        .ends_with("Tyler was here."));
+    ok(&mut w, "dave", "revoke", json!(["tyler"]));
+    assert!(call(
+        &mut w,
+        "tyler",
+        ActorKind::Citizen,
+        "append",
+        json!(["Again."])
+    )
+    .is_err());
+    // Set it back to what the fade checks below expect.
+    ok(
+        &mut w,
+        "dave",
+        "describe",
+        json!(["Steps of salt. Swept now, by a friend."]),
+    );
 
     // The seed rooms are the world's.
     ok(&mut w, "dave", "travel", json!(["up"]));

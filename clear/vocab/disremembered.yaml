@@ -60,6 +60,7 @@ approved_verbs:
   append: {params: [{name: text, type: text, required: true}]}
   name: {params: [{name: name, type: text, required: true}]}
   permit: {params: [{name: citizen, type: entity, required: true}, {name: hours, type: number, required: false}]}
+  welcome: {params: [{name: citizen, type: entity, required: true}, {name: hours, type: number, required: false}]}
   revoke: {params: [{name: citizen, type: entity, required: true}]}
   # social
   say: {params: [{name: text, type: text, required: true}]}

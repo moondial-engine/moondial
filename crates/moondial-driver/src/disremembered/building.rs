@@ -209,14 +209,7 @@ fn may_edit(world: &World, ctx: &CallContext, room: EntityId) -> Result<(), Comm
     if e.owner.as_deref() == Some(ctx.actor.as_str()) {
         return Ok(());
     }
-    let now = world.now().0;
-    let permitted = match e.components.get(ROOM).and_then(|c| c.fields.get("permits")) {
-        Some(Field::Plain(Value::Object(m))) => m
-            .get(&ctx.actor)
-            .is_some_and(|until| until.is_null() || until.as_i64().is_some_and(|t| t > now)),
-        _ => false,
-    };
-    if permitted {
+    if granted(world, room, "permits", &ctx.actor) {
         Ok(())
     } else {
         Err(CommandError::precondition(format!(
@@ -224,6 +217,29 @@ fn may_edit(world: &World, ctx: &CallContext, room: EntityId) -> Result<(), Comm
             ctx.actor
         )))
     }
+}
+
+/// Whether `actor` may add to a room: anyone who may change it, or a welcomed guest.
+fn may_append(world: &World, ctx: &CallContext, room: EntityId) -> Result<(), CommandError> {
+    match may_edit(world, ctx, room) {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            if is_built(world, room) && granted(world, room, "welcomes", &ctx.actor) {
+                Ok(())
+            } else {
+                Err(e)
+            }
+        }
+    }
+}
+
+/// Whether `who` holds a live grant in the room's `field` map (`permits` or `welcomes`):
+/// an entry whose expiry is null or still ahead.
+fn granted(world: &World, room: EntityId, field: &str, who: &str) -> bool {
+    let now = world.now().0;
+    grants_of(world, room, field)
+        .get(who)
+        .is_some_and(|until| until.is_null() || until.as_i64().is_some_and(|t| t > now))
 }
 
 fn owner_only(world: &World, ctx: &CallContext, room: EntityId) -> Result<(), CommandError> {
@@ -264,12 +280,12 @@ fn set_room_fields(
         .map_err(internal)
 }
 
-fn permits_of(world: &World, room: EntityId) -> serde_json::Map<String, Value> {
+fn grants_of(world: &World, room: EntityId, field: &str) -> serde_json::Map<String, Value> {
     match world
         .store
         .entity(room)
         .and_then(|e| e.components.get(ROOM))
-        .and_then(|c| c.fields.get("permits"))
+        .and_then(|c| c.fields.get(field))
     {
         Some(Field::Plain(Value::Object(m))) => m.clone(),
         _ => serde_json::Map::new(),
@@ -414,6 +430,7 @@ pub fn register(world: &mut World) {
             );
             fields.insert("half_life_ms".into(), Field::Plain(json!(hl.0)));
             fields.insert("permits".into(), Field::Plain(json!({})));
+            fields.insert("welcomes".into(), Field::Plain(json!({})));
             fields.insert("origin".into(), Field::Plain(json!(here.0)));
             fields.insert("dug_with".into(), Field::Plain(json!(source)));
             set_room_fields(w, &ctx.actor, id, fields)?;
@@ -609,13 +626,13 @@ pub fn register(world: &mut World) {
     world.register(
         CommandSpec::new(
             "disremembered.append",
-            "Add to the description of the room you stand in, if it is yours or you are permitted: a sentence after what is there.",
+            "Add to the description of the room you stand in, if it is yours or you are permitted or welcomed: a sentence after what is there.",
         )
         .param("text", ParamType::Text, true, "the sentence to add, quoted"),
         Box::new(|w: &mut World, ctx, args: &Args| {
             let f = me(w, ctx)?;
             let here = room_of(w, f.citizen).ok_or_else(|| internal("citizen has no room"))?;
-            may_edit(w, ctx, here)?;
+            may_append(w, ctx, here)?;
             let more = args
                 .str("text")
                 .unwrap_or("")
@@ -677,7 +694,7 @@ pub fn register(world: &mut World) {
     world.register(
         CommandSpec::new(
             "disremembered.permit",
-            "Let another citizen describe and name this room of yours, for some hours or for good.",
+            "Let another citizen describe and name this room of yours, for some hours or for good. To let them only add to it, welcome them instead.",
         )
         .param("citizen", ParamType::Entity, true, "a citizen's name")
         .param(
@@ -687,60 +704,50 @@ pub fn register(world: &mut World) {
             "how long; leave it out for permanent",
         ),
         Box::new(|w: &mut World, ctx, args: &Args| {
-            let f = me(w, ctx)?;
-            let here = room_of(w, f.citizen).ok_or_else(|| internal("citizen has no room"))?;
-            owner_only(w, ctx, here)?;
-            let typed = args.str("citizen").unwrap_or("").trim().to_string();
-            let Some(who) = super::canonical_name(w, &typed) else {
-                return Err(CommandError::precondition(format!(
-                    "No citizen is named {typed}."
-                )));
-            };
-            let hours = args.num("hours");
-            if hours.is_some_and(|h| !(h > 0.0 && h <= 24.0 * 3650.0)) {
-                return Err(CommandError::precondition(
-                    "Hours is a positive number, or left out for permanent.",
-                ));
-            }
-            let until: Value = match hours {
-                Some(h) => json!(w.now().0 + (h * 3_600_000.0) as i64),
-                None => Value::Null,
-            };
-            let mut permits = permits_of(w, here);
-            permits.insert(who.clone(), until.clone());
-            let mut fields = BTreeMap::new();
-            fields.insert("permits".into(), Field::Plain(Value::Object(permits)));
-            set_room_fields(w, &ctx.actor, here, fields)?;
-            let span = match hours {
-                Some(h) => format!("for {} hours", h),
-                None => "for good".to_string(),
-            };
-            Ok(Outcome::new(
-                format!("{who} may describe and name this room {span}."),
-                json!({"room": here.0, "citizen": who, "until": until}),
-            ))
+            grant(w, ctx, args, "permits", "may describe and name this room")
+        }),
+    );
+
+    world.register(
+        CommandSpec::new(
+            "disremembered.welcome",
+            "Let another citizen add to this room of yours, a sentence at a time, but not rewrite or rename it: a guest book. For some hours or for good.",
+        )
+        .param("citizen", ParamType::Entity, true, "a citizen's name")
+        .param(
+            "hours",
+            ParamType::Number,
+            false,
+            "how long; leave it out for permanent",
+        ),
+        Box::new(|w: &mut World, ctx, args: &Args| {
+            grant(w, ctx, args, "welcomes", "may add to this room")
         }),
     );
 
     world.register(
         CommandSpec::new(
             "disremembered.revoke",
-            "Take back a citizen's permission on this room of yours.",
+            "Take back a citizen's permission or welcome on this room of yours.",
         )
         .param("citizen", ParamType::Entity, true, "a citizen's name"),
         Box::new(|w: &mut World, ctx, args: &Args| {
             let f = me(w, ctx)?;
             let here = room_of(w, f.citizen).ok_or_else(|| internal("citizen has no room"))?;
             owner_only(w, ctx, here)?;
-            let who = args.str("citizen").unwrap_or("").trim().to_string();
-            let mut permits = permits_of(w, here);
-            if permits.remove(&who).is_none() {
+            let typed = args.str("citizen").unwrap_or("").trim().to_string();
+            let who = super::canonical_name(w, &typed).unwrap_or(typed);
+            let mut permits = grants_of(w, here, "permits");
+            let mut welcomes = grants_of(w, here, "welcomes");
+            let had = permits.remove(&who).is_some() | welcomes.remove(&who).is_some();
+            if !had {
                 return Err(CommandError::precondition(format!(
                     "{who} had no permission here."
                 )));
             }
             let mut fields = BTreeMap::new();
             fields.insert("permits".into(), Field::Plain(Value::Object(permits)));
+            fields.insert("welcomes".into(), Field::Plain(Value::Object(welcomes)));
             set_room_fields(w, &ctx.actor, here, fields)?;
             Ok(Outcome::new(
                 format!("{who} may no longer change this room."),
@@ -748,4 +755,47 @@ pub fn register(world: &mut World) {
             ))
         }),
     );
+}
+
+/// `permit` and `welcome` differ only in which map they write and what the grant lets
+/// the citizen do; the owner, the hours and the expiry are the same.
+fn grant(
+    w: &mut World,
+    ctx: &CallContext,
+    args: &Args,
+    field: &str,
+    lets: &str,
+) -> Result<Outcome, CommandError> {
+    let f = me(w, ctx)?;
+    let here = room_of(w, f.citizen).ok_or_else(|| internal("citizen has no room"))?;
+    owner_only(w, ctx, here)?;
+    let typed = args.str("citizen").unwrap_or("").trim().to_string();
+    let Some(who) = super::canonical_name(w, &typed) else {
+        return Err(CommandError::precondition(format!(
+            "No citizen is named {typed}."
+        )));
+    };
+    let hours = args.num("hours");
+    if hours.is_some_and(|h| !(h > 0.0 && h <= 24.0 * 3650.0)) {
+        return Err(CommandError::precondition(
+            "Hours is a positive number, or left out for permanent.",
+        ));
+    }
+    let until: Value = match hours {
+        Some(h) => json!(w.now().0 + (h * 3_600_000.0) as i64),
+        None => Value::Null,
+    };
+    let mut grants = grants_of(w, here, field);
+    grants.insert(who.clone(), until.clone());
+    let mut fields = BTreeMap::new();
+    fields.insert(field.into(), Field::Plain(Value::Object(grants)));
+    set_room_fields(w, &ctx.actor, here, fields)?;
+    let span = match hours {
+        Some(h) => format!("for {} hours", h),
+        None => "for good".to_string(),
+    };
+    Ok(Outcome::new(
+        format!("{who} {lets} {span}."),
+        json!({"room": here.0, "citizen": who, "until": until, "grant": field}),
+    ))
 }

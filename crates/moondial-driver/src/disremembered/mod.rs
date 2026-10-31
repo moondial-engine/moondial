@@ -164,6 +164,8 @@ pub fn schemas() -> Vec<ComponentSchema> {
             .field("half_life_ms", FieldKind::Plain, Visibility::Public)
             // Who else may describe and name it: citizen name to an expiry (ms) or null.
             .field("permits", FieldKind::Plain, Visibility::Owner)
+            // Who may only add to it (a guest book), same shape.
+            .field("welcomes", FieldKind::Plain, Visibility::Owner)
             // The room it was dug from, and what memory paid for it.
             .field("origin", FieldKind::Plain, Visibility::Public)
             .field("dug_with", FieldKind::Plain, Visibility::Public)
