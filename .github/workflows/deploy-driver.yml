@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "crates/**"
+      # The vocabulary is compiled into the driver (include_str!).
+      - "clear/vocab/**"
       - "Cargo.toml"
       - "Cargo.lock"
       - "rust-toolchain.toml"
