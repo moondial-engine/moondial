@@ -327,10 +327,11 @@ fn handle(s: &Shared, msg: &Value, cloak: bool, ip: &str) -> Option<Value> {
             "mcp",
             json!({"method": method, "tool": tool, "actor": actor}),
         );
-        match (method, tool) {
-            ("initialize", _) => w.looked_in("initialize"),
-            ("tools/call", Some("cloak")) => w.looked_in("cloak"),
-            _ => {}
+        // Announced on the cloak, the first thing that reads the world: a directory
+        // crawler initializes and lists the tools and never looks in, and was
+        // announced as a visitor. initialize still counts in the door.
+        if let ("tools/call", Some("cloak")) = (method, tool) {
+            w.looked_in("cloak");
         }
     }
     Some(match method {

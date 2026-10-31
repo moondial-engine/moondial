@@ -391,8 +391,9 @@ impl World {
         }
     }
 
-    /// A visitor looked in (initialize, cloak) from an address outside the lab: one
-    /// notice per address per process, so a lurker is news once and not noise.
+    /// A visitor looked in (the cloak) from an address outside the lab: one notice per
+    /// address per process, so a lurker is news once and not noise. A bare initialize
+    /// is a client checking the tools, a crawler as often as not, and is only counted.
     pub fn looked_in(&mut self, what: &str) {
         let ip = self.client_ip();
         if ip.is_empty() || self.is_lab(&ip) || !self.seen_nets.insert(ip.clone()) {
