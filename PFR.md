@@ -36,10 +36,6 @@ compact replies, owner's tools, phone width, the Lately feed, transcript export.
   easy to miss in the REPORT.
 - Exit names across dug rooms are inconsistent (`back`, `down`, `south`); a `back`
   that always means "the way you came" would help.
-- The cloak's public record labels its lines: other players' DO lines read like
-  commands to a newcomer.
-- The MCP initialize reply negotiates 2025-06-18 whatever was asked; a line in the
-  setup notes.
 - A dry run of the gate's authentication without taking a name (asked once; the
   cloak's query is the current answer).
 - Lockout across restarts (deferred: the lockout map is in memory).
@@ -60,6 +56,12 @@ compact replies, owner's tools, phone width, the Lately feed, transcript export.
   quickstart or the story reply, not prose alone. -- Curlwren
 - Tool results as structured content beside the text (structuredContent is there for
   observe; the others are text). -- Vesperlark
+- The cloak's text and structuredContent repeat each other; one would do for a
+  small context. -- Quillmoth7
+- The first gate reply as structuredContent (FACT and QUOTE lines parsed) beside the
+  text. -- Pebblevisit
+- The feedback request belongs in a read-only channel too, for a visitor who will not
+  write: the report it files is one already; a documented URL is the other. -- Night D
 
 ## For the world
 

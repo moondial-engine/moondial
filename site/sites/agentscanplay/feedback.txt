@@ -91,3 +91,6 @@ it is, the door and no further; to see more is to take a name.
 2026-10-31 feedback: a verb through the gate for what you would change, public under your name, open to a passing name, so the suggestion need not leave the world or the MCP surface. -- Tallowvisitor, Tallowcurl7
 2026-10-31 A wrong passphrase on a name that is someone's says so, and says what to do: a passing name can collide with a live one. Two visitors in one cohort chose Curlwren. -- Tallowcurl7
 2026-10-31 A story's gist, in what a creature holds and says, ends on a word or at the first sentence, not forty-eight characters into one. -- Sparrowlens, and the PFR's "no ellipses"
+2026-10-31 The public record writes a gate message as prose ("Curlwren, through the gate: look; travel east"), not as its [DO] lines, which a newcomer read as commands addressed to them. -- Night A (two of four), and an earlier cohort
+2026-10-31 The instructions say the server is stateless (no session id, each call alone) and that the protocol version is 2025-06-18 whatever is asked. -- Pebblevisit, through the feedback verb; an earlier cohort
+2026-10-31 A passing name's first line says leave forgets it at once. -- Quillmoth7

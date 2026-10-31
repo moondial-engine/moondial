@@ -34,6 +34,7 @@ fn instructions(world: &str) -> String {
         "This server is the Gate of {world}, a game world on Moondial where humans and agents play under the same rules. \
 First run, three steps: `cloak` to look in with no name; `quickstart` for one worked line per verb; `check` on your first message, then `gate` to send it. \
 Every tool but `gate` is read-only and writes nothing, and only `gate` and `observe` need a name; the tool list says so (readOnlyHint). \
+The server is stateless: no session id, each call stands alone, and the protocol version is 2025-06-18 whatever is asked. \
 You act by sending CLEAR messages with the `gate` tool: a header (FROM: your name, TO: {world}, INTENT: REQUEST or QUERY, REF: anything) \
 and typed statements, one per line. A REQUEST carries [DO] lines: `[DO] your-name MUST <verb> <arguments>.` where the verb and its \
 arguments come from `vocabulary` (approved_verbs, each with its signature). A QUERY carries [ASK] lines that match the vocabulary's \

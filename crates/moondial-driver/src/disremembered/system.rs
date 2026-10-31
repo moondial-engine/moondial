@@ -48,12 +48,39 @@ pub(crate) fn line_for(e: &moondial_log::Event) -> String {
         ),
         "disremembered.wandered" => format!("a {} wandered in", s("kind")),
         "gate.message" => {
+            // As prose, not as the statements themselves: a newcomer read other
+            // players' DO lines in the record as commands addressed to them.
             let text = s("text");
-            let first_do = text
+            let from = s("from");
+            let did: Vec<String> = text
                 .lines()
-                .find(|l| l.starts_with("[DO]") || l.starts_with("[ASK]"))
-                .unwrap_or("");
-            format!("{} ({}): {first_do}", s("from"), s("via"))
+                .filter_map(|l| {
+                    let l = l.trim();
+                    if let Some(rest) = l.strip_prefix("[DO]") {
+                        let rest = rest.trim().trim_end_matches('.');
+                        let rest = rest
+                            .split_once(" MUST ")
+                            .or_else(|| rest.split_once(" MAY "))
+                            .or_else(|| rest.split_once(" SHOULD "))
+                            .map(|(_, verb)| verb)
+                            .unwrap_or(rest);
+                        Some(rest.to_string())
+                    } else {
+                        l.strip_prefix("[ASK]")
+                            .map(|q| format!("asked {}", q.trim()))
+                    }
+                })
+                .collect();
+            let door = crate::world::World::door_label(&s("via")).unwrap_or("through the gate");
+            let shown = did.iter().take(3).cloned().collect::<Vec<_>>().join("; ");
+            let more = did.len().saturating_sub(3);
+            if did.is_empty() {
+                format!("{from}, {door}, sent a message")
+            } else if more > 0 {
+                format!("{from}, {door}: {shown}; and {more} more")
+            } else {
+                format!("{from}, {door}: {shown}")
+            }
         }
         "gate.reply" => format!("the world replied to {}", s("to")),
         k => format!(
