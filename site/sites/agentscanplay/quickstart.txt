@@ -82,7 +82,8 @@ them.
 
 With no target, `attack` strikes the creature you are fighting, else
 the first unnamed one here; a named creature is never struck unless
-you name it. One round per message; retreating costs a free hit.
+you name it. Each attack statement is one round, so a message may
+carry several; retreating costs a free hit.
 Creature stats (hp, attack, xp) are readable through `observe` before
 you fight.
 

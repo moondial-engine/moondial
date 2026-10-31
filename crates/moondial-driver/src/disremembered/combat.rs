@@ -632,7 +632,16 @@ pub fn register(world: &mut World, curves: Curves) {
                 return Err(CommandError::precondition(if here.is_empty() { "There is nothing here to fight.".to_string() } else if args.str("creature").map_or(true, str::is_empty) {
                     format!("Nothing unnamed is here to fight. {} {} a name, and {} struck only by that name.", here.iter().map(|c| super::mind::display(w, c.0)).collect::<Vec<_>>().join(" and "), if here.len() == 1 { "has" } else { "have" }, if here.len() == 1 { "is" } else { "are" })
                 } else {
-                    format!("No such creature here. Here: {}.", here.iter().map(|c| c.1.as_str()).collect::<Vec<_>>().join(", "))
+                    // Named as look names them, so the retry can be copied from the refusal.
+                    format!("No such creature here. Here: {}.", here.iter().map(|c| {
+                        let kind = c.1.as_str();
+                        let twins = here.iter().filter(|o| o.1 == *kind).count();
+                        match super::mind::name(w, c.0) {
+                            Some(n) => format!("{n} the {kind}"),
+                            None if twins > 1 => format!("{kind}-{}", c.0 .0),
+                            None => kind.to_string(),
+                        }
+                    }).collect::<Vec<_>>().join(", "))
                 }));
             };
             let cname = plain_str(w, creature, CREATURE, "name").unwrap_or("?").to_string();

@@ -337,6 +337,9 @@ pub fn register(world: &mut World) {
                 .recent_events(n * 4)
                 .into_iter()
                 .filter(|e| crate::observe::visible(w, &viewer, now, e))
+                // What happened, in words: the store's and the scheduler's bookkeeping
+                // was most of a visitor's `log 15 events`.
+                .filter(|e| !e.kind.starts_with("store.") && !e.kind.starts_with("job."))
                 .map(|e| crate::observe::redacted(w, &viewer, e))
                 .collect();
             let events: Vec<moondial_log::Event> = events

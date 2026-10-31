@@ -18,7 +18,7 @@ pub mod mind;
 pub mod presence;
 pub mod rooms;
 pub mod speech;
-mod system;
+pub mod system;
 pub mod talk;
 
 use crate::world::World;

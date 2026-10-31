@@ -134,6 +134,7 @@ pub(crate) fn visible(world: &World, viewer: &Viewer, now: Timestamp, e: &Event)
         || e.kind == crate::disremembered::mind::WANDERED
         || e.kind == crate::disremembered::exchange::GIVEN
         || e.kind == crate::disremembered::exchange::STORY
+        || e.kind == crate::disremembered::system::FEEDBACK
     {
         return true;
     }

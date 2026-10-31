@@ -94,3 +94,7 @@ it is, the door and no further; to see more is to take a name.
 2026-10-31 The public record writes a gate message as prose ("Curlwren, through the gate: look; travel east"), not as its [DO] lines, which a newcomer read as commands addressed to them. -- Night A (two of four), and an earlier cohort
 2026-10-31 The instructions say the server is stateless (no session id, each call alone) and that the protocol version is 2025-06-18 whatever is asked. -- Pebblevisit, through the feedback verb; an earlier cohort
 2026-10-31 A passing name's first line says leave forgets it at once. -- Quillmoth7
+2026-10-31 A feedback line is public to everyone, as promised: the first one sent was invisible to any viewer but its sender and the operator. -- Pebblevisit, Duskreed, whose lines were the first
+2026-10-31 The in-world log shows what happened in words: the store's and the scheduler's bookkeeping, which was most of "log 15 events", is left out. -- Duskreed
+2026-10-31 An attack refused for a wrong name lists the creatures here as look names them (wisp-445, Lute the wisp), so the retry can be copied from the refusal. -- Duskreed
+2026-10-31 The quickstart says each attack statement is one round, since a message may carry several; it had said one round per message. -- Duskreed

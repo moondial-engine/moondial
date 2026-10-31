@@ -2555,6 +2555,18 @@ fn feedback_is_a_public_line_under_your_name_and_a_passing_name_may() {
         system::line_for(&said[0]),
         "Tallowvisitor would change: \"exits should say where they lead\""
     );
+    // Public: anyone's log shows it, in words.
+    let now = w.now();
+    assert!(crate::observe::visible(
+        &w,
+        &Viewer::actor("someone-else"),
+        now,
+        &said[0]
+    ));
+    login(&mut w, "tyler", "test", PASS).unwrap();
+    let seen = ok(&mut w, "tyler", "log", json!([40]));
+    assert!(seen.summary.contains("would change:"), "{}", seen.summary);
+    assert!(!seen.summary.contains("store."), "{}", seen.summary);
     let err = call(
         &mut w,
         "Tallowvisitor",

@@ -60,6 +60,9 @@ compact replies, owner's tools, phone width, the Lately feed, transcript export.
   small context. -- Quillmoth7
 - The first gate reply as structuredContent (FACT and QUOTE lines parsed) beside the
   text. -- Pebblevisit
+- observe's contents relation lists citizens whose trace is still here as if present,
+  while look says you are alone; a presence filter, or a `here` flag on the row.
+  -- Duskreed
 - The feedback request belongs in a read-only channel too, for a visitor who will not
   write: the report it files is one already; a documented URL is the other. -- Night D
 
