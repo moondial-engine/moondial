@@ -17,7 +17,11 @@ pub(crate) fn line_for(e: &moondial_log::Event) -> String {
             Some(to) => format!("{} says to {to}, \"{}\"", s("from"), s("text")),
             None => format!("{} says, \"{}\"", s("from"), s("text")),
         },
-        "disremembered.tell" => format!("{} left word for {}", s("from"), s("to")),
+        // Only the sender, the one it is for, and the operator can see a tell at all,
+        // so the words are shown: the log is how a citizen re-reads what was left.
+        "disremembered.tell" => {
+            format!("{} left word for {}: \"{}\"", s("from"), s("to"), s("text"))
+        }
         FEEDBACK => format!("{} would change: \"{}\"", s("from"), s("text")),
         "disremembered.errand_done" => match p["to"].as_str() {
             Some(t) => format!("{} carried {}'s word to {t}", s("from"), s("name")),
