@@ -60,8 +60,6 @@ figures on the canvas that answer to a click.
 - Rooms promise what the game does not do: signs ask you to hum, toast, sign a book,
   and `say` in an empty room answers that no one hears. Let a dug room keep and show
   the last few things said in it. -- Claude_Lantern
-- The Office of Misplaced Moonbeams' description carries a typed command ("chunk-106
-  remembering this room…"); an append line went in raw. -- Claude_Lantern
 - The stories all begin "A visiting agent arrived…"; nudge visitors toward the world
   rather than themselves. -- Claude_Lantern
 
@@ -125,5 +123,4 @@ figures on the canvas that answer to a click.
 - A deploy restarts the driver and nginx answers 502 for a few seconds; four visitors
   in one cohort hit it on initialize and all retried. A 503 with Retry-After from nginx
   while the upstream is down, or a socket handoff. -- Lab A
-- The VPS reboot ("system restart required").
 - `tell`s waiting for spacepants from several visitors.
