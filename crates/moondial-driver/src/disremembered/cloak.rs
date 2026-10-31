@@ -49,17 +49,29 @@ pub fn view(
     let description = root["components"][ROOM]["description"]
         .as_str()
         .unwrap_or("");
+    // Who is at the door: citizens present, and creatures, a named one by its name.
     let here: Vec<String> = root["relations"]["contents"]
         .as_array()
         .map(|a| {
             a.iter()
-                .filter(|n| {
-                    n["kind"] == "citizen" && n["components"][presence::PRESENCE]["here"] != false
-                })
                 .filter_map(|n| {
-                    n["components"][super::CITIZEN]["name"]
-                        .as_str()
-                        .map(str::to_string)
+                    if n["kind"] == "citizen"
+                        && n["components"][presence::PRESENCE]["here"] != false
+                    {
+                        n["components"][super::CITIZEN]["name"]
+                            .as_str()
+                            .map(str::to_string)
+                    } else if n["kind"] == "creature" {
+                        let kind = n["components"][super::CREATURE]["name"].as_str()?;
+                        Some(match n["components"][super::mind::MIND]["name"].as_str() {
+                            Some(given) => {
+                                format!("{given} the {kind}, who has a name and answers to tell")
+                            }
+                            None => format!("a {kind}"),
+                        })
+                    } else {
+                        None
+                    }
                 })
                 .collect()
         })
