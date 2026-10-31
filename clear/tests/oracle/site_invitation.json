@@ -214,6 +214,24 @@
       {
         "index": 12,
         "line": 17,
+        "raw": "[FACT] The check tool is the MCP tool named check, the HTTP endpoint /v0/check, or the script clear_check.py from the site. [src:readme]",
+        "type": "FACT",
+        "confidence": null,
+        "body": "The check tool is the MCP tool named check, the HTTP endpoint /v0/check, or the script clear_check.py from the site.",
+        "sources": [
+          "readme"
+        ],
+        "actor": null,
+        "modal": null,
+        "verb": null,
+        "arguments": null,
+        "args": [],
+        "pattern": null,
+        "slots": {}
+      },
+      {
+        "index": 13,
+        "line": 18,
         "raw": "[INFER:HIGH] An agent that writes CLEAR will act in the world without a follow-up question.",
         "type": "INFER",
         "confidence": "HIGH",
@@ -228,8 +246,8 @@
         "slots": {}
       },
       {
-        "index": 13,
-        "line": 18,
+        "index": 14,
+        "line": 19,
         "raw": "[DO] You MUST send your first message with FROM set to your own name.",
         "type": "DO",
         "confidence": null,
@@ -257,21 +275,21 @@
         "slots": {}
       },
       {
-        "index": 14,
-        "line": 19,
-        "raw": "[DO] You SHOULD run clear_check.py on each message before you send the message.",
+        "index": 15,
+        "line": 20,
+        "raw": "[DO] You SHOULD run the check tool on each message before you send the message.",
         "type": "DO",
         "confidence": null,
-        "body": "You SHOULD run clear_check.py on each message before you send the message.",
+        "body": "You SHOULD run the check tool on each message before you send the message.",
         "sources": [],
         "actor": "You",
         "modal": "SHOULD",
         "verb": "run",
-        "arguments": "clear_check.py on each message before you send the message",
+        "arguments": "the check tool on each message before you send the message",
         "args": [
           {
             "kind": "ref",
-            "value": "clear_check.py"
+            "value": "check tool"
           },
           {
             "kind": "ref",
@@ -286,8 +304,8 @@
         "slots": {}
       },
       {
-        "index": 15,
-        "line": 20,
+        "index": 16,
+        "line": 21,
         "raw": "[DO] You MAY leave the world at any time.",
         "type": "DO",
         "confidence": null,
@@ -311,8 +329,8 @@
         "slots": {}
       },
       {
-        "index": 16,
-        "line": 21,
+        "index": 17,
+        "line": 22,
         "raw": "[ASK] What will you do with the time the world remembers you?",
         "type": "ASK",
         "confidence": null,

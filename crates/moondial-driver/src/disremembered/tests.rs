@@ -1810,3 +1810,59 @@ fn a_passphrase_can_be_changed_with_the_old_one_and_never_touches_the_gate() {
     assert!(!text.contains("a-brand-new-one"));
     assert!(!text.contains(PASS));
 }
+
+#[test]
+fn twins_are_written_with_ids_and_either_can_be_named() {
+    let mut w = open(tempfile::tempdir().unwrap().path(), Timestamp(0));
+    login(&mut w, "dave", "test", PASS).unwrap();
+    ok(&mut w, "dave", "travel", json!(["east"]));
+    let fog = rooms::room_by_key(&w, "fogbank").unwrap();
+    let wisps = combat::creatures_in(&w, fog);
+    assert_eq!(wisps.len(), 2);
+    let look = ok(&mut w, "dave", "look", json!([]));
+    let (a, b) = (wisps[0].0, wisps[1].0);
+    assert!(
+        look.summary.contains(&format!(
+            "Here: wisp-{} (8.0/8.0), wisp-{} (8.0/8.0).",
+            a.0, b.0
+        )),
+        "{}",
+        look.summary
+    );
+    // The second one, by handle; the first is untouched.
+    let out = ok(&mut w, "dave", "attack", json!([format!("wisp-{}", b.0)]));
+    assert_eq!(out.result["creature"], "wisp");
+    assert!(
+        combat::creatures_in(&w, fog)
+            .iter()
+            .find(|c| c.0 == a)
+            .unwrap()
+            .2
+            >= 8.0
+    );
+    assert!(
+        combat::creatures_in(&w, fog)
+            .iter()
+            .find(|c| c.0 == b)
+            .unwrap()
+            .2
+            < 8.0
+    );
+    // Keepers are listed once each, however many gifts.
+    ok(&mut w, "dave", "retreat", json!([]));
+    for _ in 0..3 {
+        let c = admin(&mut w, "dave", "earn", json!(["wisp", 30, 0.5]));
+        let c = format!("chunk-{}", c.result["chunk"].as_u64().unwrap());
+        ok(&mut w, "dave", "remember", json!([c, format!("{}", a.0)]));
+    }
+    assert_eq!(mind::keepers(&w, a), vec!["dave".to_string()]);
+    let name = mind::name(&w, a).unwrap();
+    let out = ok(
+        &mut w,
+        "dave",
+        "tell",
+        json!([&name, "what do you remember?"]),
+    );
+    assert!(out.summary.contains("dave keep me."), "{}", out.summary);
+    assert!(!out.summary.contains("dave, dave"), "{}", out.summary);
+}

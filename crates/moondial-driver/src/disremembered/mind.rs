@@ -121,16 +121,21 @@ pub fn display(world: &World, creature: EntityId) -> String {
     }
 }
 
-/// Who has given it a memory, in order.
+/// Who has given it a memory, in order of first gift, each once.
 pub fn keepers(world: &World, creature: EntityId) -> Vec<String> {
-    mind_field(world, creature, "kept")
+    let mut out: Vec<String> = Vec::new();
+    for k in mind_field(world, creature, "kept")
         .and_then(Value::as_array)
-        .map(|a| {
-            a.iter()
-                .filter_map(|k| k["by"].as_str().map(str::to_string))
-                .collect()
-        })
-        .unwrap_or_default()
+        .into_iter()
+        .flatten()
+    {
+        if let Some(by) = k["by"].as_str() {
+            if !out.iter().any(|o| o == by) {
+                out.push(by.to_string());
+            }
+        }
+    }
+    out
 }
 
 /// Still reeling from a memory taken.
@@ -389,8 +394,8 @@ pub fn sweep(world: &mut World) -> Result<(), String> {
     Ok(())
 }
 
-/// The creature here that `what` names: a given name, or a kind (the first of that
-/// kind that is not shaken, else the first).
+/// The creature here that `what` names: an id (`101`, `creature-101`, `wisp-101`), a
+/// given name, or a kind (the first of that kind that is not shaken, else the first).
 pub fn find_here(world: &World, room: EntityId, what: &str) -> Option<EntityId> {
     let what = what.trim().trim_start_matches("the ").to_lowercase();
     let here: Vec<EntityId> = world
@@ -399,6 +404,18 @@ pub fn find_here(world: &World, room: EntityId, what: &str) -> Option<EntityId> 
         .filter(|e| e.kind == "creature")
         .map(|e| e.id)
         .collect();
+    let by_id = what
+        .rsplit_once('-')
+        .map(|(_, d)| d)
+        .unwrap_or(&what)
+        .parse::<u64>()
+        .ok()
+        .map(EntityId);
+    if let Some(id) = by_id {
+        if here.contains(&id) {
+            return Some(id);
+        }
+    }
     if let Some(id) = here.iter().find(|&&c| {
         name(world, c).is_some_and(|n| n.to_lowercase() == what)
             || display(world, c).to_lowercase() == what

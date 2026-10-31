@@ -608,11 +608,7 @@ pub fn register(world: &mut World, curves: Curves) {
             let room = super::rooms::room_of(w, f.citizen).ok_or_else(|| internal("citizen has no room"))?;
             let here = creatures_in(w, room);
             let target = match args.str("creature") {
-                Some(name) if !name.is_empty() => {
-                    let name = name.trim_start_matches("creature-").to_ascii_lowercase();
-                    here.iter().find(|(id, _, _, _)| id.0.to_string() == name).map(|c| c.0)
-                        .or_else(|| super::mind::find_here(w, room, &name))
-                }
+                Some(name) if !name.is_empty() => super::mind::find_here(w, room, name),
                 _ => engaged_with(w, f.citizen).filter(|id| here.iter().any(|c| c.0 == *id)).or_else(|| here.first().map(|c| c.0)),
             };
             let Some(creature) = target else {

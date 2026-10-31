@@ -457,9 +457,16 @@ pub fn describe(
         let list: Vec<String> = creatures
             .iter()
             .map(|c| {
+                let kind = c["name"].as_str().unwrap_or("?");
+                let twins = creatures
+                    .iter()
+                    .filter(|o| o["name"] == c["name"] && o["mind"]["name"].is_null())
+                    .count();
                 let who = match c["mind"]["name"].as_str() {
-                    Some(n) => format!("{n} the {}", c["name"].as_str().unwrap_or("?")),
-                    None => c["name"].as_str().unwrap_or("?").to_string(),
+                    Some(n) => format!("{n} the {kind}"),
+                    // Two of a kind: written with their ids, so either can be named.
+                    None if twins > 1 => format!("{kind}-{}", c["id"]),
+                    None => kind.to_string(),
                 };
                 let holds = match c["mind"]["level"].as_f64() {
                     Some(l) if l >= 0.5 => format!(", holding {l:.0}"),
