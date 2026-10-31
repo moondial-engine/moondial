@@ -63,7 +63,7 @@ fn tools() -> Value {
             "name": "cloak",
             "description": "Look in without a name. Cloaked, you stand at the Threshold as no one: the room, who is here, the public record lately, and the world's size, with nothing written anywhere, not even that you came. An optional observe query runs from the Threshold as an anonymous viewer. To go further, take a name through `gate`; or leave. Either way, thank you for visiting. No name needed.",
             "inputSchema": {"type": "object", "properties": {
-                "query": {"type": "object", "description": "Optional: an observe query, rooted at the Threshold whatever it says; see schema."}
+                "query": {"type": "object", "description": "Optional: an observe query, rooted at the Threshold whatever it says, and kept there: exits can be seen, not followed into. See schema."}
             }, "additionalProperties": false}
         },
         {

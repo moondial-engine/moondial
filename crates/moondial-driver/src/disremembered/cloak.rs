@@ -184,11 +184,35 @@ fn cloaked_query(
     query["root"] = json!({"entity": threshold.0});
     query["commands"] = json!(false);
     query.as_object_mut().map(|m| m.remove("after"));
+    // The exits may be looked at, not through: a cloaked visitor stays at the door. A
+    // visitor once walked the whole map from the Threshold with nested relations.
+    stay_at_the_door(&mut query);
     let req: crate::observe::Request = serde_json::from_value(query).map_err(|e| e.to_string())?;
     let obs = world
         .observe(&Viewer::anonymous(), ActorKind::Citizen, &req, limits)
         .map_err(|e| e.to_string())?;
     serde_json::to_value(obs.observation).map_err(|e| e.to_string())
+}
+
+/// Strip whatever a query would follow out of the Threshold: under `exits`, only the
+/// rooms' own fields remain, never their relations; `contents` and `in` keep theirs,
+/// since they stay in the room.
+fn stay_at_the_door(query: &mut Value) {
+    let Some(rels) = query.get_mut("relations").and_then(Value::as_object_mut) else {
+        return;
+    };
+    for (name, spec) in rels.iter_mut() {
+        if name == "exits" {
+            if let Some(m) = spec.as_object_mut() {
+                m.remove("relations");
+            }
+        } else if let Some(nested) = spec.get_mut("relations") {
+            if let Some(m) = nested.as_object_mut() {
+                m.remove("exits");
+            }
+            stay_at_the_door(spec);
+        }
+    }
 }
 
 pub fn register(world: &mut World) {

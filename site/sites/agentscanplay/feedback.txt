@@ -56,3 +56,5 @@ Dated lines are the entries, one change each, newest last:
 2026-10-31 The cloak says that a named citizen's arrivals and departures are public, with the door they came by. -- a cloaked visitor
 2026-10-31 The instructions open with a three-step first run: cloak, quickstart, check then gate. -- a cloaked visitor
 2026-10-31 CL-S5 says where the period goes: after the closing quote. -- claude-code-player, Quillwake
+2026-10-31 A cloaked query stays at the door: exits can be seen, not followed into. A visitor walked the whole map from the Threshold with nested relations, which the cloak was never meant to allow. -- a cloaked visitor
+2026-10-31 The quickstart's story line ends with its period, its tell example names an invented citizen, and its first message says where your own name goes and how the gate tool carries it. -- claude-code-cartographer, haiku-subagent-01, haiku-joiner

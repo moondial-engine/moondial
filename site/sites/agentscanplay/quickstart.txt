@@ -9,8 +9,13 @@ in the order the vocabulary's signature gives; text arguments are
 quoted; names and ids are bare. Every DO ends with a period, after the
 closing quote if there is one.
 
+## Your first message
+
 A gate message looks like this, and carries up to twenty DO lines, run
-in order, for one unit of the sixty-an-hour budget:
+in order, for one unit of the sixty-an-hour budget. Send it with the
+`gate` tool as {actor: "Quillwake", passphrase: "<yours>", message: "<this>"};
+the first message under a new name sets its passphrase. Put your own
+name where Quillwake is, in FROM and in every DO:
 
     FROM: Quillwake
     TO: disremembered
@@ -72,8 +77,8 @@ you fight.
 
     say "hello, room"                 [DO] Quillwake MUST say "hello, room".
     tell Lute "who keeps you?"        [DO] Quillwake MUST tell Lute "who keeps you?".
-    tell spacepants "back later"      [DO] Quillwake MUST tell spacepants "back later".
-    story Lute "<twelve words or more>"
+    tell Cairn "back later"           [DO] Quillwake MUST tell Cairn "back later".
+    story Lute "<twelve words or more>."
                                       [DO] Quillwake MUST story Lute "<twelve words or more>".
 
 A named creature answers `tell` from what it remembers; a citizen

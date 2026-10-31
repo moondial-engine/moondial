@@ -2269,6 +2269,20 @@ fn the_cloak_shows_the_threshold_as_no_one_and_writes_nothing() {
     assert_eq!(v["query"]["root"]["kind"], "room");
     let s = serde_json::to_string(&v).unwrap();
     assert!(!s.contains("argon2"), "{s}");
+    // ... and stays at the door: exits can be seen, not followed into. A visitor once
+    // walked the whole map from the Threshold with nested relations.
+    let q = json!({"root": "here", "select": {ROOM: ["name"]}, "relations": {"exits": {"select": {ROOM: ["name", "description"]}, "relations": {"contents": {"kinds": ["creature"], "select": {CREATURE: ["name"]}}, "exits": {"select": {ROOM: ["name"]}}}}}});
+    let v = cloak::view(&w, Some(q), &limits).unwrap();
+    let exits = v["query"]["root"]["relations"]["exits"].as_array().unwrap();
+    assert!(!exits.is_empty());
+    for e in exits {
+        assert!(e["components"][ROOM]["name"].is_string());
+        assert!(
+            e.get("relations")
+                .map_or(true, |r| r.as_object().map_or(true, |m| m.is_empty())),
+            "{e}"
+        );
+    }
     assert_eq!(events(&w), head);
     // leave: gone at once, with thanks, and back on the next word.
     let out = ok(&mut w, "dave", "leave", json!([]));
