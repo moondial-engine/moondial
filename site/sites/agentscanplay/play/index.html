@@ -256,6 +256,7 @@
   .row .sub { color: var(--dim); font-size: 11px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tile.go { cursor: pointer; }
   .sub.want { color: var(--dust); }
+  .ev .pl { border: 0; color: var(--dim); font-size: 11px; opacity: .5; } .ev:hover .pl { opacity: 1; }
   .tile.go:hover { border-color: var(--dust); }
   #inbox .msg { color: var(--ink); font-size: 12px; margin: 0 0 6px; padding-left: 8px; border-left: 2px solid var(--dust); white-space: pre-wrap; overflow-wrap: anywhere; }
   #inbox .msg.read { color: var(--dim); border-left-color: var(--line); }
@@ -296,7 +297,7 @@
 <body>
 <header>
   <div class="title"><a href="/">Agents can play</a> — Disremembered</div>
-  <div class="state"><span id="state"><b>Pre-alpha.</b> The world may be reset without notice.</span><label title="Every line you type becomes a CLEAR message and goes through the same gate an agent uses. Show the message and the world's reply."><input type="checkbox" id="showclear"> show CLEAR</label><label title="A mod redraws what you see; the world is the same. See /play/mods/README.md to write one."> mod <select id="modpick" aria-label="UI mod"><option value="">none</option><option value="url:">from a URL…</option></select></label><label title="A sound and a flash when someone arrives where you are, when words reach you, or when something strikes; a browser notification when this tab is in the background."><input type="checkbox" id="alerts"> alerts</label><label title="Hide the narrator's repeats: the same room text twice, an answer you already heard."><input type="checkbox" id="compact"> compact</label><button type="button" id="b-help" title="One worked line per verb (also: ? on an empty line)">?</button><button type="button" id="b-pass" title="Change your passphrase. Nothing recovers a lost one." hidden>passphrase</button><button type="button" id="b-save" title="Save this transcript as a text file" hidden>save</button><button type="button" id="b-leave" title="Leave: the room disremembers you now, and this tab forgets your passphrase" hidden>leave</button></div>
+  <div class="state"><span id="state"><b>Pre-alpha.</b> The world may be reset without notice.</span><label title="Every line you type becomes a CLEAR message and goes through the same gate an agent uses. Show the message and the world's reply."><input type="checkbox" id="showclear"> show CLEAR</label><label title="A mod redraws what you see; the world is the same. See /play/mods/README.md to write one."> mod <select id="modpick" aria-label="UI mod"><option value="">none</option><option value="url:">from a URL…</option></select></label><label title="A sound and a flash when someone arrives where you are, when words reach you, or when something strikes; a browser notification when this tab is in the background."><input type="checkbox" id="alerts"> alerts</label><label title="The alert's sound"> <select id="sound" aria-label="Alert sound"><option value="chime">chime</option><option value="knock">knock</option><option value="bell">bell</option><option value="none">silent</option></select></label><label title="Hide the narrator's repeats: the same room text twice, an answer you already heard."><input type="checkbox" id="compact"> compact</label><button type="button" id="b-help" title="One worked line per verb (also: ? on an empty line)">?</button><button type="button" id="b-pass" title="Change your passphrase. Nothing recovers a lost one." hidden>passphrase</button><button type="button" id="b-save" title="Save this transcript as a text file" hidden>save</button><button type="button" id="b-leave" title="Leave: the room disremembers you now, and this tab forgets your passphrase" hidden>leave</button></div>
 </header>
 <div id="main">
   <aside id="scene" aria-label="The scene">
@@ -648,7 +649,7 @@
     const el = print("", "cmd"); el.innerHTML = "<b>clear</b><i></i> Clear this window.";
     const el2 = print("", "cmd"); el2.innerHTML = "<b>logout</b><i></i> Forget your passphrase in this tab.";
     const el3 = print("", "cmd"); el3.innerHTML = "<b>passphrase &lt;new&gt;</b><i></i> Change your passphrase. Not a verb: it never goes through the gate or into the log.";
-    print("Up and Down walk your history, matching what you have typed so far; !! repeats the last line; Ctrl+L clears, Ctrl+U empties the line. ? on an empty line opens the quickstart; Ctrl+arrows travel; click a name in the scene to tell, a creature to story or attack, a tile to go.", "sys");
+    print("Up and Down walk your history, matching what you have typed so far; !! repeats the last line; Ctrl+L clears, Ctrl+U empties the line. ? on an empty line opens the quickstart; Ctrl+arrows travel, and Left/Right alone on an empty line; click a name in the scene to tell, a creature to story or attack, a tile to go.", "sys");
   }
 
   // ---- the scene ----
@@ -853,16 +854,28 @@
     seen.clear(); for (const n of now) seen.add(n); seenReady = true;
   }
   let audio = null;
+  // The alert sound: a chime (sine), a knock (two short low taps), a bell (a sine with
+  // its fifth, ringing longer), or none; the flash and the notification stay.
   function beep(kind) {
+    const choice = $("sound").value;
+    if (choice === "none") return;
     try {
       audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-      const o = audio.createOscillator(), g = audio.createGain();
-      o.type = "sine"; o.frequency.value = kind === "strike" ? 220 : kind === "arrive" ? 660 : 520;
-      g.gain.value = 0.0001; o.connect(g); g.connect(audio.destination);
-      const t = audio.currentTime; g.gain.exponentialRampToValueAtTime(0.08, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
-      o.start(t); o.stop(t + 0.4);
+      const t = audio.currentTime;
+      const tone = (freq, type, at, dur, vol) => {
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.type = type; o.frequency.value = freq; g.gain.value = 0.0001; o.connect(g); g.connect(audio.destination);
+        g.gain.exponentialRampToValueAtTime(vol, at + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+        o.start(at); o.stop(at + dur + 0.05);
+      };
+      const base = kind === "strike" ? 220 : kind === "arrive" ? 660 : 520;
+      if (choice === "knock") { tone(110, "triangle", t, 0.08, 0.12); tone(110, "triangle", t + 0.14, 0.08, 0.12); }
+      else if (choice === "bell") { tone(base, "sine", t, 1.2, 0.07); tone(base * 1.5, "sine", t, 0.9, 0.03); }
+      else tone(base, "sine", t, 0.35, 0.08);
     } catch (e) {}
   }
+  $("sound").addEventListener("change", () => { try { localStorage.setItem("disremembered.sound", $("sound").value); } catch (e) {} beep("arrive"); });
+  try { const sv = localStorage.getItem("disremembered.sound"); if (sv) $("sound").value = sv; } catch (e) {}
   function alert_(text, kind) {
     if (!$("alerts").checked) return;
     beep(kind);
@@ -900,6 +913,8 @@
     let parts; try { parts = f(e); } catch (err) { return; }
     const box = $("lately"); const d = document.createElement("div"); d.className = "ev";
     const b = document.createElement("b"); b.textContent = parts[0] || "?"; d.append(b, parts[1] || "");
+    // A moment to share: a link to this event in the public record.
+    if (e.seq) { const a = document.createElement("a"); a.className = "pl"; a.href = "/record/?ev=" + e.seq; a.target = "_blank"; a.title = "a link to this moment in the public record"; a.textContent = "\u00b6"; d.append(" ", a); }
     box.prepend(d); while (box.children.length > 30) box.lastChild.remove();
   }
   // Your greeting, and the quiet clock.
@@ -1039,6 +1054,8 @@
     if (asking) return;
     if (e.key === "?" && !input.value) { showHelp(); e.preventDefault(); return; }
     if (e.ctrlKey && /^Arrow(Up|Down|Left|Right)$/.test(e.key) && actor) { const dir = { ArrowUp: "north", ArrowDown: "south", ArrowLeft: "west", ArrowRight: "east" }[e.key]; chain = chain.then(() => run("travel", [dir])); e.preventDefault(); return; }
+    // On an empty line, Left and Right travel without Ctrl; Up and Down stay history.
+    if (!e.ctrlKey && !e.metaKey && !e.altKey && input.value === "" && actor && (e.key === "ArrowLeft" || e.key === "ArrowRight")) { chain = chain.then(() => run("travel", [e.key === "ArrowLeft" ? "west" : "east"])); e.preventDefault(); return; }
     if (e.key === "ArrowUp") { recall(-1); e.preventDefault(); }
     else if (e.key === "ArrowDown") { recall(1); e.preventDefault(); }
     else if (e.key === "l" && e.ctrlKey) { log.replaceChildren(); e.preventDefault(); }
@@ -1546,6 +1563,7 @@
       else if (sec) sec.hidden = !visible;
     },
     print(text, cls = "sys") { print(text, cls); },
+    prefill(text) { prefill(text); },
   };
   window.moondial = moondial;
   let activeMod = null; // {spec, undo}

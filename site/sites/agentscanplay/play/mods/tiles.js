@@ -147,11 +147,14 @@ export default function install(m) {
         ctx.fillRect((x * T + 2) * SCALE, (y * T - 3 + bob) * SCALE, Math.round(12 * frac) * SCALE, 2 * SCALE);
         if (t.given) label(t.given, x, y, -1);
         const who = t.given ? t.given + " the " + t.name : "the " + t.name;
-        hot.set(x + "," + y, { label: "attack " + who + " (" + t.hp.toFixed(0) + "/" + t.max + ")", action: () => m.command("attack", [t.given || t.name]) });
+        // A named creature takes a story (click) or words (shift-click); an unnamed one
+        // is only something to fight. The same rows the Here panel offers, on the canvas.
+        if (t.given) hot.set(x + "," + y, { label: "story " + who + " … (click); tell (shift-click); attack (alt-click)", action: (ev) => m.prefill(ev && ev.altKey ? "attack " + t.given : (ev && ev.shiftKey ? 'tell ' + t.given + ' "' : 'story ' + t.given + ' "')) });
+        else hot.set(x + "," + y, { label: "attack " + who + " (" + t.hp.toFixed(0) + "/" + t.max + ")", action: () => m.command("attack", [t.name]) });
       } else if (t.kind === "you") {
         hot.set(x + "," + y, { label: "you, " + t.name + " — look around", action: () => m.command("look", []) });
       } else {
-        hot.set(x + "," + y, { label: t.name + " is here", action: null });
+        hot.set(x + "," + y, { label: t.name + " is here — tell (click)", action: () => m.prefill('tell ' + t.name + ' "') });
       }
     }
     // Memory: a dug room that is fading goes dark.
@@ -191,7 +194,7 @@ export default function install(m) {
     hud.textContent = h ? h.label : (scene ? (scene.description || "") : "");
   });
   canvas.addEventListener("mouseleave", () => { hud.textContent = scene ? (scene.description || "") : ""; });
-  canvas.addEventListener("click", (ev) => { const h = tileAt(ev); if (h && h.action) h.action(); });
+  canvas.addEventListener("click", (ev) => { const h = tileAt(ev); if (h && h.action) h.action(ev); });
 
   // ---- the subscription ----
   const QUERY = {

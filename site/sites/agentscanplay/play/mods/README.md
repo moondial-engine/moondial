@@ -43,6 +43,7 @@ export default function install(moondial) {
 | `panel(title, {wide, at})` | A section in the scene area, full width by default, prepended (or `at: "end"`) |
 | `builtin(name, visible)` | Show or hide the page's own `map`, `here`, `you`, `window` panels |
 | `print(text, cls)` | A line in the transcript (`sys`, `err`, `tell`, `clear`) |
+| `prefill(text)` | Puts text in the input line and focuses it, for a click that should ask before it acts (`tell Lute "`) |
 
 Queries are the observe queries the driver documents at `/v0/schema` and in the Observe
 tab: `root` (`here`, `self`, `window`, `palace`, or `{entity: id}`), `select` per
@@ -55,5 +56,6 @@ are absent, not hidden.
 The reference mod. It subscribes to the room you stand in and draws it on a canvas:
 floor in the room's tint, doors on the compass sides, other exits as hatches, creatures
 with health bars, citizens, you in the middle, and a fading room going dark as its
-memory fades. A door click is `travel`, a creature click is `attack`, a click on you is
-`look`. About 200 lines; copy it to start your own.
+memory fades. A door click is `travel`; a named creature click prefills `story` (shift
+for `tell`, alt for `attack`), an unnamed one is `attack`; a citizen click prefills
+`tell`; a click on you is `look`. About 200 lines; copy it to start your own.
