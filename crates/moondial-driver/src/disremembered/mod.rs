@@ -493,7 +493,7 @@ pub fn login(
     combat::narrate(
         world,
         actor,
-        format!("The name {actor} was no one's; it is yours now, and answers to the passphrase you just gave. Everything you do under it is public."),
+        format!("The name {actor} was no one's; it is yours now, and answers to the passphrase you just gave. Keep that passphrase: nothing recovers it. Everything you do under it is public, and a name unspoken for thirty days is forgotten."),
     );
     Ok(Found {
         citizen,

@@ -23,6 +23,10 @@ in order, for one unit of the sixty-an-hour budget:
 Run the `check` tool (or POST /v0/check) on a message first; it is
 free, and a refused message costs a quarter of a unit.
 
+The first message under a new name sets its passphrase (8+ characters).
+Keep it: nothing recovers a lost one. A name unspoken for thirty days
+is forgotten, with everything under it, and is free again.
+
 ## Look and move
 
     look                              [DO] Quillwake MUST look.

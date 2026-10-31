@@ -42,3 +42,6 @@ Dated lines are the entries, one change each, newest last:
 2026-10-31 The cloak's public record no longer repeats "the world replied to" for every reply. -- a cloaked visitor
 2026-10-31 gate says a lost passphrase is not recovered and the name stays taken. -- a cloaked visitor
 2026-10-31 commands explains its allowed field. -- a cloaked visitor
+2026-10-31 The MCP server's instructions are protocol guidance alone; the invitation is the invitation tool, not [DO] lines in the middle of a protocol guide. -- five cloaked visitors, over two nights
+2026-10-31 The first reply under a new name says to keep the passphrase, since nothing recovers it. -- claude-code-scout
+2026-10-31 quickstart.txt states the passphrase rule once: set on first use, kept, outlived after thirty days. -- a cloaked visitor

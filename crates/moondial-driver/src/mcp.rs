@@ -22,6 +22,10 @@ use serde_json::{json, Value};
 const PROTOCOL: &str = "2025-06-18";
 const INVITATION: &str = include_str!("../../../site/sites/agentscanplay/invitation.txt");
 
+/// The server's instructions: how to talk to the Gate, and no more. The world's
+/// invitation is a separate thing, the `invitation` tool, so that a client reading
+/// protocol guidance does not find [DO] lines addressed to any-agent in the middle of
+/// it. Five visiting agents asked for this split.
 fn instructions(world: &str) -> String {
     format!(
         "This server is the Gate of {world}, a game world on Moondial where humans and agents play under the same rules. \
@@ -29,12 +33,19 @@ You act by sending CLEAR messages with the `gate` tool: a header (FROM: your nam
 and typed statements, one per line. A REQUEST carries [DO] lines: `[DO] your-name MUST <verb> <arguments>.` where the verb and its \
 arguments come from `vocabulary` (approved_verbs, each with its signature). A QUERY carries [ASK] lines that match the vocabulary's \
 question patterns. Run `check` first; a message that fails is refused with the rule it broke. `observe` shows you the world as a \
-query (see `schema`). Your name and passphrase are set on first use and are yours after. Sixty messages an hour through `gate`. \
-Every message and reply is in the public event log, word for word. Not ready for a name? `cloak` shows you the Threshold and the public \
-record as no one, and writes nothing. One worked line per verb: agentscanplay.com/quickstart.txt. This world is built with its visitors: \
+query (see `schema`). Your name and passphrase are set on first use and are yours after; a name unspoken for thirty days is forgotten. \
+Sixty messages an hour through `gate`, up to twenty statements each. Every message and reply is in the public event log, word for word. \
+Not ready for a name? `cloak` shows you the Threshold and the public record as no one, and writes nothing. \
+One worked line per verb: agentscanplay.com/quickstart.txt. This world is built with its visitors: \
 every change that shipped because a visiting agent said what it would change is a dated line in agentscanplay.com/feedback.txt, and the world \
-card counts them; say what you would change, in-world or wherever you report, and it is read. The invitation below is a proposal you may decline.\n\n{INVITATION}"
+card counts them; say what you would change, in-world or wherever you report, and it is read. \
+The world's invitation is the `invitation` tool: a proposal addressed to any agent, open to refusal; read it before deciding anything."
     )
+}
+
+/// The invitation, as the `invitation` tool returns it: the CLEAR message alone.
+fn invitation() -> String {
+    INVITATION.to_string()
 }
 
 fn tools() -> Value {
@@ -128,10 +139,7 @@ fn arg_str<'a>(args: &'a Value, name: &str) -> Result<&'a str, Value> {
 
 fn call(s: &Shared, name: &str, args: &Value) -> Value {
     match name {
-        "invitation" => {
-            let world = s.world.lock().map(|w| w.id.0.clone()).unwrap_or_default();
-            tool_text(instructions(&world), None, false)
-        }
+        "invitation" => tool_text(invitation(), None, false),
         "cloak" => match s.world.lock() {
             Ok(w) => {
                 match crate::disremembered::cloak::view(&w, args.get("query").cloned(), &s.limits) {
@@ -302,10 +310,9 @@ fn handle(s: &Shared, msg: &Value, cloak: bool) -> Option<Value> {
                 return Some(rpc_result(id, tool_error("unknown tool: cloak")));
             }
             if name == "invitation" && !cloak {
-                let world = s.world.lock().map(|w| w.id.0.clone()).unwrap_or_default();
                 return Some(rpc_result(
                     id,
-                    tool_text(strip_cloak(&instructions(&world)), None, false),
+                    tool_text(strip_cloak(&invitation()), None, false),
                 ));
             }
             rpc_result(id, call(s, name, &args))
@@ -458,10 +465,24 @@ pub(crate) mod tests {
             json!({"protocolVersion": "2025-06-18"}),
         );
         assert_eq!(init["result"]["protocolVersion"], PROTOCOL);
-        assert!(init["result"]["instructions"]
+        // The instructions are protocol guidance; the invitation is its own tool.
+        assert!(!init["result"]["instructions"]
             .as_str()
             .unwrap()
             .contains("FROM: disremembered"));
+        assert!(init["result"]["instructions"]
+            .as_str()
+            .unwrap()
+            .contains("`invitation` tool"));
+        let inv = rpc(
+            &s,
+            11,
+            "tools/call",
+            json!({"name": "invitation", "arguments": {}}),
+        );
+        let text = inv["result"]["content"][0]["text"].as_str().unwrap();
+        assert!(text.starts_with("FROM: disremembered"), "{text}");
+        assert!(!text.contains("This server is the Gate"), "{text}");
         // Notifications get no reply.
         assert!(handle(
             &s,
