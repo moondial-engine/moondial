@@ -15,6 +15,7 @@ RUN_USER=${RUN_USER:-starsailor}
 APP_DIR=/srv/agentscanplay
 CERT_EMAIL=${CERT_EMAIL:?set CERT_EMAIL=you@example.com for certificate notices}
 DOMAINS=(agentscanplay.com www.agentscanplay.com moondial.ai www.moondial.ai)
+PENDING_FULL=()
 
 ok()   { echo "OK:   $*"; }
 fail() { echo "FAIL: $*"; }
@@ -53,9 +54,27 @@ for name in agentscanplay moondial; do
   if [ -z "$SRC" ]; then
     fail "nginx-$name.conf not found; scp deploy/nginx-$name.conf to /tmp/ first"; exit 1
   fi
-  install -m 644 "$SRC" "/etc/nginx/sites-available/$name"
+  # A config that carries its own 443 blocks (agentscanplay) names certificate files
+  # that do not exist before certbot has run. Until they do, install the port-80
+  # blocks only, so nginx can start and certbot can answer the challenge.
+  domain=$([ "$name" = agentscanplay ] && echo agentscanplay.com || echo moondial.ai)
+  if grep -q 'listen 443' "$SRC" && [ ! -f "/etc/letsencrypt/live/$domain/fullchain.pem" ]; then
+    cat > "/etc/nginx/sites-available/$name" <<STUB
+server {
+    listen 80;
+    listen [::]:80;
+    server_name $domain www.$domain;
+    root $APP_DIR/current/sites/$name;
+    index index.html;
+}
+STUB
+    ok "installed a port-80 stub for $name (no certificate yet); the full config follows certbot"
+    PENDING_FULL+=("$name:$SRC")
+  else
+    install -m 644 "$SRC" "/etc/nginx/sites-available/$name"
+    ok "installed server block for $name from $SRC"
+  fi
   ln -sfn "/etc/nginx/sites-available/$name" "/etc/nginx/sites-enabled/$name"
-  ok "installed server block for $name from $SRC"
 done
 nginx -t && systemctl reload nginx && ok "nginx reloaded" || { fail "nginx config test failed"; exit 1; }
 
@@ -67,6 +86,13 @@ if certbot --nginx --non-interactive --agree-tos --redirect -m "$CERT_EMAIL" "${
 else
   fail "certbot failed; check that DNS for all four names resolves to this host, then rerun"
 fi
+# Now the certificate files exist: a config that carries its own 443 blocks replaces
+# what certbot wrote, so the live file and the repo's are one file.
+for pair in "${PENDING_FULL[@]:-}"; do
+  [ -n "$pair" ] || continue
+  name=${pair%%:*}; SRC=${pair#*:}
+  install -m 644 "$SRC" "/etc/nginx/sites-available/$name" && ok "installed full config for $name from $SRC"
+done
 nginx -t && systemctl reload nginx
 
 echo; echo "######## Done"
